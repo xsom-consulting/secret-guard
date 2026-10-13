@@ -1,5 +1,6 @@
 // Commande depguardcheck : prouve que les règles depguard de .golangci.yml refusent chaque import interdit au
-// moteur (detect), au Pack (pack), aux limites (internal/limits) et au programme livré (cmd, internal).
+// moteur (detect), au Pack (pack), aux instructions cachées (hidden), aux mentions (mentions), aux limites
+// (internal/limits) et au programme livré (cmd, internal).
 //
 // Usage (à la racine du dépôt) : go run ./tools/depguardcheck
 //
@@ -36,8 +37,10 @@ var backtracking = []string{
 
 func injections() []injection {
 	cases := []injection{}
-	// Moteur, Pack et limites : purs, liste fermée d'imports.
-	for _, target := range []struct{ dir, pkg string }{{"detect", "detect"}, {"pack", "pack"}, {"internal/limits", "limits"}} {
+	// Moteur, Pack, instructions cachées, mentions et limites : purs, liste fermée d'imports.
+	for _, target := range []struct{ dir, pkg string }{
+		{"detect", "detect"}, {"pack", "pack"}, {"hidden", "hidden"}, {"mentions", "mentions"}, {"internal/limits", "limits"},
+	} {
 		for _, imp := range []string{
 			"os", "io/fs", "io/ioutil", "net", "net/http", "syscall", "golang.org/x/sys/cpu", "time", "math/rand",
 			"crypto/rand", "log", "log/slog", "unsafe", "plugin", "os/exec",

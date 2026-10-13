@@ -8,6 +8,8 @@
 //   const guard = await SecretGuard.instantiate(wasmBytes, wasi.wasiImport, (instance) => wasi.initialize(instance));
 //   const result = guard.scan(new TextEncoder().encode(text), 'typescript');
 //   // result : { complete, failure, findings: [{ ruleId, secretType, encoding, score, level, byteStart, byteEnd }] }
+//   const report = guard.findHidden(new TextEncoder().encode(text));
+//   // report : { complete, hidden, findings: [{ kind, line, column, count, byteStart, byteEnd }] }
 //
 // Décider sur result.complete et result.failure : une analyse incomplète (entrée de plus de 1 Mio, budget épuisé)
 // n'a aucun constat et ne vaut jamais « rien trouvé ». Aucun constat ne porte la valeur détectée.
@@ -80,6 +82,23 @@ export class SecretGuard {
     const ptr = this.#copyIn(input);
     try {
       return this.#readResult(this.#exports.sg_scan_with_fingerprint(ptr, input.length));
+    } finally {
+      this.#exports.sg_free(ptr);
+    }
+  }
+
+  /**
+   * Relève les instructions cachées d'un texte (Uint8Array) : caractères d'étiquette Unicode, contrôles
+   * bidirectionnels, suites de caractères invisibles, suites de sélecteurs de variante. Rend { complete, hidden,
+   * findings: [{ kind, line, column, count, byteStart, byteEnd }] }, jamais ce que les caractères écrivent. Au-delà de
+   * MAX_INPUT_BYTES, seuls MAX_INPUT_BYTES + 1 octets sont copiés : le rapport est incomplet (complete: false).
+   */
+  findHidden(bytes) {
+    const input = bytes.subarray(0, MAX_INPUT_BYTES + 1);
+    if (input.length === 0) return { complete: true, hidden: 0, findings: [] };
+    const ptr = this.#copyIn(input);
+    try {
+      return this.#readResult(this.#exports.sg_find_hidden(ptr, input.length));
     } finally {
       this.#exports.sg_free(ptr);
     }
