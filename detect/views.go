@@ -180,7 +180,7 @@ func newBuilder(capacity int, budget *viewBudget) *builder {
 	return b
 }
 
-// reserve garantit la place de n octets de plus, dans le budget. La capacité double (au plus jusqu'à la limite) :
+// reserve assure la place de n octets de plus, dans le budget. La capacité double (au plus jusqu'à la limite) :
 // la croissance par défaut d'append (×1,25 au-delà de 256 éléments) allouerait au total cinq fois la vue finale.
 func (b *builder) reserve(n int) error {
 	need := len(b.text) + n

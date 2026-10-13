@@ -27,7 +27,7 @@ const (
 	// MaxPackVersion est la plus grande version d'un Pack (Number.MAX_SAFE_INTEGER, 2^53 − 1).
 	MaxPackVersion = 1<<53 - 1
 	// MaxPackBytes est la taille la plus grande d'un document de Pack lu par pack.Decode : au-delà, il est refusé
-	// avant toute lecture. Le plus grand Pack conforme au schéma, sans espace inutile, tient en moins de 26 Mio
+	// avant toute lecture. Le plus grand Pack qui respecte le schéma, sans espace inutile, tient en moins de 26 Mio
 	// (1 000 règles dont le motif de 4 096 unités est écrit en échappements \uXXXX).
 	MaxPackBytes = 32 << 20
 )

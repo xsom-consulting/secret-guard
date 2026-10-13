@@ -13,7 +13,7 @@ import (
 	"github.com/xsom-consulting/secret-guard/internal/limits"
 )
 
-// validRule et validPack écrivent un Pack minimal conforme ; chaque cas de refus en modifie un seul élément.
+// validRule et validPack écrivent un Pack minimal valide ; chaque cas de refus en modifie un seul élément.
 const validRule = `{"ruleId":"demo_rule","family":"fixed_pattern","secretType":"api_key","score":80,"validator":"","pattern":"\\bdemo_[a-z]{8}\\b","minLength":0,"maxLength":0}`
 
 func validPack(rule string) string {

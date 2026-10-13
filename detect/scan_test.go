@@ -481,7 +481,7 @@ func isAdmittedScanError(err error) bool {
 
 // FuzzScan : toute entrée, tout langage : l'assemblage ne panique pas (appelé sans le rattrapage de Scan), ne rend
 // pas d'autre erreur qu'un budget épuisé ou trop de constats, et Scan rend des constats triés, disjoints, dans
-// l'entrée, de règles du Pack, avec un niveau conforme au score, identiques à la seconde exécution.
+// l'entrée, de règles du Pack, avec le niveau qui correspond au score, identiques à la seconde exécution.
 func FuzzScan(f *testing.F) {
 	for _, seed := range append(append([]string{}, fuzzSeeds...), ruleFuzzSeeds...) {
 		f.Add([]byte(seed), uint8(0))

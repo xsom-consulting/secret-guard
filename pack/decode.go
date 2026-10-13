@@ -14,7 +14,7 @@ import (
 	"github.com/xsom-consulting/secret-guard/internal/limits"
 )
 
-// ErrInvalidPack : le document n'est pas un Pack conforme au schéma RulePack. Toute erreur de Decode l'enveloppe
+// ErrInvalidPack : le document n'est pas un Pack qui respecte le schéma RulePack. Toute erreur de Decode l'enveloppe
 // (errors.Is) ; son message donne le chemin JSON et la raison, jamais une valeur du document.
 var ErrInvalidPack = errors.New("pack : document refusé")
 
@@ -72,7 +72,7 @@ type rawRule struct {
 	MaxLength  *int64  `json:"maxLength"`
 }
 
-// Decode lit un Pack de règles et le refuse (ErrInvalidPack) s'il n'est pas exactement conforme au schéma RulePack :
+// Decode lit un Pack de règles et le refuse (ErrInvalidPack) s'il ne respecte pas exactement le schéma RulePack :
 // document de plus de limits.MaxPackBytes octets, JSON invalide (UTF-8 invalide, substitut isolé, contenu après le
 // document), membre inconnu ou en double (noms comparés à la casse près), champ absent ou null, type différent,
 // nombre non entier, énumération, motif ou borne du schéma non respectés, horodatage issuedAt qui n'existe pas.
