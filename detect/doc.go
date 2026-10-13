@@ -1,6 +1,7 @@
 // Package detect est le moteur de détection de secrets de Secret Guard, porté en Go depuis le moteur TypeScript
 // d'origine (origine, avis et modifications dans UPSTREAM.md) : vues de texte et décodages bornés, règles chargées
-// d'un Pack de règles par LoadRules, analyse par Scan ou ScanWithFingerprint.
+// d'un Pack de règles par LoadRules, analyse par Scan ou ScanWithFingerprint, masquage par RedactAndRescan (ou Redact),
+// décision par défaut d'un niveau par DecisionForLevel (un préréglage : le produit qui embarque le moteur décide).
 //
 // Utilisation :
 //
