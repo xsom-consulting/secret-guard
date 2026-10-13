@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Générateur du Pack initial, des motifs du moteur Go et du corpus de parité de Secret Guard (outil de développement, absent du moteur livré).",
+  "description": "Générateur du Pack initial, des motifs du moteur Go, du corpus de parité et des vecteurs des instructions cachées et des mentions de Secret Guard (outil de développement, absent du moteur livré).",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=26.0.0 <27"
@@ -13,7 +13,9 @@
     "test": "vitest run",
     "pack:initial": "node rule-pack/generate-initial-pack.ts",
     "vectors:detection": "node corpus/main.ts",
-    "vectors:unicode": "node unicode-parity.ts"
+    "vectors:unicode": "node unicode-parity.ts",
+    "vectors:hidden": "node hidden/main.ts",
+    "hidden:tables": "node hidden/unicode-tables.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.4",
