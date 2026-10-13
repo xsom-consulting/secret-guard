@@ -92,7 +92,7 @@ cd generator
 npm ci
 npm test                                   # Pack, motifs du moteur, corpus, Unicode, Empreintes locales
 npm run pack:initial                       # pack/initial/pack.json et detect/engine_patterns.go
-npm run vectors:detection -- --upstream <checkout> --check   # corpus, checkout de jt33120/poc-AI_guard au commit d'UPSTREAM.md
+npm run vectors:detection -- --upstream <checkout> --check   # corpus : réservé à xSOM (checkout du dépôt d'origine privé, voir UPSTREAM.md)
 npm run vectors:unicode                    # vectors/unicode-parity.json (montée de version Unicode seulement)
 ```
 

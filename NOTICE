@@ -2,12 +2,14 @@ Secret Guard
 Copyright (c) 2026 XSOM CONSULTING ("xSOM")
 
 Ce produit est un portage en Go du moteur de détection TypeScript Secret Guard
-(dépôt jt33120/poc-AI_guard, commit c177a447b8cdf8ce07e0c3160ea45dace99b6dc9,
+(dépôt privé de xSOM, aujourd'hui archivé sous xsom-consulting/ai-guard-legacy,
+anciennement jt33120/poc-AI_guard ; commit c177a447b8cdf8ce07e0c3160ea45dace99b6dc9,
 chemin secret-guard/packages/core), publié sous la licence Apache, version 2.0.
 Origine, empreintes des fichiers repris et modifications : UPSTREAM.md.
 
 This product is a Go port of the Secret Guard TypeScript detection engine
-(repository jt33120/poc-AI_guard, commit c177a447b8cdf8ce07e0c3160ea45dace99b6dc9,
+(private xSOM repository, now archived as xsom-consulting/ai-guard-legacy,
+formerly jt33120/poc-AI_guard; commit c177a447b8cdf8ce07e0c3160ea45dace99b6dc9,
 path secret-guard/packages/core), licensed under the Apache License, Version 2.0.
 Origin, hashes of the copied files and modifications: UPSTREAM.md.
 

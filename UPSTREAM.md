@@ -6,7 +6,7 @@ Le moteur Go de ce dépôt (`detect/`), le Pack initial (`pack/initial/pack.json
 
 | Élément | Valeur |
 |---|---|
-| Dépôt | `jt33120/poc-AI_guard` (public) |
+| Dépôt | `jt33120/poc-AI_guard`, dépôt privé de xSOM, archivé le 2026-10-13 sous `xsom-consulting/ai-guard-legacy` (privé). Les fichiers repris sont copiés ici avec leur empreinte : le corpus se vérifie sans accès à ce dépôt. |
 | Commit | `c177a447b8cdf8ce07e0c3160ea45dace99b6dc9` (branche `main`) |
 | Chemin | `secret-guard/packages/core` |
 | Licence | Apache License, Version 2.0 (`secret-guard/packages/core/LICENSE`, dans le périmètre ouvert de `LICENSING.md` du dépôt d'origine) |
