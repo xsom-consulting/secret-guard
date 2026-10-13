@@ -70,7 +70,7 @@ func TestRedactCommand(t *testing.T) {
 	}{
 		{"option inconnue", []string{"redact", "--fingerprint-key", "cle"}, "Usage"},
 		{"deux fichiers", []string{"redact", "a", "b"}, "Usage"},
-		{"fichier introuvable", []string{"redact", "absent.txt"}, "fichier à masquer : fichier introuvable"},
+		{"fichier introuvable", []string{"redact", "absent.txt"}, "fichier à lire : fichier introuvable"},
 		{"fichier interdit", []string{"redact", "interdit"}, "accès refusé"},
 		{"fichier illisible", []string{"redact", "illisible"}, "lecture impossible"},
 		{"Pack hors schéma", []string{"redact", "--pack", "pack-vide", "propre.txt"}, "pack : document refusé"},

@@ -59,9 +59,10 @@ linters:
             - pkg: "plugin"
               desc: "le programme livré ne charge aucun code"
 
-        # Le moteur (detect), le Pack (pack) et les limites (internal/limits) sont purs. Ni E/S, ni réseau, ni appel
-        # système, ni horloge, ni hasard, ni journal : les bornes sont des budgets de travail, pas des délais. Les
-        # tests en sont exclus (« !$test ») : ils lisent le corpus de parité.
+        # Le moteur (detect), le Pack (pack), les instructions cachées (hidden), les mentions (mentions) et les limites
+        # (internal/limits) sont purs. Ni E/S, ni réseau, ni appel système, ni horloge, ni hasard, ni journal : les
+        # bornes sont des budgets de travail, pas des délais. Les tests en sont exclus (« !$test ») : ils lisent les
+        # vecteurs de parité.
         engine-pure:
           # Liste fermée : seuls ces paquets (et leurs sous-paquets non refusés ci-dessous) sont admis ; tout autre
           # import (fmt, path/filepath, mime, runtime, module tiers, second moteur d'expressions…) est refusé.
@@ -69,6 +70,8 @@ linters:
           files:
             - "**/detect/**"
             - "**/pack/**"
+            - "**/hidden/**"
+            - "**/mentions/**"
             - "**/internal/limits/**"
             - "!$test"
           allow:

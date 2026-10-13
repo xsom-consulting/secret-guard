@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/xsom-consulting/secret-guard/detect"
-	"github.com/xsom-consulting/secret-guard/internal/limits"
 	"github.com/xsom-consulting/secret-guard/internal/report"
 )
 
@@ -25,7 +24,7 @@ func redact(args []string, stdin io.Reader, stdout, stderr io.Writer, opener fil
 	if problem != "" {
 		return fail(stderr, problem)
 	}
-	content, problem := readContent(flags.Arg(0), stdin, opener)
+	content, problem := readContent(flags.Arg(0), stdin, opener) // hidden.go
 	defer clear(content)
 	if problem != "" {
 		return fail(stderr, problem)
@@ -45,24 +44,4 @@ func redact(args []string, stdin io.Reader, stdout, stderr io.Writer, opener fil
 		return fail(stderr, "masquage impossible : un secret subsiste après masquage (residual) ; aucun texte écrit")
 	}
 	return fail(stderr, "masquage impossible : analyse incomplète ("+string(result.Final.Failure)+") ; aucun texte écrit")
-}
-
-// readContent lit le fichier nommé, ou l'entrée standard (sans nom, ou « - »), au plus MaxInputBytes + 1 octets :
-// au-delà de la limite, le moteur rend scan_limit sans rien analyser. Le message d'un refus ne cite pas le chemin.
-func readContent(name string, stdin io.Reader, opener files) ([]byte, string) {
-	input := stdin
-	if name != "" && name != "-" {
-		file, err := opener.Open(name)
-		if err != nil {
-			return nil, "fichier à masquer : " + fileProblem(err)
-		}
-		defer func() { _ = file.Close() }()
-		input = file
-	}
-	content, err := io.ReadAll(io.LimitReader(input, limits.MaxInputBytes+1))
-	if err != nil {
-		clear(content)
-		return nil, "lecture impossible"
-	}
-	return content, ""
 }

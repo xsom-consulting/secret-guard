@@ -8,6 +8,8 @@ Secret Guard est un moteur de détection de secrets (clés d'API, jetons, clés 
 
 C'est le portage en Go du moteur TypeScript de Secret Guard (origine, licence et modifications : [UPSTREAM.md](UPSTREAM.md)). Le portage rend exactement les résultats de l'original sur un corpus figé de 823 cas (`TestParity`).
 
+Deux paquets l'accompagnent, portés de la même origine : `hidden` (instructions cachées dans un texte) et `mentions` (fichiers cités par « @ » dans un prompt).
+
 ### Ce que fait le moteur
 
 - 35 règles (Pack initial, `pack/initial/pack.json`) : formats fixes de jetons connus, clés privées PEM, URL à identifiants, affectations sensibles (`password = …`, en-têtes, cookies, `curl -u`, `auth` de Docker), entropie.
@@ -17,7 +19,7 @@ C'est le portage en Go du moteur TypeScript de Secret Guard (origine, licence et
 
 ### Ce qu'il ne fait jamais
 
-- **Aucun réseau, aucune télémétrie, aucun modèle de langage.** Le moteur (`detect`, `pack`) n'importe ni réseau, ni fichier, ni horloge, ni hasard, ni journal : règle `depguard` de [.golangci.yml](.golangci.yml), prouvée import par import par `go run ./tools/depguardcheck`. Le module WebAssembly n'importe aucune fonction réseau (`sock_*`) ni d'ouverture de fichier (`path_open`) : test `wasm/secret-guard.test.mjs`.
+- **Aucun réseau, aucune télémétrie, aucun modèle de langage.** Le moteur (`detect`, `pack`, `hidden`, `mentions`) n'importe ni réseau, ni fichier, ni horloge, ni hasard, ni journal : règle `depguard` de [.golangci.yml](.golangci.yml), prouvée import par import par `go run ./tools/depguardcheck`. Le module WebAssembly n'importe aucune fonction réseau (`sock_*`) ni d'ouverture de fichier (`path_open`) : test `wasm/secret-guard.test.mjs`.
 - **Aucune valeur détectée en sortie.** Un constat porte la règle, le type de secret, la lecture, le score, le niveau et l'étendue en octets : jamais la valeur, un extrait, un masque ni un condensat non salé. Des tests par réflexion et par arbre syntaxique relèvent la liste fermée de l'API exportée.
 - **Jamais « rien trouvé » par défaut.** Une analyse incomplète (entrée trop grande, budget épuisé, panique rattrapée) rend `complete: false` et aucun constat : l'appelant décide (bloquer), jamais sur le seul nombre de constats.
 
@@ -64,6 +66,43 @@ Chaque constat a un niveau tiré de son score : LOW (moins de 25), MEDIUM (25 à
 
 Le schéma du Pack (`schema/RulePack.json`, [docs/rule-pack.md](docs/rule-pack.md)) est une copie : le programme qui signe et distribue des Packs (xSOM Fleet) reste la source du contrat signé. Le test `TestSchemaCopy` compare le type `pack.Pack` à cette copie. Le moteur ne vérifie aucune signature : vérifier un Pack signé est l'affaire de celui qui le distribue, avant `pack.Decode`.
 
+### Instructions cachées (`hidden`)
+
+Des caractères qu'une personne ne voit pas mais qu'un modèle lit peuvent porter des consignes : dans un fichier d'instructions d'assistant, un prompt collé, un fichier cité. Le paquet `hidden` en relève quatre porteurs :
+
+- caractères d'étiquette Unicode (U+E0000 à U+E007F), « ASCII smuggling » ;
+- plongements, forçages et isolats bidirectionnels, « Trojan Source » (CVE-2021-42574) ;
+- suites de caractères invisibles de largeur nulle (et autres caractères ignorables par défaut) ;
+- suites de sélecteurs de variante après un caractère.
+
+Les usages légitimes restent silencieux : drapeau de subdivision (Angleterre, Écosse, pays de Galles), liant dans un emoji, liants des écritures qui joignent leurs lettres (persan, devanagari…), un sélecteur de variante après sa base, sélecteurs de forme du mongol, césure conditionnelle entre deux lettres, marque d'ordre des octets en tête, marques de direction. Moins de quatre caractères invisibles isolés dans un texte sont tenus pour du bruit.
+
+```go
+report := hidden.Find(text)   // texte en octets, 1 Mio au plus
+if !report.Complete {
+	// plus de 1 Mio : rien n'est lu, ne jamais tenir le texte pour propre
+}
+for _, f := range report.Findings { // 50 suites au plus ; report.Hidden reste exact
+	// f.Kind, f.Line, f.Column, f.Count, f.ByteStart, f.ByteEnd : jamais ce que les caractères écrivent
+}
+clean := hidden.Strip(text)   // retire exactement ce que Find signale ; rend toujours de l'UTF-8 valide
+```
+
+Un octet hors UTF-8 se lit comme U+FFFD (un par octet) : jamais signalé, il compte comme un caractère. `Strip` l'écrit U+FFFD : garder l'octet pourrait, une fois retiré un caractère voisin, former avec d'autres octets un caractère qui n'était pas là (U+202E par exemple). Comme à l'origine, `Strip` fait une seule passe : deux caractères invisibles que le retrait rapproche peuvent être signalés par un nouvel appel de `Find`. Parité : 152 cas produits par le `hidden.ts` d'origine (`vectors/hidden.json`, `TestHiddenParity`).
+
+### Fichiers cités par « @ » (`mentions`)
+
+Claude Code ajoute au contexte le contenu d'un fichier cité par `@` dans un prompt sans appel d'outil : aucun hook `PreToolUse` ne se déclenche pour lui, pas même ceux qui visent `Read` ([documentation des hooks](https://code.claude.com/docs/en/hooks)). Un hook `UserPromptSubmit` doit donc retrouver ces fichiers lui-même pour les analyser avant l'envoi ; `mentions.Parse` les relève, sans lire ni résoudre aucun fichier : l'appelant résout chaque chemin (répertoire de travail de l'assistant) et lit le fichier sous l'identité de la personne, puis l'analyse (`detect`, `hidden`).
+
+```go
+for _, m := range mentions.Parse(prompt) {
+	// m.Path : chemin tel qu'écrit (sans guillemets, suffixe « #L10-20 » ni ponctuation finale)
+	// m.Lines : « 10-20 » ou vide ; m.LineRange() pour les nombres ; m.ByteStart, m.ByteEnd : position de la mention
+}
+```
+
+Règles de l'origine (`mentionedPaths`) : une mention commence le prompt ou suit un espacement (une adresse électronique n'en est pas une) ; formes `@chemin`, `@"chemin avec espaces"`, `@chemin#L10-20` ; ponctuation finale `, ; : ! ? )` retirée ; doublons fusionnés. Sans résolution, la fusion porte sur le chemin tel qu'écrit (`@a.md` et `@./a.md` restent deux mentions, à fusionner après résolution). Parité : 122 cas produits par `mentionedPaths` d'origine (`vectors/mentions.json`, `TestMentionsParity`).
+
 ### Ligne de commande
 
 ```sh
@@ -72,6 +111,9 @@ secret-guard scan fichier.env          # ou : cat fichier | secret-guard scan -
 secret-guard scan --pack autre-pack.json --language dotenv fichier.env
 secret-guard scan --fingerprint-key cle.hex fichier.env   # cle.hex : 64 caractères hexadécimaux, lue, jamais écrite
 secret-guard redact fichier.env > fichier.masque.env       # code 2 : rien n'est écrit (fichier vide)
+secret-guard hidden AGENTS.md          # rapport JSON des instructions cachées
+secret-guard hidden --strip AGENTS.md > AGENTS.propre.md   # texte sans les caractères signalés
+secret-guard mentions prompt.txt       # fichiers cités par « @ », sans rien lire
 secret-guard version
 ```
 
@@ -91,6 +133,8 @@ Sortie : un document JSON sur une ligne, `{"complete":true,"failure":"none","fin
 | 1 | au moins un secret masqué |
 | 2 | erreur, analyse incomplète ou secret qui subsiste après masquage : rien sur la sortie standard, la raison sur la sortie d'erreur |
 
+`secret-guard hidden` écrit `{"complete":true,"hidden":21,"findings":[{"kind":"tag_characters","line":1,"column":16,"count":21,"byteStart":15,"byteEnd":99}]}` ; mêmes codes de sortie (1 : au moins un caractère signalé ; 2 : erreur ou texte de plus de 1 Mio). Avec `--strip`, il écrit le texte nettoyé à la place, et rien au-delà de 1 Mio. `secret-guard mentions` écrit `{"mentions":[{"path":"src/x.ts","lines":"10-20","byteStart":30,"byteEnd":46}]}` ; code 0, ou 2 en cas d'erreur ou de prompt de plus de 1 Mio.
+
 ### WebAssembly
 
 ```sh
@@ -99,13 +143,13 @@ node --test wasm/secret-guard.test.mjs
 node --no-warnings wasm/bench.mjs
 ```
 
-Module WASI preview 1 en mode bibliothèque : instancié une fois, il garde ses règles chargées et analyse ou masque à la demande (`guard.scan(octets)`, `guard.redact(octets)`, qui rend `{ failure, initial, final, redacted }`, `redacted` valant `null` si le masquage échoue) ; `wasm/secret-guard.mjs` est un chargeur sans dépendance (`node:wasi` sous Node, une couche WASI ailleurs). Choix de `wasip1` plutôt que `js/wasm` : interface WASI standard sans colle JavaScript liée à une version exacte de Go (`wasm_exec.js`), exécutable par Node, Wasmtime ou une couche WASI de navigateur, et la liste des fonctions importées montre ce que le module peut faire (ni réseau, ni ouverture de fichier). La ligne de commande se construit aussi pour WASI (`GOOS=wasip1 GOARCH=wasm go build ./cmd/secret-guard`).
+Module WASI preview 1 en mode bibliothèque : instancié une fois, il garde ses règles chargées et analyse ou masque à la demande (`scan`, `scanWithFingerprint`, `findHidden`, le rapport de `secret-guard hidden`, et `redact`, qui rend `{ failure, initial, final, redacted }`, `redacted` valant `null` si le masquage échoue) ; `wasm/secret-guard.mjs` est un chargeur sans dépendance (`node:wasi` sous Node, une couche WASI ailleurs). Choix de `wasip1` plutôt que `js/wasm` : interface WASI standard sans colle JavaScript liée à une version exacte de Go (`wasm_exec.js`), exécutable par Node, Wasmtime ou une couche WASI de navigateur, et la liste des fonctions importées montre ce que le module peut faire (ni réseau, ni ouverture de fichier). La ligne de commande se construit aussi pour WASI (`GOOS=wasip1 GOARCH=wasm go build ./cmd/secret-guard`).
 
 Mesures du 13 octobre 2026 sur une seule machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2, `node wasm/bench.mjs`, trois séries), indicatives :
 
 | Mesure | Valeur |
 |---|---|
-| Taille du `.wasm` (masquage compris) | 5,99 Mo brut ; 1,64 Mo gzip -9 ; 1,21 Mo brotli |
+| Taille du `.wasm` (avec `findHidden` et `redact`) | 6,02 Mo brut ; 1,65 Mo gzip -9 ; 1,21 Mo brotli |
 | Démarrage (compilation, instanciation, Pack initial chargé), médiane de 10 | 20 ms (première instance du processus : 70 à 90 ms) |
 | Première analyse d'un texte court | 9 ms |
 | Analyse de 64 Kio (entrée de `BenchmarkScan64KiB`), médiane de 20 | 300 à 360 ms selon la série, minimum 304 ms (Go natif : 66 ms) |
@@ -117,14 +161,16 @@ Le générateur TypeScript est dans `generator/` (Node 26, `npm ci`). Il n'est p
 ```sh
 cd generator
 npm ci
-npm test                                   # Pack, motifs du moteur, corpus, Unicode, Empreintes locales
+npm test                                   # Pack, motifs du moteur, corpus, Unicode, Empreintes locales, vecteurs hidden et mentions
 npm run pack:initial                       # pack/initial/pack.json et detect/engine_patterns.go
 npm run vectors:detection -- --upstream <checkout> --check   # corpus : réservé à xSOM (checkout du dépôt d'origine privé, voir UPSTREAM.md)
 npm run vectors:redact -- --upstream <checkout> --check      # vecteurs du masquage et des décisions (même checkout)
+npm run vectors:hidden -- --upstream <checkout> --check      # vectors/hidden.json et vectors/mentions.json (même checkout)
+npm run hidden:tables -- --check           # hidden/unicode_tables.go, calculé par Node
 npm run vectors:unicode                    # vectors/unicode-parity.json (montée de version Unicode seulement)
 ```
 
-Ne jamais éditer `pack.json`, `engine_patterns.go`, le corpus ni les vecteurs du masquage (`vectors/redact.json`, `vectors/decision.json`) à la main. Toute évolution des règles ajoute ses cas au corpus.
+Ne jamais éditer `pack.json`, `engine_patterns.go`, `hidden/unicode_tables.go`, le corpus ni les vecteurs (dont `vectors/redact.json` et `vectors/decision.json`) à la main. Toute évolution des règles ajoute ses cas au corpus.
 
 ### Vérifier
 
@@ -132,12 +178,14 @@ Ne jamais éditer `pack.json`, `engine_patterns.go`, le corpus ni les vecteurs d
 go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...
 go test -count=1 -v -run '^TestParity$' ./detect
 go test -count=1 -v -run '^(TestRedactParity|TestDecisionParity|TestRedactLeavesNoValue)$' ./detect   # masquage et décisions
-go run ./tools/covercheck coverage.out     # detect, pack, internal ≥ 80 %
+go test -count=1 -v -run '^TestHiddenParity$' ./hidden
+go test -count=1 -v -run '^TestMentionsParity$' ./mentions
+go run ./tools/covercheck coverage.out     # detect, pack, hidden, mentions, internal ≥ 80 %
 go run ./tools/depguardcheck                # chaque import interdit est refusé
 gitleaks dir . && gitleaks git .
 ```
 
-Fuzz : `go test ./detect -run '^$' -fuzz '^FuzzScan$' -fuzztime=60s` (autres cibles : `FuzzRedact`, `FuzzTextViews`, `FuzzBase64Candidates`, `FuzzDecodeBase64`, `FuzzJWT`, `FuzzRuleFamilies`…).
+Fuzz : `go test ./detect -run '^$' -fuzz '^FuzzScan$' -fuzztime=60s` (autres cibles : `FuzzRedact`, `FuzzTextViews`, `FuzzBase64Candidates`, `FuzzDecodeBase64`, `FuzzJWT`, `FuzzRuleFamilies`…, et `FuzzHiddenFind` dans `./hidden`, `FuzzMentions` dans `./mentions`).
 
 ### Sécurité
 
@@ -155,7 +203,11 @@ It is the Go port of the Secret Guard TypeScript engine (origin, license and cha
 
 **What it does**: 35 rules (initial Pack), several readings of the same text (as is, NFKC-normalized, decoded once from percent, JSON escapes and base64, wrapped lines joined), RE2 regular expressions only (linear time), bounded work (1 MiB input, decoding, window and view budgets).
 
-**What it never does**: no network, no telemetry, no language model (the engine imports no network, file, clock, randomness or logging package: `depguard` rule proven by `tools/depguardcheck`; the WebAssembly module imports no `sock_*` or `path_open`); no detected value in the output (a finding carries rule, secret type, reading, score, level and byte span, never the value, an excerpt, a mask or an unsalted hash); never "nothing found" by default (an incomplete scan returns `complete: false` and no finding, so the caller blocks). The engine only finds what its rules describe: it lowers the risk, it does not remove it.
+**What it never does**: no network, no telemetry, no language model (the engine, `hidden` and `mentions` import no network, file, clock, randomness or logging package: `depguard` rule proven by `tools/depguardcheck`; the WebAssembly module imports no `sock_*` or `path_open`); no detected value in the output (a finding carries rule, secret type, reading, score, level and byte span, never the value, an excerpt, a mask or an unsalted hash); never "nothing found" by default (an incomplete scan returns `complete: false` and no finding, so the caller blocks). The engine only finds what its rules describe: it lowers the risk, it does not remove it.
+
+**Hidden instructions** (`hidden`): `hidden.Find(text)` reports characters a person cannot see but a model reads: Unicode tag characters ("ASCII smuggling"), bidirectional embeddings, overrides and isolates ("Trojan Source", CVE-2021-42574), runs of zero-width and other default-ignorable characters, runs of variation selectors. Legitimate uses stay silent (subdivision flags, joiners in emoji and in joining scripts, one variation selector after its base, Mongolian variation selectors, soft hyphens between letters, a leading byte-order mark, directional marks). Each finding carries kind, line, column, count and byte span, never what the characters spell; `Complete` is false beyond 1 MiB. `hidden.Strip(text)` removes exactly what `Find` reports and always returns valid UTF-8 (an invalid byte becomes U+FFFD, so that removing a neighbour cannot form a new character). Parity: 152 cases produced by the original `hidden.ts` (`TestHiddenParity`).
+
+**@-mentioned files** (`mentions`): Claude Code adds the content of a file referenced with `@` in a prompt without any tool call, so no `PreToolUse` hook fires for it, not even one matching `Read` ([hooks documentation](https://code.claude.com/docs/en/hooks)). `mentions.Parse(prompt)` finds these files (`@path`, `@"path with spaces"`, `@path#L10-20`, trailing `, ; : ! ? )` removed, e-mail addresses ignored, duplicates merged) without reading or resolving anything, so that a `UserPromptSubmit` hook can resolve, read (as the user) and scan them itself. Parity: 122 cases produced by the original `mentionedPaths` (`TestMentionsParity`).
 
 **Go API**: `pack.Initial()` or `pack.Decode(bytes)` (strict RulePack decoding), `detect.LoadRules(pack)`, `detect.Scan(content, rules, detect.Options{LanguageID: …})`, `detect.ScanWithFingerprint(content, rules, key)` (local fingerprint: HMAC-SHA256 truncated to 16 bytes under a 32-byte caller key). Decide on `Result.Complete` and `Result.Failure`, never on the number of findings. The Pack schema is a copy; the program that signs and distributes Packs (xSOM Fleet) remains the source of the signed contract, and `TestSchemaCopy` checks the copy.
 
@@ -163,11 +215,11 @@ It is the Go port of the Secret Guard TypeScript engine (origin, license and cha
 
 **Levels and decisions**: a finding's level comes from its score (LOW < 25 ≤ MEDIUM < 50 ≤ HIGH < 75 ≤ CRITICAL). `detect.DecisionForLevel(level)` returns Secret Guard's default decision (`ALLOW` for LOW, `WARN` for MEDIUM, `BLOCK` for HIGH, CRITICAL and any level outside this list): a preset, not a policy. The product that embeds the engine decides; xSOM Fleet maps levels to decisions through its published Policy and, with no published mapping, blocks whatever the level. An incomplete scan always blocks.
 
-**Command line**: `secret-guard scan [--pack <file>] [--language <id>] [--fingerprint-key <file>] [file|-]`, one-line JSON output; exit codes 0 (no finding), 1 (findings), 2 (error or incomplete scan, never "nothing found"). `secret-guard redact [--pack <file>] [--language <id>] [file|-]` writes the redacted text on standard output; exit codes 0 (nothing to redact, text copied), 1 (redacted), 2 (error, incomplete scan or residual secret, nothing on standard output).
+**Command line**: `secret-guard scan [--pack <file>] [--language <id>] [--fingerprint-key <file>] [file|-]`, one-line JSON output; exit codes 0 (no finding), 1 (findings), 2 (error or incomplete scan, never "nothing found"). `secret-guard redact [--pack <file>] [--language <id>] [file|-]` writes the redacted text on standard output; exit codes 0 (nothing to redact, text copied), 1 (redacted), 2 (error, incomplete scan or residual secret, nothing on standard output). `secret-guard hidden [--strip] [file|-]`: JSON report of hidden characters (same exit codes), or the cleaned text with `--strip`. `secret-guard mentions [file|-]`: JSON list of `@` mentions (exit code 0, or 2 on error).
 
-**WebAssembly**: `GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm`; WASI preview 1 reactor module with a dependency-free JavaScript loader (`wasm/secret-guard.mjs`: `scan(bytes)`, `redact(bytes)`), tested under Node (`node --test wasm/secret-guard.test.mjs`). Measured on 13 October 2026 on one machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2), indicative: 5.99 MB raw (redaction included), 1.64 MB gzip, 1.21 MB brotli; 20 ms startup (median of 10; 70 to 90 ms for the first instance of the process); 300 to 360 ms to scan 64 KiB depending on the run (native Go: 66 ms).
+**WebAssembly**: `GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm`; WASI preview 1 reactor module (`scan`, `scanWithFingerprint`, `findHidden`, `redact`) with a dependency-free JavaScript loader (`wasm/secret-guard.mjs`), tested under Node (`node --test wasm/secret-guard.test.mjs`). Measured on 13 October 2026 on one machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2), indicative: 6.02 MB raw, 1.65 MB gzip, 1.21 MB brotli (with `findHidden` and `redact`); 20 ms startup (median of 10; 70 to 90 ms for the first instance of the process); 300 to 360 ms to scan 64 KiB depending on the run (native Go: 66 ms).
 
-**Regenerating**: the TypeScript generator in `generator/` (Node 26) rebuilds the initial Pack, the engine patterns, the parity corpus and the redaction and decision vectors (`npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout> --check`, `npm run vectors:redact -- --upstream <checkout> --check`). Never edit these files by hand.
+**Regenerating**: the TypeScript generator in `generator/` (Node 26) rebuilds the initial Pack, the engine patterns, the parity corpus, the redaction and decision vectors, the hidden and mention vectors and the Unicode tables of `hidden` (`npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout> --check`, `npm run vectors:redact -- --upstream <checkout> --check`, `npm run vectors:hidden -- --upstream <checkout> --check`, `npm run hidden:tables -- --check`). Never edit these files by hand.
 
 **Security**: report vulnerabilities through a private GitHub security advisory, never a public issue. Scan time is bounded by work budgets, not a clock: the caller sets its deadline.
 

@@ -1,8 +1,11 @@
 // Commande secret-guard : analyse un fichier ou l'entrée standard avec le moteur de détection, localement, sans
-// réseau, et écrit les constats en JSON, jamais la valeur détectée.
+// réseau, et écrit les constats en JSON, jamais la valeur détectée ; relève aussi les instructions cachées d'un texte
+// et les fichiers cités par « @ » dans un prompt.
 //
 //	secret-guard scan [--pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
 //	secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+//	secret-guard hidden [--strip] [fichier|-]
+//	secret-guard mentions [fichier|-]
 //	secret-guard version
 //
 // Codes de sortie : 0 analyse complète sans constat ; 1 au moins un constat ; 2 erreur (usage, lecture, Pack refusé)
@@ -30,6 +33,8 @@ import (
 const usage = `Usage :
   secret-guard scan [--pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
   secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+  secret-guard hidden [--strip] [fichier|-]
+  secret-guard mentions [fichier|-]
   secret-guard version
 
 scan analyse le fichier donné, ou l'entrée standard (sans fichier, ou « - »), avec le Pack initial embarqué
@@ -50,6 +55,15 @@ redact écrit sur la sortie standard le texte où chaque secret détecté est re
 <REDACTED_règle>, après une nouvelle analyse du texte masqué. Codes de sortie : 0 rien à masquer (texte recopié) ;
 1 au moins un secret masqué ; 2 erreur ou échec du masquage (analyse incomplète, secret qui subsiste), et alors
 aucun texte sur la sortie standard. Le masquage réduit le risque, il ne le supprime pas.
+
+hidden relève les instructions cachées (caractères d'étiquette Unicode, contrôles bidirectionnels, suites de
+caractères invisibles, suites de sélecteurs de variante) : {"complete", "hidden", "findings": [{"kind", "line",
+"column", "count", "byteStart", "byteEnd"}]}, jamais ce que les caractères écrivent. --strip écrit à la place le texte
+sans ces caractères. Codes de sortie : 0 rien ; 1 au moins un caractère signalé ; 2 erreur ou texte de plus de 1 Mio.
+
+mentions relève les fichiers cités par « @ » dans un prompt (« @chemin », « @"chemin" », « @chemin#L10-20 ») :
+{"mentions": [{"path", "lines", "byteStart", "byteEnd"}]}, sans lire ni résoudre aucun fichier. Codes de sortie : 0 ;
+2 erreur ou prompt de plus de 1 Mio.
 `
 
 // maxKeyFileBytes borne la lecture du fichier de clé : 64 caractères hexadécimaux et une fin de ligne.
@@ -78,6 +92,10 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files)
 		return scan(args[1:], stdin, stdout, stderr, opener)
 	case "redact":
 		return redact(args[1:], stdin, stdout, stderr, opener)
+	case "hidden":
+		return hiddenCommand(args[1:], stdin, stdout, stderr, opener)
+	case "mentions":
+		return mentionsCommand(args[1:], stdin, stdout, stderr, opener)
 	case "version":
 		if len(args) != 1 {
 			_, _ = io.WriteString(stderr, usage)

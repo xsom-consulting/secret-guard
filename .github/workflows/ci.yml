@@ -45,7 +45,9 @@ jobs:
         run: go test -count=1 -v -run '^TestParity$' ./detect
       - name: "Parité du masquage et des décisions (vectors/redact.json, vectors/decision.json)"
         run: go test -count=1 -v -run '^(TestRedactParity|TestDecisionParity|TestRedactLeavesNoValue)$' ./detect
-      - name: Couverture du moteur (detect, pack, internal ≥ 80 %)
+      - name: "Parité à 100 % avec hidden.ts et mentionedPaths (vectors/hidden.json, vectors/mentions.json)"
+        run: go test -count=1 -v -run '^(TestHiddenParity|TestMentionsParity)$' ./hidden ./mentions
+      - name: Couverture du moteur (detect, pack, hidden, mentions, internal ≥ 80 %)
         run: go run ./tools/covercheck coverage.out
       - name: depguardcheck (chaque import interdit est refusé)
         if: runner.os == 'Linux'
@@ -85,7 +87,7 @@ jobs:
           retention-days: 14
 
   generator:
-    name: Générateur TypeScript (Pack initial, motifs, corpus)
+    name: Générateur TypeScript (Pack initial, motifs, corpus, vecteurs hidden et mentions)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
