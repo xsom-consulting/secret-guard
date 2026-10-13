@@ -4,7 +4,7 @@
 // Pack de règles du client.
 //
 //	secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
-//	secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+//	secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
 //	secret-guard terms digest --salt <sel> [fichier|-]
 //	secret-guard hidden [--strip] [fichier|-]
 //	secret-guard mentions [fichier|-]
@@ -35,7 +35,7 @@ import (
 
 const usage = `Usage :
   secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
-  secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+  secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
   secret-guard terms digest --salt <sel> [fichier|-]
   secret-guard hidden [--strip] [fichier|-]
   secret-guard mentions [fichier|-]
@@ -60,7 +60,8 @@ Codes de sortie : 0 aucun constat ; 1 au moins un constat ; 2 erreur ou analyse 
 1 Mio, budget épuisé), qui ne vaut jamais « rien trouvé ».
 
 redact écrit sur la sortie standard le texte où chaque secret détecté est remplacé par un libellé
-<REDACTED_règle>, après une nouvelle analyse du texte masqué. Codes de sortie : 0 rien à masquer (texte recopié) ;
+<REDACTED_règle>, après une nouvelle analyse du texte masqué (--custom-pack : détections du Pack de règles du client
+nommées d'après le libellé de leur détecteur, ou <REDACTED_custom_rule>). Codes de sortie : 0 rien à masquer (texte recopié) ;
 1 au moins un secret masqué ; 2 erreur ou échec du masquage (analyse incomplète, secret qui subsiste), et alors
 aucun texte sur la sortie standard. Le masquage réduit le risque, il ne le supprime pas.
 

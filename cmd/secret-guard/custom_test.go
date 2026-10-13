@@ -141,3 +141,18 @@ func TestTermsDigestCommand(t *testing.T) {
 		}
 	})
 }
+
+func TestRedactCustomPack(t *testing.T) {
+	files := memoryFiles{
+		"pack.json": customPackJSON(t),
+		"texte.txt": []byte("Le client CLI-00421337 suit le projet faucon."),
+	}
+	code, stdout, stderr := runCommand(t, files, "", "redact", "--custom-pack", "pack.json", "texte.txt")
+	if code != report.ExitFindings || stderr != "" ||
+		stdout != "Le client <REDACTED_Identifiant_client> suit le <REDACTED_Noms_de_code>." {
+		t.Fatalf("code %d, %q, %q", code, stdout, stderr)
+	}
+	if code, stdout, _ := runCommand(t, files, "", "redact", "--custom-pack", "absent.json", "texte.txt"); code != report.ExitError || stdout != "" {
+		t.Fatalf("code %d, %q", code, stdout)
+	}
+}

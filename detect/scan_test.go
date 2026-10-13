@@ -309,13 +309,14 @@ var allowedExported = map[string][]string{
 	"FingerprintKey": {},
 	// Décision par défaut d'un niveau (préréglage) et masquage : issue et analyses, jamais le texte masqué.
 	"Decision":        nil,
-	"RedactOptions":   {},
+	"RedactOptions":   {"Custom", "NeutralCustomNames"},
 	"SanitizeFailure": nil,
 	"SanitizeResult":  {"Failure", "Initial", "Final"},
 }
 
-// allowedCustomField est le seul champ pointeur d'une structure exportée : le Pack de règles du client d'une analyse.
-const allowedCustomField = "Options.Custom"
+// allowedCustomFields sont les seuls champs pointeurs des structures exportées : le Pack de règles du client d'une
+// analyse et d'un masquage.
+var allowedCustomFields = map[string]bool{"Options.Custom": true, "RedactOptions.Custom": true}
 
 // allowedFingerprintField est le seul champ dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé de
 // l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash).
@@ -427,7 +428,7 @@ func checkExportedType(t *testing.T, typ reflect.Type, allowed []string) {
 			t.Errorf("%s.%s : nom de champ interdit", typ.Name(), field.Name)
 		}
 		kind := field.Type.Kind()
-		if typ.Name()+"."+field.Name == allowedCustomField {
+		if allowedCustomFields[typ.Name()+"."+field.Name] {
 			// Pack de règles du client compilé (custom.Pack) : aucun champ exporté, détections en étendues seulement.
 			if field.Type != reflect.TypeFor[*custom.Pack]() {
 				t.Errorf("%s.%s : type %s", typ.Name(), field.Name, field.Type)

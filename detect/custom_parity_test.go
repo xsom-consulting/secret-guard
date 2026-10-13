@@ -5,7 +5,9 @@ package detect_test
 // est vérifié contre le résultat Go qu'il annonce ; aucun autre écart n'est admis.
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"reflect"
@@ -187,4 +189,90 @@ func TestCustomScanParity(t *testing.T) {
 		}
 	}
 	t.Logf("parité de l'analyse avec un Pack de règles du client : %d cas, dont %d écarts déclarés", len(cases), divergences)
+}
+
+type customRedactExpected struct {
+	Failure  detect.SanitizeFailure `json:"failure"`
+	Neutral  bool                   `json:"neutral"`
+	Redacted *struct {
+		Bytes  int     `json:"bytes"`
+		SHA256 string  `json:"sha256"`
+		Text   *string `json:"text"`
+	} `json:"redacted"`
+}
+
+type customRedactCase struct {
+	ID            string               `json:"id"`
+	Pack          string               `json:"pack"`
+	Input         json.RawMessage      `json:"input"`
+	InputEncoding string               `json:"inputEncoding"`
+	Expected      customRedactExpected `json:"expected"`
+	Divergence    *struct {
+		Reason string               `json:"reason"`
+		Go     customRedactExpected `json:"go"`
+	} `json:"divergence"`
+}
+
+// TestCustomRedactParity : masquage avec un Pack de règles du client (libellés des détecteurs, puis libellés neutres
+// si la nouvelle analyse échoue), comme redactAndRescan du moteur d'origine, avec la règle du moteur Go : tout constat
+// restant fait échouer le masquage.
+func TestCustomRedactParity(t *testing.T) {
+	var cases []customRedactCase
+	readJSON(t, customVectors+"redact.json", &cases)
+	var packCases []customPackCase
+	readJSON(t, customVectors+"packs.json", &packCases)
+	packs := map[string][]byte{}
+	for _, p := range packCases {
+		packs[p.ID] = customInput(t, p.Pack, p.PackEncoding)
+	}
+	initial, _ := pack.Initial()
+	rules, err := detect.LoadRules(initial)
+	if err != nil {
+		t.Fatal(err)
+	}
+	neutral := 0
+	for _, c := range cases {
+		compiled, err := custom.Compile(packs[c.Pack])
+		if err != nil {
+			t.Fatalf("%s : Pack %s refusé", c.ID, c.Pack)
+		}
+		content := customInput(t, c.Input, c.InputEncoding)
+		text, result := detect.RedactAndRescan(content, rules, detect.Options{Custom: compiled}, detect.RedactOptions{})
+		want := c.Expected
+		if c.Divergence != nil {
+			if c.Divergence.Reason != "backtracking_budget" {
+				t.Errorf("%s : raison d'écart non déclarée %q", c.ID, c.Divergence.Reason)
+			}
+			want = c.Divergence.Go
+		}
+		if result.Failure != want.Failure {
+			t.Errorf("%s : issue %s, attendu %s", c.ID, result.Failure, want.Failure)
+			continue
+		}
+		if want.Neutral {
+			neutral++
+		}
+		if want.Redacted == nil {
+			if text != nil {
+				t.Errorf("%s : texte rendu pour un masquage en échec", c.ID)
+			}
+			continue
+		}
+		sum := sha256.Sum256(text)
+		if len(text) != want.Redacted.Bytes || hex.EncodeToString(sum[:]) != want.Redacted.SHA256 ||
+			(want.Redacted.Text != nil && string(text) != *want.Redacted.Text) {
+			t.Errorf("%s : texte masqué différent (%d octets, attendu %d)", c.ID, len(text), want.Redacted.Bytes)
+		}
+		// Redact seul, libellés neutres demandés : aucun libellé de détecteur.
+		if result.Initial.Complete {
+			if neutralText, err := detect.Redact(content, result.Initial, detect.RedactOptions{Custom: compiled, NeutralCustomNames: true}); err != nil ||
+				strings.Contains(string(neutralText), "<REDACTED_Identifiant") {
+				t.Errorf("%s : libellés neutres : %v", c.ID, err)
+			}
+		}
+	}
+	if neutral == 0 {
+		t.Error("aucun vecteur de libellés neutres")
+	}
+	t.Logf("masquage avec un Pack de règles du client : %d cas, dont %d avec libellés neutres", len(cases), neutral)
 }
