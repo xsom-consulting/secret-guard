@@ -16,7 +16,8 @@
     "vectors:redact": "node redact/main.ts",
     "vectors:unicode": "node unicode-parity.ts",
     "vectors:hidden": "node hidden/main.ts",
-    "hidden:tables": "node hidden/unicode-tables.ts"
+    "hidden:tables": "node hidden/unicode-tables.ts",
+    "vectors:custom": "node custom/main.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.4",

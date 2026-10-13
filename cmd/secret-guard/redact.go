@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io"
 
+	"github.com/xsom-consulting/secret-guard/custom"
 	"github.com/xsom-consulting/secret-guard/detect"
 	"github.com/xsom-consulting/secret-guard/internal/report"
 )
@@ -15,6 +16,7 @@ func redact(args []string, stdin io.Reader, stdout, stderr io.Writer, opener fil
 	flags := flag.NewFlagSet("redact", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	packFile := flags.String("pack", "", "")
+	customFile := flags.String("custom-pack", "", "")
 	language := flags.String("language", "", "")
 	if err := flags.Parse(args); err != nil || flags.NArg() > 1 {
 		_, _ = io.WriteString(stderr, usage)
@@ -24,12 +26,20 @@ func redact(args []string, stdin io.Reader, stdout, stderr io.Writer, opener fil
 	if problem != "" {
 		return fail(stderr, problem)
 	}
+	var customPack *custom.Pack
+	if *customFile != "" {
+		if customPack, problem = loadCustomPack(*customFile, opener); problem != "" {
+			return fail(stderr, problem)
+		}
+	}
 	content, problem := readContent(flags.Arg(0), stdin, opener) // hidden.go
 	defer clear(content)
 	if problem != "" {
 		return fail(stderr, problem)
 	}
-	text, result := detect.RedactAndRescan(content, rules, detect.Options{LanguageID: *language}, detect.RedactOptions{})
+	// Constats du Pack de règles du client : libellé de leur détecteur, puis libellés neutres si un secret subsiste.
+	options := detect.Options{LanguageID: *language, Custom: customPack}
+	text, result := detect.RedactAndRescan(content, rules, options, detect.RedactOptions{})
 	defer clear(text)
 	switch result.Failure {
 	case detect.SanitizeNone:

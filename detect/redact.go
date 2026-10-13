@@ -13,6 +13,8 @@ import (
 	"errors"
 	"sort"
 	"strings"
+
+	"github.com/xsom-consulting/secret-guard/custom"
 )
 
 // Libellé d'une étendue masquée : <REDACTED_règle>.
@@ -21,9 +23,15 @@ const (
 	redactLabelClose = ">"
 )
 
-// RedactOptions règle le masquage. Vide dans cette version : l'option neutralCustomNames de Secret Guard ne vise que
-// les constats de règles propres à un client, que ce moteur n'a pas ; elle prendra place ici avec elles.
-type RedactOptions struct{}
+// RedactOptions règle le masquage des constats d'un Pack de règles du client (custom_rule). Custom est le Pack qui
+// les a produits : le libellé <REDACTED_…> d'un tel constat est tiré du libellé de son détecteur (placeholderName de
+// Secret Guard) ; sans Pack, ou avec NeutralCustomNames (neutralCustomNames de Secret Guard), il vaut
+// <REDACTED_custom_rule>. RedactAndRescan prend le Pack de ses Options quand Custom est nil. Sans effet sur les
+// constats des règles intégrées.
+type RedactOptions struct {
+	Custom             *custom.Pack
+	NeutralCustomNames bool
+}
 
 // SanitizeFailure est l'issue d'un masquage suivi d'une nouvelle analyse (RedactAndRescan), en liste fermée.
 type SanitizeFailure string
@@ -78,7 +86,7 @@ func Redact(content []byte, result Result, options RedactOptions) ([]byte, error
 	if !result.Complete || result.Failure != FailureNone {
 		return nil, ErrRedactIncomplete
 	}
-	spans, ok := mergeRedactSpans(len(content), result.Findings)
+	spans, ok := mergeRedactSpans(len(content), result.Findings, customPlaceholders(options))
 	if !ok {
 		return nil, ErrRedactSpan
 	}
@@ -92,11 +100,16 @@ var redactScan = Scan
 // et options (redactAndRescan de Secret Guard). Il rend le texte masqué seulement si les deux analyses sont
 // complètes et que la seconde n'a aucun constat (SanitizeNone) ; sinon nil, avec SanitizeIncomplete ou
 // SanitizeResidual, et la copie masquée est effacée. Sans constat dans l'entrée, le texte rendu est une copie de
-// content, sans seconde analyse (le moteur est déterministe : elle rendrait la même chose).
+// content, sans seconde analyse (le moteur est déterministe : elle rendrait la même chose). Avec un Pack de règles du
+// client, si la nouvelle analyse échoue alors que l'entrée a des constats du Pack, le masquage est refait une fois avec
+// des libellés neutres (<REDACTED_custom_rule>), puis analysé de nouveau.
 //
 // Le texte rendu est celui de l'appelant sans les valeurs détectées. La seconde analyse ne trouve que ce que les règles
 // décrivent : le masquage réduit le risque, il ne le supprime pas.
 func RedactAndRescan(content []byte, rules *Rules, options Options, redaction RedactOptions) ([]byte, SanitizeResult) {
+	if redaction.Custom == nil {
+		redaction.Custom = options.Custom
+	}
 	initial := redactScan(content, rules, options)
 	if !initial.Complete || initial.Failure != FailureNone {
 		return nil, SanitizeResult{Failure: SanitizeIncomplete, Initial: initial, Final: initial}
@@ -110,12 +123,17 @@ func RedactAndRescan(content []byte, rules *Rules, options Options, redaction Re
 		return nil, SanitizeResult{Failure: SanitizeIncomplete, Initial: initial, Final: incomplete(FailureScanError)}
 	}
 	final := redactScan(redacted, rules, options)
-	failure := SanitizeNone
-	switch {
-	case !final.Complete || final.Failure != FailureNone:
-		failure = SanitizeIncomplete
-	case len(final.Findings) > 0:
-		failure = SanitizeResidual
+	failure := sanitizeFailure(final)
+	if failure != SanitizeNone && !redaction.NeutralCustomNames && hasCustomFinding(initial) {
+		// Un libellé de détecteur peut contenir un mot que le Pack détecte : libellés neutres, puis une seule nouvelle
+		// analyse (redactAndRescan de Secret Guard).
+		clear(redacted)
+		redaction.NeutralCustomNames = true
+		if redacted, err = Redact(content, initial, redaction); err != nil {
+			return nil, SanitizeResult{Failure: SanitizeIncomplete, Initial: initial, Final: incomplete(FailureScanError)}
+		}
+		final = redactScan(redacted, rules, options)
+		failure = sanitizeFailure(final)
 	}
 	if failure != SanitizeNone {
 		clear(redacted)
@@ -126,7 +144,7 @@ func RedactAndRescan(content []byte, rules *Rules, options Options, redaction Re
 
 // mergeRedactSpans suit la fusion de redact de Secret Guard ; faux si une étendue sort du contenu. Les positions en
 // octets gardent l'ordre et les égalités des positions UTF-16 de l'origine (étendues aux limites de caractères).
-func mergeRedactSpans(length int, findings []Finding) ([]redactSpan, bool) {
+func mergeRedactSpans(length int, findings []Finding, names func(Finding) string) ([]redactSpan, bool) {
 	valid := make([]Finding, 0, len(findings))
 	for _, f := range findings {
 		if f.ByteStart < 0 || f.ByteEnd < f.ByteStart || f.ByteEnd > length {
@@ -152,7 +170,7 @@ func mergeRedactSpans(length int, findings []Finding) ([]redactSpan, bool) {
 			merged[n-1].end = max(merged[n-1].end, f.ByteEnd)
 			continue
 		}
-		merged = append(merged, redactSpan{start: f.ByteStart, end: f.ByteEnd, name: placeholderName(f.RuleID)})
+		merged = append(merged, redactSpan{start: f.ByteStart, end: f.ByteEnd, name: names(f)})
 	}
 	return merged, true
 }
@@ -172,6 +190,17 @@ func placeholderName(ruleID string) string {
 		}
 	}
 	return name.String()
+}
+
+// sanitizeFailure est l'issue d'une nouvelle analyse du texte masqué : tout constat restant fait échouer le masquage.
+func sanitizeFailure(final Result) SanitizeFailure {
+	switch {
+	case !final.Complete || final.Failure != FailureNone:
+		return SanitizeIncomplete
+	case len(final.Findings) > 0:
+		return SanitizeResidual
+	}
+	return SanitizeNone
 }
 
 // redactSpans écrit le texte masqué dans un seul tableau, alloué à sa taille exacte : aucune copie intermédiaire.

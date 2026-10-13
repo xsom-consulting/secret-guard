@@ -32,7 +32,8 @@ var (
 //
 // L'analyse est complète (Complete, FailureNone, constats dédupliqués triés par octet de début) ou incomplète, sans
 // aucun constat : FailureScanLimit pour une entrée de plus de MaxInputBytes octets, FailureScanError pour un budget
-// épuisé, plus de MaxFindings constats, des règles absentes ou une panique (rattrapée, jamais propagée). Une
+// épuisé, plus de MaxFindings constats, des règles absentes ou une panique (rattrapée, jamais propagée),
+// FailureCustomBudget ou FailureCustomTooMany pour le Pack de règles du client d'Options.Custom. Une
 // analyse incomplète est un blocage pour l'appelant. Une erreur d'exécution que Go ne rend pas rattrapable
 // (mémoire épuisée, pile dépassée) arrête le processus : l'appelant doit alors conclure à un échec, jamais à une autorisation.
 //
@@ -63,6 +64,12 @@ func scan(content []byte, rules *Rules, options Options, key *FingerprintKey) (r
 	public, ok := publicFindings(findings, key)
 	if !ok {
 		return incomplete(FailureScanError)
+	}
+	if options.Custom != nil {
+		var failure Failure
+		if public, failure = withCustomFindings(content, options.Custom, public); failure != FailureNone {
+			return incomplete(failure)
+		}
 	}
 	return Result{Complete: true, Failure: FailureNone, Findings: public}
 }

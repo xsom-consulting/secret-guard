@@ -7,6 +7,8 @@
 
 package detect
 
+import "github.com/xsom-consulting/secret-guard/custom"
+
 // Failure est l'issue d'une analyse incomplète, en liste fermée (champ failure du corpus de parité).
 type Failure string
 
@@ -19,6 +21,11 @@ const (
 	// FailureScanError : budget de travail épuisé (vues, fenêtres, décodages), plus de MaxFindings constats, règles
 	// absentes ou panique pendant l'analyse.
 	FailureScanError Failure = "scan_error"
+	// FailureCustomBudget : le Pack de règles du client (Options.Custom) a épuisé son budget de travail.
+	FailureCustomBudget Failure = "custom_budget"
+	// FailureCustomTooMany : le Pack de règles du client a trouvé plus de détections que l'analyse n'en garde
+	// (MaxFindings moins les constats des règles intégrées).
+	FailureCustomTooMany Failure = "custom_too_many"
 )
 
 // Level est le niveau d'un constat, déduit de son score (levelForScore de Secret Guard).
@@ -62,6 +69,9 @@ type Options struct {
 	// qui change la lecture des affectations ; vide : absent (undefined en JavaScript). Un identifiant vide mais
 	// présent n'est pas représentable.
 	LanguageID string
+	// Custom est un Pack de règles du client compilé par custom.Compile (nil : aucun). Ses détections s'ajoutent aux
+	// constats des règles intégrées (custom.go) ; il n'en retire ni n'en affaiblit aucun.
+	Custom *custom.Pack
 }
 
 func (o Options) language() language {

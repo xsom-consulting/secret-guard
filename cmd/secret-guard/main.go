@@ -1,9 +1,11 @@
 // Commande secret-guard : analyse un fichier ou l'entrée standard avec le moteur de détection, localement, sans
 // réseau, et écrit les constats en JSON, jamais la valeur détectée ; relève aussi les instructions cachées d'un texte
-// et les fichiers cités par « @ » dans un prompt.
+// et les fichiers cités par « @ » dans un prompt ; calcule, chez le client, les condensats de termes confidentiels d'un
+// Pack de règles du client.
 //
-//	secret-guard scan [--pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
-//	secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+//	secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+//	secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
+//	secret-guard terms digest --salt <sel> [fichier|-]
 //	secret-guard hidden [--strip] [fichier|-]
 //	secret-guard mentions [fichier|-]
 //	secret-guard version
@@ -24,6 +26,7 @@ import (
 	"os"
 	"runtime/debug"
 
+	"github.com/xsom-consulting/secret-guard/custom"
 	"github.com/xsom-consulting/secret-guard/detect"
 	"github.com/xsom-consulting/secret-guard/internal/limits"
 	"github.com/xsom-consulting/secret-guard/internal/report"
@@ -31,8 +34,9 @@ import (
 )
 
 const usage = `Usage :
-  secret-guard scan [--pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
-  secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
+  secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+  secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
+  secret-guard terms digest --salt <sel> [fichier|-]
   secret-guard hidden [--strip] [fichier|-]
   secret-guard mentions [fichier|-]
   secret-guard version
@@ -42,6 +46,10 @@ scan analyse le fichier donné, ou l'entrée standard (sans fichier, ou « - »)
 JSON sur une ligne, {"complete", "failure", "findings": [{"ruleId", "secretType", "encoding", "score", "level",
 "byteStart", "byteEnd"}]} ; jamais la valeur détectée.
 
+  --custom-pack <fichier>    Pack de règles du client (charge JSON du schéma CustomPack, signature déjà vérifiée
+                             par celui qui le distribue) : ses détections s'ajoutent aux constats (ruleId
+                             « xsom_<détecteur> », secretType « custom_rule ») ; issues custom_budget et
+                             custom_too_many possibles. Incompatible avec --fingerprint-key.
   --language <id>            identifiant de langage du contenu (« typescript », « dotenv »…), qui change la
                              lecture des affectations
   --fingerprint-key <fichier> clé d'Empreinte locale : 64 caractères hexadécimaux (32 octets), lue, jamais écrite ;
@@ -52,7 +60,8 @@ Codes de sortie : 0 aucun constat ; 1 au moins un constat ; 2 erreur ou analyse 
 1 Mio, budget épuisé), qui ne vaut jamais « rien trouvé ».
 
 redact écrit sur la sortie standard le texte où chaque secret détecté est remplacé par un libellé
-<REDACTED_règle>, après une nouvelle analyse du texte masqué. Codes de sortie : 0 rien à masquer (texte recopié) ;
+<REDACTED_règle>, après une nouvelle analyse du texte masqué (--custom-pack : détections du Pack de règles du client
+nommées d'après le libellé de leur détecteur, ou <REDACTED_custom_rule>). Codes de sortie : 0 rien à masquer (texte recopié) ;
 1 au moins un secret masqué ; 2 erreur ou échec du masquage (analyse incomplète, secret qui subsiste), et alors
 aucun texte sur la sortie standard. Le masquage réduit le risque, il ne le supprime pas.
 
@@ -60,6 +69,12 @@ hidden relève les instructions cachées (caractères d'étiquette Unicode, cont
 caractères invisibles, suites de sélecteurs de variante) : {"complete", "hidden", "findings": [{"kind", "line",
 "column", "count", "byteStart", "byteEnd"}]}, jamais ce que les caractères écrivent. --strip écrit à la place le texte
 sans ces caractères. Codes de sortie : 0 rien ; 1 au moins un caractère signalé ; 2 erreur ou texte de plus de 1 Mio.
+
+terms digest calcule les condensats d'une liste de termes confidentiels, un terme par ligne (lignes vides ignorées),
+avec le sel du détecteur (base64 de 16 ou 32 octets) : {"type":"terms","salt","digests","maxWords"}, à reprendre
+dans le champ match d'un détecteur. Aucun terme n'est écrit, ni en sortie ni dans un message d'erreur : seuls les
+condensats SHA-256 salés de leur forme normalisée sortent. Codes de sortie : 0 ; 2 erreur (sel, terme sans mot ou de
+plus de 4 mots, plus de 5 000 termes, entrée de plus de 1 Mio).
 
 mentions relève les fichiers cités par « @ » dans un prompt (« @chemin », « @"chemin" », « @chemin#L10-20 ») :
 {"mentions": [{"path", "lines", "byteStart", "byteEnd"}]}, sans lire ni résoudre aucun fichier. Codes de sortie : 0 ;
@@ -92,6 +107,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files)
 		return scan(args[1:], stdin, stdout, stderr, opener)
 	case "redact":
 		return redact(args[1:], stdin, stdout, stderr, opener)
+	case "terms":
+		return termsCommand(args[1:], stdin, stdout, stderr, opener)
 	case "hidden":
 		return hiddenCommand(args[1:], stdin, stdout, stderr, opener)
 	case "mentions":
@@ -119,6 +136,7 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	flags := flag.NewFlagSet("scan", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 	packFile := flags.String("pack", "", "")
+	customFile := flags.String("custom-pack", "", "")
 	language := flags.String("language", "", "")
 	keyFile := flags.String("fingerprint-key", "", "")
 	if err := flags.Parse(args); err != nil {
@@ -132,9 +150,18 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	if *keyFile != "" && *language != "" {
 		return fail(stderr, "--fingerprint-key et --language ne se combinent pas")
 	}
+	if *keyFile != "" && *customFile != "" {
+		return fail(stderr, "--fingerprint-key et --custom-pack ne se combinent pas")
+	}
 	rules, problem := loadRules(*packFile, opener)
 	if problem != "" {
 		return fail(stderr, problem)
+	}
+	var customPack *custom.Pack
+	if *customFile != "" {
+		if customPack, problem = loadCustomPack(*customFile, opener); problem != "" {
+			return fail(stderr, problem)
+		}
 	}
 	var key *detect.FingerprintKey
 	if *keyFile != "" {
@@ -164,7 +191,7 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	if key != nil {
 		result = detect.ScanWithFingerprint(content, rules, *key)
 	} else {
-		result = detect.Scan(content, rules, detect.Options{LanguageID: *language})
+		result = detect.Scan(content, rules, detect.Options{LanguageID: *language, Custom: customPack})
 	}
 	if _, err := stdout.Write(report.JSON(result)); err != nil {
 		return report.ExitError
