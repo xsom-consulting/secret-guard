@@ -74,14 +74,14 @@ node --no-warnings wasm/bench.mjs
 
 Module WASI preview 1 en mode bibliothèque : instancié une fois, il garde ses règles chargées et analyse à la demande ; `wasm/secret-guard.mjs` est un chargeur sans dépendance (`node:wasi` sous Node, une couche WASI ailleurs). Choix de `wasip1` plutôt que `js/wasm` : interface WASI standard sans colle JavaScript liée à une version exacte de Go (`wasm_exec.js`), exécutable par Node, Wasmtime ou une couche WASI de navigateur, et la liste des fonctions importées montre ce que le module peut faire (ni réseau, ni ouverture de fichier). La ligne de commande se construit aussi pour WASI (`GOOS=wasip1 GOARCH=wasm go build ./cmd/secret-guard`).
 
-Mesures du 13 octobre 2026 sur une seule machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2), indicatives :
+Mesures du 13 octobre 2026 sur une seule machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2, `node wasm/bench.mjs`, trois séries), indicatives :
 
 | Mesure | Valeur |
 |---|---|
-| Taille du `.wasm` | 5,97 Mo brut ; 1,64 Mo gzip -9 ; 1,21 Mo brotli |
-| Démarrage (compilation, instanciation, Pack initial chargé), médiane de 10 | 19 ms |
+| Taille du `.wasm` | 5,97 Mo brut ; 1,64 Mo gzip -9 ; 1,20 Mo brotli |
+| Démarrage (compilation, instanciation, Pack initial chargé), médiane de 10 | 20 ms (première instance du processus : 70 à 90 ms) |
 | Première analyse d'un texte court | 9 ms |
-| Analyse de 64 Kio (entrée de `BenchmarkScan64KiB`), médiane de 20 | 306 ms (Go natif : 66 ms) |
+| Analyse de 64 Kio (entrée de `BenchmarkScan64KiB`), médiane de 20 | 300 à 360 ms selon la série, minimum 304 ms (Go natif : 66 ms) |
 
 ### Régénérer le Pack initial et le corpus
 
@@ -132,7 +132,7 @@ It is the Go port of the Secret Guard TypeScript engine (origin, license and cha
 
 **Command line**: `secret-guard scan [--pack <file>] [--language <id>] [--fingerprint-key <file>] [file|-]`, one-line JSON output; exit codes 0 (no finding), 1 (findings), 2 (error or incomplete scan, never "nothing found").
 
-**WebAssembly**: `GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm`; WASI preview 1 reactor module with a dependency-free JavaScript loader (`wasm/secret-guard.mjs`), tested under Node (`node --test wasm/secret-guard.test.mjs`). Measured on 13 October 2026 on one machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2), indicative: 5.97 MB raw, 1.64 MB gzip, 1.21 MB brotli; 19 ms startup (median of 10); 306 ms to scan 64 KiB (native Go: 66 ms).
+**WebAssembly**: `GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm`; WASI preview 1 reactor module with a dependency-free JavaScript loader (`wasm/secret-guard.mjs`), tested under Node (`node --test wasm/secret-guard.test.mjs`). Measured on 13 October 2026 on one machine (Apple M2 Pro, Node 26.0.0, Go 1.27.2), indicative: 5.97 MB raw, 1.64 MB gzip, 1.20 MB brotli; 20 ms startup (median of 10; 70 to 90 ms for the first instance of the process); 300 to 360 ms to scan 64 KiB depending on the run (native Go: 66 ms).
 
 **Regenerating**: the TypeScript generator in `generator/` (Node 26) rebuilds the initial Pack, the engine patterns and the parity corpus (`npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout> --check`). Never edit these files by hand.
 
