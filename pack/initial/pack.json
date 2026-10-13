@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 1,
+  "minAgentVersion": "0.0.0",
+  "packVersion": 1,
+  "issuedAt": "2026-10-09T00:00:00Z",
+  "rules": [
+    {
+      "ruleId": "private_key_pem",
+      "family": "private_key",
+      "secretType": "private_key",
+      "score": 100,
+      "validator": "",
+      "pattern": "-----BEGIN ((?:(?:RSA|EC|DSA|OPENSSH|ENCRYPTED) )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "private_key_pem_incomplete",
+      "family": "private_key",
+      "secretType": "private_key",
+      "score": 90,
+      "validator": "",
+      "pattern": "-----BEGIN ((?:(?:RSA|EC|DSA|OPENSSH|ENCRYPTED) )?PRIVATE KEY|PGP PRIVATE KEY BLOCK)-----",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "github_fine_grained_pat",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bgithub_pat_[A-Za-z0-9_]{30,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "github_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bgh[pousr]_[A-Za-z0-9]{36,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gitlab_pat",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bglpat-[A-Za-z0-9_-]{20,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "openrouter_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bsk-or-v1-[A-Za-z0-9_-]{32,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "anthropic_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bsk-ant-(?:api\\d{2}-)?[A-Za-z0-9_-]{20,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "openai_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 92,
+      "validator": "",
+      "pattern": "\\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{20,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "stripe_secret_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{20,128}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "slack_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bxox[baprs]-[A-Za-z0-9-]{10,200}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "slack_webhook",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "https:\\/\\/hooks\\.slack\\.com\\/services\\/[A-Za-z0-9_/-]{20,300}",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "google_api_key",
+      "family": "fixed_pattern",
+      "secretType": "api_key",
+      "score": 90,
+      "validator": "",
+      "pattern": "\\bAIza[0-9A-Za-z_-]{35}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "google_oauth_token",
+      "family": "fixed_pattern",
+      "secretType": "access_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bya29\\.[0-9A-Za-z_-]{20,255}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sendgrid_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bSG\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "npm_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bnpm_[A-Za-z0-9]{36}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "huggingface_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bhf_[A-Za-z0-9]{34,100}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "databricks_pat",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bdapi[0-9a-fA-F]{32}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "digitalocean_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bdop_v1_[0-9a-fA-F]{64}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "shopify_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bshp(?:at|ss|ca|pa)_[0-9a-fA-F]{32}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_storage_key",
+      "family": "fixed_pattern",
+      "secretType": "cloud_credential",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bAccountKey=([A-Za-z0-9+/]{40,120}={0,2})",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_access_key_id",
+      "family": "fixed_pattern",
+      "secretType": "cloud_credential",
+      "score": 45,
+      "validator": "",
+      "pattern": "\\b(?:AKIA|ASIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA)[A-Z0-9]{16}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "jwt",
+      "family": "fixed_pattern",
+      "secretType": "jwt",
+      "score": 60,
+      "validator": "jwt_structure",
+      "pattern": "\\beyJ[A-Za-z0-9_-]{4,}\\.eyJ[A-Za-z0-9_-]{4,}\\.[A-Za-z0-9_-]{8,}\\b",
+      "minLength": 24,
+      "maxLength": 14344
+    },
+    {
+      "ruleId": "database_url_credentials",
+      "family": "credential_url",
+      "secretType": "database_credentials",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(?:[hH][tT][tT][pP][sS]?|[fF][tT][pP]|[pP][oO][sS][tT][gG][rR][eE][sS](?:[qQ][lL])?|[mM][yY][sS][qQ][lL]|[mM][aA][rR][iI][aA][dD][bB]|[mM][oO][nN][gG][oO][dD][bB](?:\\+[sS][rR][vV])?|[rR][eE][dD][iI][sS](?:[sS])?|[aA][mM][qQ][pP](?:[sS])?):\\/\\/[^\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"'<>]+",
+      "minLength": 7,
+      "maxLength": 2062
+    },
+    {
+      "ruleId": "basic_auth_url",
+      "family": "credential_url",
+      "secretType": "password",
+      "score": 90,
+      "validator": "",
+      "pattern": "\\b(?:[hH][tT][tT][pP][sS]?|[fF][tT][pP]|[pP][oO][sS][tT][gG][rR][eE][sS](?:[qQ][lL])?|[mM][yY][sS][qQ][lL]|[mM][aA][rR][iI][aA][dD][bB]|[mM][oO][nN][gG][oO][dD][bB](?:\\+[sS][rR][vV])?|[rR][eE][dD][iI][sS](?:[sS])?|[aA][mM][qQ][pP](?:[sS])?):\\/\\/[^\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"'<>]+",
+      "minLength": 7,
+      "maxLength": 2062
+    },
+    {
+      "ruleId": "contextual_password",
+      "family": "contextual_assignment",
+      "secretType": "password",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_private_key",
+      "family": "contextual_assignment",
+      "secretType": "private_key",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_cloud_credential",
+      "family": "contextual_assignment",
+      "secretType": "cloud_credential",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_api_key",
+      "family": "contextual_assignment",
+      "secretType": "api_key",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_access_token",
+      "family": "contextual_assignment",
+      "secretType": "access_token",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_generic_secret",
+      "family": "contextual_assignment",
+      "secretType": "generic_secret",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contextual_database_credentials",
+      "family": "contextual_assignment",
+      "secretType": "database_credentials",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cookie_session_credential",
+      "family": "contextual_assignment",
+      "secretType": "access_token",
+      "score": 70,
+      "validator": "",
+      "pattern": "",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cli_basic_auth",
+      "family": "contextual_assignment",
+      "secretType": "password",
+      "score": 70,
+      "validator": "",
+      "pattern": "(?m)(?:^|[\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}])(?:-[uU]|--[uU][sS][eE][rR])(?:=|[\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]+)(?:\"([^:\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']{1,256}):([^\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']+)\"|'([^:\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']{1,256}):([^\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']+)'|([^:\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']{1,256}):([^\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}\"']+))",
+      "minLength": 3,
+      "maxLength": 1281
+    },
+    {
+      "ruleId": "docker_auth",
+      "family": "contextual_assignment",
+      "secretType": "password",
+      "score": 70,
+      "validator": "",
+      "pattern": "(?m)(?:^|[\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF},{])[\"']?([aA][uU][tT][hH])[\"']?[\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*:[\\t\\n\\x0B\\f\\r \\x{00A0}\\x{1680}\\x{2000}-\\x{200A}\\x{2028}\\x{2029}\\x{202F}\\x{205F}\\x{3000}\\x{FEFF}]*",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "high_entropy",
+      "family": "entropy",
+      "secretType": "high_entropy",
+      "score": 35,
+      "validator": "",
+      "pattern": "[A-Za-z0-9+/_-]{20,512}={0,2}",
+      "minLength": 0,
+      "maxLength": 0
+    }
+  ]
+}
