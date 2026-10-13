@@ -14,6 +14,7 @@
 //	sg_clear_fingerprint_key()                               efface la clé
 //	sg_scan(pointeur, longueur, langage, longueur) → i64     résultat JSON : (pointeur << 32) | longueur, 0 : refus
 //	sg_scan_with_fingerprint(pointeur, longueur) → i64       même chose, avec l'Empreinte locale de chaque constat
+//	sg_redact(pointeur, longueur, langage, longueur) → i64   masquage : document JSON, « \n », texte masqué (redact.go)
 //
 // Le résultat est le document JSON de la ligne de commande (internal/report) : jamais la valeur détectée. Le module
 // n'importe que les fonctions WASI que demande le runtime Go (mémoire, hasard des tables de hachage, horloge du

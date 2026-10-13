@@ -11,6 +11,9 @@
 //
 // Décider sur result.complete et result.failure : une analyse incomplète (entrée de plus de 1 Mio, budget épuisé)
 // n'a aucun constat et ne vaut jamais « rien trouvé ». Aucun constat ne porte la valeur détectée.
+//
+//   const { failure, redacted } = guard.redact(new TextEncoder().encode(clipboardText));
+//   // failure : 'none' (redacted : octets du texte masqué), 'incomplete' ou 'residual' (redacted : null, ne rien coller)
 
 /** Taille d'entrée la plus grande analysée (detect.MaxInputBytes) ; au-delà, l'analyse rend scan_limit. */
 export const MAX_INPUT_BYTES = 1 << 20;
@@ -69,6 +72,42 @@ export class SecretGuard {
       return this.#readResult(this.#exports.sg_scan(ptr, input.length, languagePtr, language.length));
     } finally {
       this.#exports.sg_free(ptr); // efface la copie de l'entrée
+      if (languagePtr !== 0) this.#exports.sg_free(languagePtr);
+    }
+  }
+
+  /**
+   * Masque des octets (Uint8Array) : chaque secret détecté est remplacé par un libellé <REDACTED_règle>, puis le texte
+   * masqué est analysé de nouveau. Rend { failure, initial, final, redacted } : failure 'none' avec redacted, les
+   * octets du texte masqué (copie que l'appelant peut effacer) ; 'incomplete' (analyse incomplète, entrée de plus de
+   * 1 Mio comprise) ou 'residual' (un secret subsiste après masquage) avec redacted null : rien n'est à envoyer.
+   * initial et final sont les analyses de l'entrée et du texte masqué, dans la forme de scan.
+   */
+  redact(bytes, languageId = '') {
+    const input = bytes.subarray(0, MAX_INPUT_BYTES + 1);
+    if (input.length === 0) {
+      const empty = { complete: true, failure: 'none', findings: [] };
+      return { failure: 'none', initial: empty, final: empty, redacted: new Uint8Array(0) };
+    }
+    const ptr = this.#copyIn(input);
+    const language = encoder.encode(languageId);
+    const languagePtr = language.length === 0 ? 0 : this.#copyIn(language);
+    try {
+      const packed = this.#exports.sg_redact(ptr, input.length, languagePtr, language.length);
+      if (packed === 0n) throw new Error('secret-guard : masquage refusé par le module');
+      const out = Number(packed >> 32n);
+      const length = Number(packed & 0xffffffffn);
+      try {
+        const buffer = new Uint8Array(this.#exports.memory.buffer, out, length);
+        const end = buffer.indexOf(0x0a);
+        const document = JSON.parse(decoder.decode(buffer.subarray(0, end)));
+        const redacted = document.failure === 'none' ? buffer.slice(end + 1) : null;
+        return { ...document, redacted };
+      } finally {
+        this.#exports.sg_free(out); // efface la copie du texte masqué dans le module
+      }
+    } finally {
+      this.#exports.sg_free(ptr);
       if (languagePtr !== 0) this.#exports.sg_free(languagePtr);
     }
   }

@@ -28,7 +28,7 @@ test('le module n’importe ni réseau (sock_*) ni ouverture de fichier (path_op
   }
   const exports = WebAssembly.Module.exports(new WebAssembly.Module(wasmBytes)).map((entry) => entry.name).sort();
   assert.deepEqual(exports, [
-    '_initialize', 'memory', 'sg_alloc', 'sg_clear_fingerprint_key', 'sg_free', 'sg_load_pack', 'sg_scan',
+    '_initialize', 'memory', 'sg_alloc', 'sg_clear_fingerprint_key', 'sg_free', 'sg_load_pack', 'sg_redact', 'sg_scan',
     'sg_scan_with_fingerprint', 'sg_set_fingerprint_key',
   ]);
 });
@@ -86,4 +86,36 @@ test('un autre Pack remplace le Pack initial ; un Pack refusé laisse le Pack en
   assert.equal(guard.loadPack(encoder.encode(JSON.stringify(pack))), true);
   const result = guard.scan(encoder.encode(`demo_abcdefgh ${token}`));
   assert.deepEqual(result.findings.map((f) => f.ruleId), ['demo_rule']);
+});
+
+const decoder = new TextDecoder('utf-8', { fatal: true });
+
+test('masquage : texte masqué sans la valeur, analyse finale sans constat', async () => {
+  const guard = await load();
+  const result = guard.redact(encoder.encode(`é😀 ${token} fin\n`));
+  assert.equal(result.failure, 'none');
+  assert.equal(result.initial.findings.length, 1);
+  assert.deepEqual(result.final, { complete: true, failure: 'none', findings: [] });
+  assert.equal(decoder.decode(result.redacted), 'é😀 <REDACTED_github_token> fin\n');
+  assert.ok(!JSON.stringify(result.initial).includes(token.slice(4, 12)));
+});
+
+test('masquage : rien à masquer, texte recopié ; entrée vide', async () => {
+  const guard = await load();
+  const clean = guard.redact(encoder.encode('rien à signaler\n'), 'typescript');
+  assert.equal(clean.failure, 'none');
+  assert.equal(decoder.decode(clean.redacted), 'rien à signaler\n');
+  assert.deepEqual(guard.redact(new Uint8Array(0)).redacted, new Uint8Array(0));
+});
+
+test('masquage en échec : incomplete (plus de 1 Mio) ou residual, aucun texte', async () => {
+  const guard = await load();
+  const big = guard.redact(new Uint8Array(MAX_INPUT_BYTES + 10).fill(0x61));
+  assert.equal(big.failure, 'incomplete');
+  assert.equal(big.initial.failure, 'scan_limit');
+  assert.equal(big.redacted, null);
+  const residual = guard.redact(encoder.encode(`API_KEY=${token}\nNEXT=another`));
+  assert.equal(residual.failure, 'residual');
+  assert.equal(residual.redacted, null);
+  assert.ok(residual.final.findings.length > 0);
 });
