@@ -13,7 +13,8 @@
     "test": "vitest run",
     "pack:initial": "node rule-pack/generate-initial-pack.ts",
     "vectors:detection": "node corpus/main.ts",
-    "vectors:unicode": "node unicode-parity.ts"
+    "vectors:unicode": "node unicode-parity.ts",
+    "vectors:custom": "node custom/main.ts"
   },
   "devDependencies": {
     "@types/node": "26.6.4",
