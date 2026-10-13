@@ -15,6 +15,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/xsom-consulting/secret-guard/custom"
 )
 
 // syntheticGitHubToken est une valeur synthétique de la règle github_token, construite à l'exécution (jamais écrite
@@ -299,13 +301,16 @@ var allowedExported = map[string][]string{
 	"Level":       nil,
 	"Finding":     {"RuleID", "SecretType", "Encoding", "Score", "Level", "ByteStart", "ByteEnd", "LocalFingerprint"},
 	"Result":      {"Complete", "Failure", "Findings"},
-	"Options":     {"LanguageID"},
+	"Options":     {"LanguageID", "Custom"},
 	"Rules":       {},
 	"PackRefusal": nil,
 	"PackError":   {"RuleID", "Reason"},
 	// Clé d'Empreinte locale, sans champ exporté (octets derrière un pointeur non exporté).
 	"FingerprintKey": {},
 }
+
+// allowedCustomField est le seul champ pointeur d'une structure exportée : le Pack de règles du client d'une analyse.
+const allowedCustomField = "Options.Custom"
 
 // allowedFingerprintField est le seul champ dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé de
 // l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash).
@@ -415,6 +420,13 @@ func checkExportedType(t *testing.T, typ reflect.Type, allowed []string) {
 			t.Errorf("%s.%s : nom de champ interdit", typ.Name(), field.Name)
 		}
 		kind := field.Type.Kind()
+		if typ.Name()+"."+field.Name == allowedCustomField {
+			// Pack de règles du client compilé (custom.Pack) : aucun champ exporté, détections en étendues seulement.
+			if field.Type != reflect.TypeFor[*custom.Pack]() {
+				t.Errorf("%s.%s : type %s", typ.Name(), field.Name, field.Type)
+			}
+			continue
+		}
 		if kind == reflect.Slice {
 			if field.Type.Elem() != reflect.TypeFor[Finding]() {
 				t.Errorf("%s.%s : tranche de %s", typ.Name(), field.Name, field.Type.Elem())
