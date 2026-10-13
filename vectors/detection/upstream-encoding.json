@@ -1,0 +1,14 @@
+[
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects malformed input: %s [0] #1","input":"A","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects malformed input: %s [1] #1","input":"@@@=","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects malformed input: %s [2] #1","input":"A===","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > supports standard and URL-safe alphabets with optional padding #1","input":"aGVsbG8=","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > supports standard and URL-safe alphabets with optional padding #2","input":"eyJvayI6dHJ1ZX0","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects decoded output beyond the caller limit #1","input":"aGVsbG8=","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects invalid UTF-8, NUL, or mostly control bytes: %s [0] #1","input":"/w==","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects invalid UTF-8, NUL, or mostly control bytes: %s [1] #1","input":"AA==","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > bounded Base64 decoding > rejects invalid UTF-8, NUL, or mostly control bytes: %s [2] #1","input":"AQIDBA==","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > JWT structural validation > requires exactly three segments and a non-trivial signature #1","input":"one.two","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > JWT structural validation > requires exactly three segments and a non-trivial signature #2","input":"eyJ9.eyJ9.short","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}},
+{"id":"upstream/encoding.test.ts > JWT structural validation > rejects JSON arrays even when each segment decodes cleanly #1","input":"W10.W10.abcdefgh","inputEncoding":"utf8","expected":{"complete":true,"failure":"none","findings":[]}}
+]

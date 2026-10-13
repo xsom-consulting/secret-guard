@@ -1,0 +1,54 @@
+{
+  "formatVersion": 1,
+  "description": "Empreinte locale : hexadécimal minuscule des 16 premiers octets de HMAC-SHA256(clé, valeur normalisée). Clé synthétique de 32 octets : octet i = (keyFrom + i) mod 256. Valeur normalisée : octets UTF-8 de value, ou octets de valueHex. Aucune clé ni valeur réelle.",
+  "cases": [
+    {
+      "name": "texte ASCII",
+      "keyFrom": 0,
+      "value": "valeur-de-test-ascii",
+      "fingerprint": "5357e6db579a4a690e94da2d9e1accaa"
+    },
+    {
+      "name": "même texte, autre clé",
+      "keyFrom": 1,
+      "value": "valeur-de-test-ascii",
+      "fingerprint": "c600b9d933dd1844a9ed600f821d6928"
+    },
+    {
+      "name": "texte qui diffère d’un octet",
+      "keyFrom": 0,
+      "value": "valeur-de-test-ascii.",
+      "fingerprint": "3039fc33bed566c1c31ee67da930a336"
+    },
+    {
+      "name": "texte UTF-8 multioctet",
+      "keyFrom": 0,
+      "value": "clé-élevée→ff-日本",
+      "fingerprint": "97096e70c7d5b30e9a47791fcd4e311e"
+    },
+    {
+      "name": "octets décodés non UTF-8",
+      "keyFrom": 0,
+      "valueHex": "ff00fe01c3",
+      "fingerprint": "508584b3af62c99462e6995e39789969"
+    },
+    {
+      "name": "valeur vide",
+      "keyFrom": 0,
+      "value": "",
+      "fingerprint": "d38b42096d80f45f826b44a9d5607de7"
+    },
+    {
+      "name": "clé qui passe par 255 puis 0",
+      "keyFrom": 240,
+      "value": "valeur-de-test-ascii",
+      "fingerprint": "eb1bfb258831e91661a665ed02e229de"
+    },
+    {
+      "name": "valeur longue",
+      "keyFrom": 7,
+      "value": "abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-abc-",
+      "fingerprint": "49b342ee1dfb938ef19077520b39d52f"
+    }
+  ]
+}

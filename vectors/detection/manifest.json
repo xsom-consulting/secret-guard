@@ -1,0 +1,18 @@
+{
+  "formatVersion": 1,
+  "upstreamCommit": "c177a447b8cdf8ce07e0c3160ea45dace99b6dc9",
+  "files": [
+    {"file":"edge-cases.json","cases":84},
+    {"file":"limits.json","cases":4},
+    {"file":"rules-contextual.json","cases":152},
+    {"file":"rules-credential-url.json","cases":34},
+    {"file":"rules-entropy.json","cases":19},
+    {"file":"rules-fixed.json","cases":106},
+    {"file":"rules-private-key.json","cases":19},
+    {"file":"upstream-encoding.json","cases":12},
+    {"file":"upstream-scan.json","cases":111},
+    {"file":"upstream-security.json","cases":126},
+    {"file":"upstream-text.json","cases":5},
+    {"file":"views.json","cases":151}
+  ]
+}
