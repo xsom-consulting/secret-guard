@@ -43,6 +43,8 @@ jobs:
       # écart, jamais une entrée).
       - name: "Parité à 100 % avec Secret Guard (vectors/detection/, 823 cas)"
         run: go test -count=1 -v -run '^TestParity$' ./detect
+      - name: "Parité du masquage et des décisions (vectors/redact.json, vectors/decision.json)"
+        run: go test -count=1 -v -run '^(TestRedactParity|TestDecisionParity|TestRedactLeavesNoValue)$' ./detect
       - name: "Parité à 100 % avec hidden.ts et mentionedPaths (vectors/hidden.json, vectors/mentions.json)"
         run: go test -count=1 -v -run '^(TestHiddenParity|TestMentionsParity)$' ./hidden ./mentions
       - name: Couverture du moteur (detect, pack, hidden, mentions, internal ≥ 80 %)

@@ -305,6 +305,11 @@ var allowedExported = map[string][]string{
 	"PackError":   {"RuleID", "Reason"},
 	// Clé d'Empreinte locale, sans champ exporté (octets derrière un pointeur non exporté).
 	"FingerprintKey": {},
+	// Décision par défaut d'un niveau (préréglage) et masquage : issue et analyses, jamais le texte masqué.
+	"Decision":        nil,
+	"RedactOptions":   {},
+	"SanitizeFailure": nil,
+	"SanitizeResult":  {"Failure", "Initial", "Final"},
 }
 
 // allowedFingerprintField est le seul champ dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé de
@@ -367,14 +372,15 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		// Variables exportées : liste fermée (constantes : types de la liste fermée ou entiers, vérifiés par le
 		// compilateur et par les types ci-dessous).
 		slices.Sort(values)
-		if want := []string{"ErrFingerprintKeyInvalid", "ErrPackUnusable"}; !slices.Equal(values, want) {
+		if want := []string{"ErrFingerprintKeyInvalid", "ErrPackUnusable", "ErrRedactIncomplete", "ErrRedactSpan"}; !slices.Equal(values, want) {
 			t.Errorf("variables exportées %v, attendu %v", values, want)
 		}
 		slices.Sort(funcs)
 		if want := []string{
-			// méthode Has : Rules.Has, rend un booléen, jamais une valeur.
-			"LoadRules", "NewFingerprintKey", "Scan", "ScanWithFingerprint", "méthode Error", "méthode GoString",
-			"méthode Has", "méthode String", "méthode Unwrap", "méthode Wipe",
+			// méthode Has : Rules.Has, rend un booléen, jamais une valeur. Redact et RedactAndRescan rendent le texte
+			// de l'appelant sans les valeurs détectées (TestNoExportedFunctionReturnsValue, TestRedactLeavesNoValue).
+			"DecisionForLevel", "LoadRules", "NewFingerprintKey", "Redact", "RedactAndRescan", "Scan", "ScanWithFingerprint",
+			"méthode Error", "méthode GoString", "méthode Has", "méthode String", "méthode Unwrap", "méthode Wipe",
 		}; !slices.Equal(funcs, want) {
 			t.Errorf("fonctions exportées %v, attendu %v", funcs, want)
 		}
@@ -383,7 +389,8 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		for _, typ := range []reflect.Type{
 			reflect.TypeFor[Encoding](), reflect.TypeFor[Failure](), reflect.TypeFor[Level](), reflect.TypeFor[Finding](),
 			reflect.TypeFor[Result](), reflect.TypeFor[Options](), reflect.TypeFor[Rules](), reflect.TypeFor[PackRefusal](),
-			reflect.TypeFor[PackError](), reflect.TypeFor[FingerprintKey](),
+			reflect.TypeFor[PackError](), reflect.TypeFor[FingerprintKey](), reflect.TypeFor[Decision](),
+			reflect.TypeFor[RedactOptions](), reflect.TypeFor[SanitizeFailure](), reflect.TypeFor[SanitizeResult](),
 		} {
 			if !found[typ.Name()] {
 				t.Errorf("type %s absent du relevé", typ.Name())
@@ -415,6 +422,10 @@ func checkExportedType(t *testing.T, typ reflect.Type, allowed []string) {
 			t.Errorf("%s.%s : nom de champ interdit", typ.Name(), field.Name)
 		}
 		kind := field.Type.Kind()
+		if field.Type == reflect.TypeFor[Result]() {
+			// Résultat d'analyse (SanitizeResult) : ses champs sont relevés comme ceux de Result.
+			continue
+		}
 		if kind == reflect.Slice {
 			if field.Type.Elem() != reflect.TypeFor[Finding]() {
 				t.Errorf("%s.%s : tranche de %s", typ.Name(), field.Name, field.Type.Elem())
