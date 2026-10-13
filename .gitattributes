@@ -1,0 +1,4 @@
+# Fins de ligne \n partout, y compris sous Windows : gofmt refuse les CRLF, et les octets générés, comparés ou
+# hachés (Pack initial et sa copie d'origine, corpus, schéma, motifs générés, tables Unicode) doivent être
+# identiques sur chaque système.
+* text=auto eol=lf
