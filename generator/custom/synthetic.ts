@@ -289,7 +289,7 @@ const MATCHING: readonly (readonly [string, string, boolean, readonly (string | 
   ['case-folding-ascii-only', 'kelvin-[a-z]{2}', true, ['KELVIN-OK', 'Kelvin-ok', 'kelvin-Kk', 'kelvin-ſs', 'KELVİN-ok']],
   ['case-folding-range', 'ABC[Z-a]', true, ['abcz', 'ABC[', 'abc`', 'ABC{', 'abcA']],
   ['ascii-word', 'REF-\\w{4}', false, ['REF-été1 REF-ab_9', 'REF-ＡＢＣＤ', 'REF-a²b3']],
-  ['ascii-space', 'ACME\\s[0-9]{3}', false, ['ACME 123 ACME 456', 'ACME\t789', 'ACME\u000b111', 'ACME\u000c222', 'ACME 333', 'ACME　444']],
+  ['ascii-space', 'ACME\\s[0-9]{3}', false, ['ACME\u00a0123 ACME 456', 'ACME\t789', 'ACME\u000b111', 'ACME\u000c222', 'ACME\u2028333', 'ACME\u3000444']],
   ['ascii-digit', 'NUM\\d{3}', false, ['NUM١٢٣ NUM123', 'NUM１２３']],
   ['astral', 'CLI-[0-9]{4}', false, ['🔒CLI-1234🔒 CLI-5678', '𝟏CLI-0000']],
   ['invalid-bytes', 'CLI-[0-9]{4}', false, [Uint8Array.from([0xff, ...utf8('CLI-1234'), 0xc3, ...utf8('CLI-5678'), 0xe2, 0x82])]],
@@ -334,7 +334,7 @@ function randomSequence(next: () => number, depth: number): string {
   return sequence;
 }
 
-const RANDOM_TEXT = ['a', 'b', 'A', 'B', 'c', 'z', 'Z', '-', '0', '1', ' ', '.', '\t', 'é', ' ', '_', '😀', '[', '\\', ']', '^', '`', '/', '!', 'K', 'ſ'];
+const RANDOM_TEXT = ['a', 'b', 'A', 'B', 'c', 'z', 'Z', '-', '0', '1', ' ', '.', '\t', 'é', '\u00a0', '_', '😀', '[', '\\', ']', '^', '`', '/', '!', 'K', 'ſ'];
 
 function randomText(next: () => number): Uint8Array {
   const length = Math.floor(next() * 40);
@@ -614,23 +614,23 @@ const TERM_INPUTS: readonly string[] = [
   'Ⅻ ⅻ ½ ² ⑴ ⒈',
   'Straße STRASSE ß ẞ',
   'İstanbul ıi İı',
-  'ΣΑΣ σας ΌΣΟΣ ΜΆΪΟΣ Σ ΑΣ ΑΣ1 ΑΣʹ ΑΣͅ',
+  'ΣΑΣ σας ΌΣΟΣ ΜΆΪΟΣ Σ ΑΣ ΑΣ1 ΑΣʹ ΑΣ\u0345',
   'ΑΣ·Β ΑΣ’Β ΑΣ.Β',
   'ǅungla ǈubljana ǋ',
   '東京 タワー ｶﾀｶﾅ',
   '한국어 단어',
-  'مَرْحَبًا بِكُمْ',
-  'שָׁלוֹם',
-  'क्षत्रिय हिन्दी',
+  'م\u064eر\u0652ح\u064eب\u064bا ب\u0650ك\u064fم\u0652',
+  'ש\u05b8\u05c1לו\u05b9ם',
+  'क\u094dषत\u094dरिय हिन\u094dदी',
   'ภาษาไทย',
   'Ελληνικά ά έ',
-  'café café CAFÉ',
-  'é̂ ą́',
-  '́̂ seul',
+  'café cafe\u0301 CAFÉ',
+  'e\u0301\u0302 a\u0328\u0301',
+  '\u0301\u0302 seul',
   '١٢٣ ٤٥٦ ۷۸۹',
   '𝐁𝐨𝐥𝐝 𝔉𝔯𝔞𝔨𝔱𝔲𝔯',
   '😀 emoji 👍🏽 mot',
-  'mot​coupé soft­hyphen',
+  'mot\u200bcoupé soft\u00adhyphen',
   'Côte-d’Ivoire 2026',
   'ǰ ǈ ŉ',
   'ꭰꭱ ᏸᏹ',
@@ -703,16 +703,16 @@ function syntheticScans(engine: CustomEngine, context: ScanContext): ScanSource[
   add('reference/builtin-and-custom', ref, `token ${GITHUB_TOKEN} pour CLI-00421337`);
   const sameSpan = payload([patternDetector('gh', 'ghp_[A-Za-z0-9]{36}')], [{ detector: 'gh', text: `x ${GITHUB_TOKEN} y` }]);
   add('same-span-builtin-and-custom', sameSpan, `x ${GITHUB_TOKEN} y ${GITHUB_TOKEN}`);
-  add('reference/invisible', ref, 'Le client CLI-0042­1337 et le Projet Fau​con.');
-  add('reference/invisible-both-passes', ref, 'CLI-00421337 ​ CLI-1234​5678 projet⁠faucon projet faucon');
-  add('reference/byte-order-mark', ref, '﻿CLI-00421337 projet faucon﻿');
-  add('reference/only-invisible', ref, '​‌‍⁠﻿');
-  add('reference/invisible-at-ends', ref, '­CLI-00421337­');
-  add('reference/invisible-and-invalid-bytes', ref, concat('CLI-0042', Uint8Array.from([0xe2, 0x82]), '​', Uint8Array.from([0xac]), '1337 projet', Uint8Array.from([0xff]), '​faucon'));
+  add('reference/invisible', ref, 'Le client CLI-0042\u00ad1337 et le Projet Fau\u200bcon.');
+  add('reference/invisible-both-passes', ref, 'CLI-00421337 \u200b CLI-1234\u200b5678 projet\u2060faucon projet faucon');
+  add('reference/byte-order-mark', ref, '\ufeffCLI-00421337 projet faucon\ufeff');
+  add('reference/only-invisible', ref, '\u200b\u200c\u200d\u2060\ufeff');
+  add('reference/invisible-at-ends', ref, '\u00adCLI-00421337\u00ad');
+  add('reference/invisible-and-invalid-bytes', ref, concat('CLI-0042', Uint8Array.from([0xe2, 0x82]), '\u200b', Uint8Array.from([0xac]), '1337 projet', Uint8Array.from([0xff]), '\u200bfaucon'));
   add('reference/invalid-bytes', ref, concat(Uint8Array.from([0xff, 0xfe]), 'CLI-00421337', Uint8Array.from([0xc3]), 'projet faucon', Uint8Array.from([0x80])));
   add('reference/empty', ref, '');
-  add('reference/marks-between-words', ref, 'le projet ́ faucon');
-  add('reference/combining-in-word', ref, 'nébuleuse NÉBULEUSE');
+  add('reference/marks-between-words', ref, 'le projet \u0301 faucon');
+  add('reference/combining-in-word', ref, 'ne\u0301buleuse NE\u0301BULEUSE');
   add('reference/emoji-window', ref, `siret ${'😀'.repeat(17)} 12345678901234`);
   add('reference/emoji-window-outside', ref, `siret ${'😀'.repeat(18)} 12345678901234`);
   add('reference/keyword-after', ref, '12345678901234 est notre SIRET.');
@@ -765,9 +765,9 @@ function syntheticScans(engine: CustomEngine, context: ScanContext): ScanSource[
   add('terms/start-end', termPack, 'alpha');
   add('terms/maxwords-boundary', termPack, 'xx alpha beta gamma delta yy beta gamma delta');
   add('terms/context', termPack, 'code : epsilon. epsilon sans le mot');
-  add('terms/separators', termPack, 'alpha_beta alpha-beta alpha.beta alpha beta alpha\tbeta alpha\nbeta ALPHA BETA Alpha  Beta');
-  add('terms/marks-only-words', termPack, 'alpha ́́ beta');
-  add('terms/unicode-forms', termPack, 'ＡＬＰＨＡ ＢＥＴＡ ålpha ălpha alphá beta');
+  add('terms/separators', termPack, 'alpha_beta alpha-beta alpha.beta alpha\u00a0beta alpha\tbeta alpha\nbeta ALPHA BETA Alpha  Beta');
+  add('terms/marks-only-words', termPack, 'alpha \u0301\u0301 beta');
+  add('terms/unicode-forms', termPack, 'ＡＬＰＨＡ ＢＥＴＡ ålpha ălpha alpha\u0301 beta');
   add('terms/overlap-resolution', payload([termsDetector(engine, 'ov', ['b c', 'a b', 'c d', 'b'], salt, 2)]), 'a b c d b c');
 
   // Limites : trop de détections, exactement la limite, constats intégrés comptés.
@@ -777,7 +777,7 @@ function syntheticScans(engine: CustomEngine, context: ScanContext): ScanSource[
   add('too-many/builtin-counted', ref, `${ids(2040)} ${Array.from({ length: 10 }, (_, i) => `t${String(i)} ${['ghp', `${String(i)}B3d`.repeat(9)].join('_')}`).join(' ')}`);
   add('too-many/builtin-at-limit', ref, `${ids(2038)} ${Array.from({ length: 10 }, (_, i) => `t${String(i)} ${['ghp', `${String(i)}B3d`.repeat(9)].join('_')}`).join(' ')}`);
   add('too-many/terms', payload([termsDetector(engine, 'w', ['mot'], salt, 1)]), Array.from({ length: 2049 }, () => 'mot').join(' '));
-  add('too-many/visible-pass', ref, `${ids(1500)}​`);
+  add('too-many/visible-pass', ref, `${ids(1500)}\u200b`);
 
   // Budget : travail des termes compté à l'identique, au plus juste.
   const hashing = hashingPack(engine);

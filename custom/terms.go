@@ -10,6 +10,7 @@ package custom
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -75,13 +76,19 @@ func forEachWord(text []byte, fn func(start, end int)) {
 // NormalizeTerm rend la forme normalisée d'un terme saisi : ses mots normalisés, joints par une espace (les mots
 // devenus vides sont omis). C'est sur cette forme que se calcule le condensat d'un terme (TermDigest).
 func NormalizeTerm(term string) string {
+	normalized, _ := normalizeTerm(term)
+	return normalized
+}
+
+// normalizeTerm rend la forme normalisée d'un terme et son nombre de mots (longueur du n-gramme qu'il forme).
+func normalizeTerm(term string) (string, int) {
 	var words []string
 	forEachWord([]byte(term), func(start, end int) {
 		if normalized := normalizeWord(term[start:end]); normalized != "" {
 			words = append(words, normalized)
 		}
 	})
-	return strings.Join(words, " ")
+	return strings.Join(words, " "), len(words)
 }
 
 // TermDigest rend l'hexadécimal minuscule de SHA-256(salt ‖ UTF-8(normalized)), condensat d'un terme dans un Pack.
@@ -91,6 +98,25 @@ func TermDigest(salt []byte, normalized string) string {
 	message = append(append(message, salt...), normalized...)
 	sum := sha256.Sum256(message)
 	return hex.EncodeToString(sum[:])
+}
+
+// ErrInvalidSalt : le sel n'a pas la forme du schéma (base64 de 16 octets : 22 caractères et « == » ; de 32 octets :
+// 43 caractères et « = »).
+var ErrInvalidSalt = errors.New("sel refusé : base64 de 16 ou 32 octets attendu")
+
+// DecodeSalt lit le sel d'un détecteur de termes comme le moteur, après avoir vérifié sa forme.
+func DecodeSalt(salt string) ([]byte, error) {
+	if !saltForm.MatchString(salt) {
+		return nil, ErrInvalidSalt
+	}
+	return decodeSalt(salt), nil
+}
+
+// DigestTerm normalise un terme saisi et rend le condensat de sa forme normalisée sous salt, et son nombre de mots :
+// 0 pour un terme sans mot (jamais détecté) ; un détecteur ne le trouve que si son maxWords l'atteint (au plus 4).
+func DigestTerm(salt []byte, term string) (string, int) {
+	normalized, words := normalizeTerm(term)
+	return TermDigest(salt, normalized), words
 }
 
 // decodeSalt suit decodeBase64 de l'origine : « = » finaux retirés, groupes de 6 bits lus, bits restants ignorés.
