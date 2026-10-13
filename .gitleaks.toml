@@ -5,3 +5,7 @@ useDefault = true
 [[allowlists]]
 description = "Corpus de parité de détection : valeurs synthétiques écrites par generator/corpus/ (qui reste analysé). Fichiers de cas du dossier seulement (ni manifeste, ni sous-dossier, ni autre extension) ; test : generator/test/detection-corpus.test.ts."
 paths = ['''^vectors/detection/(?:rules|views|edge|limits|upstream)(?:-[a-z0-9]+)*\.json$''']
+
+[[allowlists]]
+description = "Vecteurs du masquage : entrées synthétiques écrites par generator/redact/ (qui reste analysé) et textes masqués, dont ceux où un secret synthétique subsiste (issue residual). Ce seul fichier ; test : generator/test/redact-vectors.test.ts."
+paths = ['''^vectors/redact\.json$''']

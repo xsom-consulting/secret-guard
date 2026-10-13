@@ -21,5 +21,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "rule-pack/**/*.ts", "corpus/**/*.ts", "test/**/*.ts", "*.ts"]
+  "include": ["src/**/*.ts", "rule-pack/**/*.ts", "corpus/**/*.ts", "redact/**/*.ts", "test/**/*.ts", "*.ts"]
 }
