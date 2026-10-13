@@ -1,0 +1,4 @@
+mode: atomic
+github.com/xsom-consulting/secret-guard/pack/policy.go:10.2,12.3 7 3
+github.com/xsom-consulting/secret-guard/detect/engine.go:5.1,9.2 1 1
+github.com/xsom-consulting/secret-guard/detect/engine.go:11.1,12.2 1 0

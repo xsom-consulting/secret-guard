@@ -1,0 +1,7 @@
+mode: set
+github.com/xsom-consulting/secret-guard/pack/policy.go:10.2,12.3 8 1
+github.com/xsom-consulting/secret-guard/pack/policy.go:14.2,15.3 2 0
+github.com/xsom-consulting/secret-guard/pack/ports/clock.go:3.1,4.2 2 1
+github.com/xsom-consulting/secret-guard/detect/engine.go:5.1,9.2 9 1
+github.com/xsom-consulting/secret-guard/detect/engine.go:11.1,12.2 1 0
+github.com/xsom-consulting/secret-guard/cmd/secret-guard/main.go:31.2,32.1 50 0

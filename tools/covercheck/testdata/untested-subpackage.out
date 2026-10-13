@@ -1,0 +1,3 @@
+mode: set
+github.com/xsom-consulting/secret-guard/pack/policy.go:10.2,12.3 8 1
+github.com/xsom-consulting/secret-guard/pack/ports/clock.go:3.1,4.2 4 0

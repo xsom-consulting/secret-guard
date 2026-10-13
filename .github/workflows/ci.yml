@@ -1,0 +1,124 @@
+# Vérification de Secret Guard à chaque poussée et à chaque demande de fusion.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Moteur Go (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: go vet
+        run: go vet ./...
+      - name: go vet (GOOS=windows)
+        run: GOOS=windows go vet ./...
+      - name: golangci-lint (depguard compris)
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+      - name: go test (couverture)
+        run: go test -count=1 -coverprofile=coverage.out ./...
+      # Déjà exécutée par go test : cette étape la nomme et l'affiche dans le journal (nombre de cas, identifiants en
+      # écart, jamais une entrée).
+      - name: "Parité à 100 % avec Secret Guard (vectors/detection/, 823 cas)"
+        run: go test -count=1 -v -run '^TestParity$' ./detect
+      - name: Couverture du moteur (detect, pack, internal ≥ 80 %)
+        run: go run ./tools/covercheck coverage.out
+      - name: depguardcheck (chaque import interdit est refusé)
+        if: runner.os == 'Linux'
+        run: |
+          go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+          go run ./tools/depguardcheck
+      - name: govulncheck
+        if: runner.os == 'Linux'
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  wasm:
+    name: WebAssembly (wasip1) et essai sous Node
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: go vet (GOOS=wasip1)
+        run: GOOS=wasip1 GOARCH=wasm go vet ./...
+      - name: Construire le module WebAssembly
+        run: GOOS=wasip1 GOARCH=wasm go build -trimpath -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm
+      - name: Construire la ligne de commande pour WASI
+        run: GOOS=wasip1 GOARCH=wasm go build -trimpath -o dist/secret-guard-cli.wasm ./cmd/secret-guard
+      - name: Essai sous Node (node:wasi)
+        run: node --test wasm/secret-guard.test.mjs
+      - name: Mesures (taille, démarrage, analyse de 64 Kio ; indicatives)
+        run: node --no-warnings wasm/bench.mjs | tee dist/bench.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: secret-guard-wasm
+          path: dist/
+          retention-days: 14
+
+  generator:
+    name: Générateur TypeScript (Pack initial, motifs, corpus)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: generator
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  secrets:
+    name: Recherche de secrets (gitleaks, historique complet et dossier)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GITLEAKS_VERSION: 8.30.1
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Installer gitleaks
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "${base}/${archive}"
+          curl -fsSLO "${base}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " ${archive}\$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum --check --strict
+          tar -xzf "${archive}" gitleaks
+          sudo install gitleaks /usr/local/bin/gitleaks
+          rm -f gitleaks "${archive}" "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+      - name: gitleaks git
+        run: gitleaks git . --redact --no-banner
+      - name: gitleaks dir
+        run: gitleaks dir . --redact --no-banner

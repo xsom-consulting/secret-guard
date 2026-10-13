@@ -1,0 +1,7 @@
+# Configuration gitleaks : règles par défaut, plus une exception étroite.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Corpus de parité de détection : valeurs synthétiques écrites par generator/corpus/ (qui reste analysé). Fichiers de cas du dossier seulement (ni manifeste, ni sous-dossier, ni autre extension) ; test : generator/test/detection-corpus.test.ts."
+paths = ['''^vectors/detection/(?:rules|views|edge|limits|upstream)(?:-[a-z0-9]+)*\.json$''']

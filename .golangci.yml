@@ -1,0 +1,117 @@
+# golangci-lint v2 (CI : 2.14). Outil de vérification, absent du programme livré.
+# La preuve que chaque import interdit est refusé : go run ./tools/depguardcheck.
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - forbidigo
+  settings:
+    # Les fonctions intégrées print et println écrivent sur la sortie d'erreur sans import : refusées partout (une
+    # valeur détectée ne doit jamais sortir du processus).
+    forbidigo:
+      forbid:
+        - pattern: '^print(ln)?$'
+          msg: "print/println écrivent sur la sortie d'erreur ; aucune valeur ne doit en sortir"
+    depguard:
+      rules:
+        # RE2 seul, partout : aucun moteur d'expressions régulières à retour arrière (regexp2, liaisons PCRE), qui
+        # rendrait possible un temps exponentiel sur une entrée choisie.
+        regexp-backtracking:
+          list-mode: lax
+          files:
+            - "$all"
+          deny:
+            - pkg: "github.com/dlclark/regexp2"
+              desc: "moteur à retour arrière : regexp (RE2) seul"
+            - pkg: "github.com/gijsbers/go-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "github.com/GRbit/go-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "github.com/glenn-brown/golang-pkg-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "go.arsenm.dev/pcre"
+              desc: "portage de PCRE (retour arrière) : regexp (RE2) seul"
+
+        # Le programme livré (moteur, Pack, ligne de commande, WebAssembly) ne parle à aucun réseau et ne lance aucun
+        # autre programme. Les outils de vérification (tools/) et les tests en sont exclus (un test de l'Empreinte locale
+        # écrit des formes d'URL avec net/url).
+        # Attention : depguard 2 cesse d'appliquer un préfixe (« net ») à ses sous-paquets si la même liste contient
+        # aussi l'un d'eux (« net/http ») : « net » seul couvre net/http, net/rpc, net/smtp… (prouvé par depguardcheck).
+        offline:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/tools/**"
+            - "!$test"
+          deny:
+            - pkg: "net"
+              desc: "aucun appel réseau : la détection est locale"
+            - pkg: "crypto/tls"
+              desc: "aucun appel réseau : la détection est locale"
+            - pkg: "os/exec"
+              desc: "le programme livré ne lance aucun autre programme"
+            - pkg: "plugin"
+              desc: "le programme livré ne charge aucun code"
+
+        # Le moteur (detect), le Pack (pack) et les limites (internal/limits) sont purs. Ni E/S, ni réseau, ni appel
+        # système, ni horloge, ni hasard, ni journal : les bornes sont des budgets de travail, pas des délais. Les
+        # tests en sont exclus (« !$test ») : ils lisent le corpus de parité.
+        engine-pure:
+          # Liste fermée : seuls ces paquets (et leurs sous-paquets non refusés ci-dessous) sont admis ; tout autre
+          # import (fmt, path/filepath, mime, runtime, module tiers, second moteur d'expressions…) est refusé.
+          list-mode: strict
+          files:
+            - "**/detect/**"
+            - "**/pack/**"
+            - "**/internal/limits/**"
+            - "!$test"
+          allow:
+            - "bytes"
+            - "errors"
+            - "math"
+            - "sort"
+            - "strings"
+            - "strconv"
+            - "unicode"
+            - "encoding/json"
+            - "regexp"
+            - "golang.org/x/text/unicode/norm"
+            # Empreinte locale (HMAC-SHA256 tronqué, écrit en hexadécimal).
+            - "crypto/hmac"
+            - "crypto/sha256"
+            - "encoding/hex"
+            # Pack initial embarqué dans le binaire (aucune lecture de fichier à l'exécution).
+            - "embed"
+            - "github.com/xsom-consulting/secret-guard/internal/limits"
+            - "github.com/xsom-consulting/secret-guard/pack"
+          deny:
+            - pkg: "os"
+              desc: "le moteur est pur : aucune E/S"
+            - pkg: "io/fs"
+              desc: "le moteur est pur : aucune E/S"
+            - pkg: "io/ioutil"
+              desc: "le moteur est pur : aucune E/S"
+            - pkg: "net"
+              desc: "le moteur ne fait aucun appel réseau"
+            - pkg: "syscall"
+              desc: "le moteur est pur : aucun appel système"
+            - pkg: "golang.org/x/sys"
+              desc: "le moteur est pur : aucun appel système"
+            - pkg: "time"
+              desc: "le moteur n'a pas d'horloge : bornes par budgets de travail"
+            - pkg: "math/rand"
+              desc: "le moteur est déterministe : aucun hasard"
+            - pkg: "crypto/rand"
+              desc: "le moteur est déterministe : aucun hasard"
+            - pkg: "log"
+              desc: "le moteur ne journalise rien : aucune valeur détectée dans un journal"
+            - pkg: "unsafe"
+              desc: "le moteur n'utilise pas unsafe"
+            - pkg: "plugin"
+              desc: "le moteur ne charge aucun code"

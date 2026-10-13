@@ -1,0 +1,5 @@
+mode: set
+github.com/xsom-consulting/secret-guard/pack/policy.go:10.2,12.3 8 0
+github.com/xsom-consulting/secret-guard/pack/policy.go:10.2,12.3 8 1
+github.com/xsom-consulting/secret-guard/pack/policy.go:14.2,15.3 2 0
+github.com/xsom-consulting/secret-guard/pack/policy.go:14.2,15.3 2 0
