@@ -221,11 +221,14 @@ describe('corpus de parité commité', () => {
   });
 });
 
+/** Vecteurs du masquage, exemptés de la recherche de secrets par leur chemin exact. */
+const REDACT_VECTORS = 'vectors/redact.json';
+
 describe('recherche de secrets', () => {
   const config = parseToml(read(new URL('.gitleaks.toml', REPOSITORY))) as Record<string, unknown>;
   const allowlists = (config['allowlists'] ?? []) as Record<string, unknown>[];
 
-  it('l’exception de la recherche de secrets ne couvre que les fichiers de cas du corpus (le Pack initial et sa copie d’origine restent analysés)', () => {
+  it('l’exception de la recherche de secrets ne couvre que les fichiers de cas du corpus et les vecteurs du masquage (le Pack initial et sa copie d’origine restent analysés)', () => {
     expect(Object.keys(config).sort()).toEqual(['allowlists', 'extend']);
     expect(config['extend']).toEqual({ useDefault: true });
     // Ni règle générale (regexes, stopwords, commits, targetRules), ni exception hors de ses chemins.
@@ -238,15 +241,17 @@ describe('recherche de secrets', () => {
       .split('\0')
       .filter((path) => path !== '');
     const exempted = tracked.filter((path) => patterns.some((pattern) => pattern.test(path)));
+    // Vecteurs du masquage : seul autre fichier exempté (test : redact-vectors.test.ts).
     const outside = exempted.filter(
       (path) =>
+        path !== REDACT_VECTORS &&
         !(path.startsWith('vectors/detection/') && CASE_FILE_PATTERN.test(path.slice('vectors/detection/'.length))),
     );
     expect(outside).toEqual([]);
     for (const file of corpus.keys()) expect(exempted, file).toContain(`vectors/detection/${file}`);
     expect(exempted).not.toContain(`vectors/detection/${MANIFEST_FILE}`);
     // Le générateur, le moteur, ses tests et le Pack restent analysés.
-    expect(exempted.some((path) => !path.startsWith('vectors/detection/'))).toBe(false);
+    expect(exempted.some((path) => !path.startsWith('vectors/detection/') && path !== REDACT_VECTORS)).toBe(false);
   });
 
   it('aucun fichier .gitleaksignore : pas d’empreinte ignorée hors des exceptions de chemin', () => {

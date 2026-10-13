@@ -39,6 +39,11 @@ func sgScan(ptr, length, languagePtr, languageLength uint32) uint64 { //nolint:u
 	return packed(state.scan(uintptr(ptr), length, uintptr(languagePtr), languageLength, false))
 }
 
+//go:wasmexport sg_redact
+func sgRedact(ptr, length, languagePtr, languageLength uint32) uint64 { //nolint:unused // appelée par l'hôte
+	return packed(state.redact(uintptr(ptr), length, uintptr(languagePtr), languageLength))
+}
+
 //go:wasmexport sg_scan_with_fingerprint
 func sgScanWithFingerprint(ptr, length uint32) uint64 { //nolint:unused // appelée par l'hôte
 	return packed(state.scan(uintptr(ptr), length, 0, 0, true))

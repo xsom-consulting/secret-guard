@@ -541,6 +541,9 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 		}
 		// Seules fonctions exportées qui rendent du texte : messages d'erreur et clé masquée.
 		textAllowed := map[string]bool{"Error": true, "String": true, "GoString": true}
+		// Seules fonctions exportées qui rendent des octets : le texte de l'appelant sans les valeurs détectées, chaque
+		// étendue remplacée par un libellé (TestRedactLeavesNoValue).
+		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true}
 		checked := 0
 		for _, entry := range entries {
 			name := entry.Name()
@@ -560,7 +563,9 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 				for _, result := range fn.Type.Results.List {
 					switch r := result.Type.(type) {
 					case *ast.ArrayType:
-						t.Errorf("%s : rend un tableau ou une tranche", fn.Name.Name)
+						if elem, ok := r.Elt.(*ast.Ident); !ok || elem.Name != "byte" || r.Len != nil || !bytesAllowed[fn.Name.Name] {
+							t.Errorf("%s : rend un tableau ou une tranche", fn.Name.Name)
+						}
 					case *ast.Ident:
 						if (r.Name == "string" && !textAllowed[fn.Name.Name]) || r.Name == "byte" || r.Name == "any" {
 							t.Errorf("%s : rend %s", fn.Name.Name, r.Name)

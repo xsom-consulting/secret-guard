@@ -13,6 +13,7 @@
     "test": "vitest run",
     "pack:initial": "node rule-pack/generate-initial-pack.ts",
     "vectors:detection": "node corpus/main.ts",
+    "vectors:redact": "node redact/main.ts",
     "vectors:unicode": "node unicode-parity.ts",
     "vectors:hidden": "node hidden/main.ts",
     "hidden:tables": "node hidden/unicode-tables.ts",

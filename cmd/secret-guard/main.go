@@ -4,6 +4,7 @@
 // Pack de règles du client.
 //
 //	secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+//	secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
 //	secret-guard terms digest --salt <sel> [fichier|-]
 //	secret-guard hidden [--strip] [fichier|-]
 //	secret-guard mentions [fichier|-]
@@ -11,6 +12,7 @@
 //
 // Codes de sortie : 0 analyse complète sans constat ; 1 au moins un constat ; 2 erreur (usage, lecture, Pack refusé)
 // ou analyse incomplète (entrée de plus de 1 Mio, budget de travail épuisé), qui ne vaut jamais « rien trouvé ».
+// redact écrit le texte masqué (0 : rien à masquer ; 1 : masqué ; 2 : échec, aucun texte).
 package main
 
 import (
@@ -33,6 +35,7 @@ import (
 
 const usage = `Usage :
   secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+  secret-guard redact [--pack <fichier>] [--language <id>] [fichier|-]
   secret-guard terms digest --salt <sel> [fichier|-]
   secret-guard hidden [--strip] [fichier|-]
   secret-guard mentions [fichier|-]
@@ -55,6 +58,11 @@ JSON sur une ligne, {"complete", "failure", "findings": [{"ruleId", "secretType"
 
 Codes de sortie : 0 aucun constat ; 1 au moins un constat ; 2 erreur ou analyse incomplète (entrée de plus de
 1 Mio, budget épuisé), qui ne vaut jamais « rien trouvé ».
+
+redact écrit sur la sortie standard le texte où chaque secret détecté est remplacé par un libellé
+<REDACTED_règle>, après une nouvelle analyse du texte masqué. Codes de sortie : 0 rien à masquer (texte recopié) ;
+1 au moins un secret masqué ; 2 erreur ou échec du masquage (analyse incomplète, secret qui subsiste), et alors
+aucun texte sur la sortie standard. Le masquage réduit le risque, il ne le supprime pas.
 
 hidden relève les instructions cachées (caractères d'étiquette Unicode, contrôles bidirectionnels, suites de
 caractères invisibles, suites de sélecteurs de variante) : {"complete", "hidden", "findings": [{"kind", "line",
@@ -96,6 +104,8 @@ func run(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files)
 	switch args[0] {
 	case "scan":
 		return scan(args[1:], stdin, stdout, stderr, opener)
+	case "redact":
+		return redact(args[1:], stdin, stdout, stderr, opener)
 	case "terms":
 		return termsCommand(args[1:], stdin, stdout, stderr, opener)
 	case "hidden":
