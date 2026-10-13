@@ -3,7 +3,7 @@
 //
 // Usage : go run ./tools/covercheck [-min 80] coverage.out
 //
-// Les paquets mesurés sont detect, pack et internal, sous-paquets compris, chacun séparément.
+// Les paquets mesurés sont detect, pack, hidden, mentions et internal, sous-paquets compris, chacun séparément.
 // Un paquet sans aucune instruction est accepté (vacuité) ; dès qu'il en contient, elles
 // figurent au profil, testées ou non, et comptent dans la mesure.
 package main
@@ -27,6 +27,8 @@ const module = "github.com/xsom-consulting/secret-guard"
 var DefaultPackages = []string{
 	module + "/detect",
 	module + "/pack",
+	module + "/hidden",
+	module + "/mentions",
 	module + "/internal",
 }
 
