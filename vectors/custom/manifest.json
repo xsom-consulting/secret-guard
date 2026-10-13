@@ -3,10 +3,11 @@
   "upstreamCommit": "c177a447b8cdf8ce07e0c3160ea45dace99b6dc9",
   "files": [
     {"file":"detection.json","cases":1659},
-    {"file":"packs.json","cases":262},
+    {"file":"packs.json","cases":264},
     {"file":"pattern-matching.json","cases":1813},
     {"file":"pattern-validation.json","cases":7681},
-    {"file":"scan.json","cases":60},
+    {"file":"redact.json","cases":57},
+    {"file":"scan.json","cases":62},
     {"file":"terms.json","cases":89},
     {"file":"unicode.json","cases":272}
   ],

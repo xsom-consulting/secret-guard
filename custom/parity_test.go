@@ -373,7 +373,7 @@ func TestCustomVectorsManifest(t *testing.T) {
 		t.Fatalf("%+v", m)
 	}
 	// Chaque identifiant upstream/<n> désigne un test de la table.
-	for _, name := range []string{"pattern-validation.json", "packs.json", "scan.json", "detection.json", "pattern-matching.json"} {
+	for _, name := range []string{"pattern-validation.json", "packs.json", "scan.json", "detection.json", "pattern-matching.json", "redact.json"} {
 		var cases []struct {
 			ID string `json:"id"`
 		}

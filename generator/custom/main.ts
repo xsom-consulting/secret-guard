@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { decodeInput, utf8Bytes } from '../corpus/bytes.ts';
 import { jsonString } from '../corpus/json.ts';
+import { describeText } from '../redact/vectors.ts';
 import { loadCustomEngine, type CompiledPackLike, type CustomEngine } from './engine.ts';
 import { recordCustomTests, testLabel, type RecordedTest } from './harness.ts';
 import { distinctWords, emptySources, hashingPack, syntheticSources, type PackSource, type ScanContext, type ScanSource, type Sources } from './synthetic.ts';
@@ -25,6 +26,7 @@ import {
   expectedPack,
   expectedPatternMatches,
   expectedPatternValidation,
+  expectedRedaction,
   expectedTerm,
   scanExpectedOf,
   serializeCases,
@@ -287,7 +289,8 @@ function build(engine: CustomEngine, all: Sources, labels: readonly string[], pr
   // Analyses.
   const compiledPacks = new Map<string, CompiledPackLike>();
   const scans: unknown[] = [];
-  for (const s of firstOf(all.scans, (s) => JSON.stringify([s.pack === undefined ? null : hex(s.pack), hex(s.bytes)]))) {
+  const scanSources = firstOf(all.scans, (s) => JSON.stringify([s.pack === undefined ? null : hex(s.pack), hex(s.bytes)]));
+  for (const s of scanSources) {
     let rules: CompiledPackLike | undefined;
     if (s.pack !== undefined) {
       const key = hex(s.pack);
@@ -314,6 +317,21 @@ function build(engine: CustomEngine, all: Sources, labels: readonly string[], pr
     scans.push(entry);
   }
 
+  // Masquages avec un Pack de règles du client (entrées UTF-8 valides).
+  const redactions: unknown[] = [];
+  for (const s of scanSources) {
+    if (s.pack === undefined || !decodeInput(s.bytes).validUtf8) continue;
+    const rules = compiledPacks.get(hex(s.pack));
+    if (rules === undefined) continue;
+    const entry: Record<string, unknown> = { id: s.id, pack: packRef(s.pack), ...encodeInput(s.bytes), expected: expectedRedaction(engine, s.bytes, rules) };
+    if (s.divergence !== undefined) {
+      // Écart déclaré de l'analyse : le masquage du moteur Go suit son analyse (complète et sans constat ici).
+      if (!s.divergence.go.complete || s.divergence.go.findings.length > 0) problems.push(`écart de masquage non pris en charge : ${s.id}`);
+      entry['divergence'] = { reason: s.divergence.reason, go: { failure: 'none', neutral: false, redacted: describeText(s.bytes) } };
+    }
+    redactions.push(entry);
+  }
+
   // Termes.
   const terms = firstOf(all.terms, (s) => JSON.stringify([s.kind, s.input, s.salt])).map((s) => ({
     id: s.id,
@@ -331,6 +349,7 @@ function build(engine: CustomEngine, all: Sources, labels: readonly string[], pr
     'packs.json': packs,
     'pattern-matching.json': matching,
     'pattern-validation.json': validation,
+    'redact.json': redactions,
     'scan.json': scans,
     'terms.json': terms,
     'unicode.json': unicodeBlocks((word) => engine.normalizeWord(word)),

@@ -7,7 +7,9 @@
 import { byteOffsetOf, decodeInput, utf8Bytes } from '../corpus/bytes.ts';
 import { jsonString } from '../corpus/json.ts';
 import { compareFindings, levelForScore, type CorpusFinding } from '../corpus/model.ts';
-import type { CustomEngine, EngineResult } from './engine.ts';
+import { describeText } from '../redact/vectors.ts';
+import type { RedactedText } from '../redact/model.ts';
+import { readScanResult, type CompiledPackLike, type CustomEngine, type EngineResult } from './engine.ts';
 
 export class VectorError extends Error {
   override readonly name = 'VectorError';
@@ -22,6 +24,7 @@ export const CUSTOM_FILES = [
   'packs.json',
   'pattern-matching.json',
   'pattern-validation.json',
+  'redact.json',
   'scan.json',
   'terms.json',
   'unicode.json',
@@ -254,6 +257,58 @@ export interface TermExpected {
 export function expectedTerm(engine: CustomEngine, term: string, salt: string): TermExpected {
   const normalized = engine.normalizeTerm(term);
   return { normalized, digest: salt === '' ? '' : engine.termDigest(engine.decodeSalt(salt), normalized) };
+}
+
+/** Issue d'un masquage suivi d'une nouvelle analyse, dans la forme du moteur Go (`detect.SanitizeFailure`). */
+export type RedactFailure = 'none' | 'incomplete' | 'residual';
+
+export interface RedactExpectedCustom {
+  readonly failure: RedactFailure;
+  /** Vrai si le texte rendu (ou jugé) est celui des libellés neutres (`neutralCustomNames`). */
+  readonly neutral: boolean;
+  readonly redacted: RedactedText | null;
+}
+
+function sanitizeFailureOf(result: EngineResult): RedactFailure {
+  if (!result.complete) return 'incomplete';
+  return result.findings.length > 0 ? 'residual' : 'none';
+}
+
+/**
+ * Masquage avec un Pack de règles du client, dans la forme du moteur Go (`detect.RedactAndRescan`) : analyse,
+ * `redact` d'origine avec les libellés des détecteurs, nouvelle analyse ; si elle échoue et que l'entrée a des constats
+ * du Pack, `redact` avec des libellés neutres puis une nouvelle analyse. Tout constat restant fait échouer le masquage
+ * (le moteur d'origine rend le texte quand il ne reste que des constats LOW : un tel cas arrête le générateur). Le
+ * texte rendu est comparé à celui de `redactAndRescan` d'origine. Entrées UTF-8 valides seulement.
+ */
+export function expectedRedaction(engine: CustomEngine, bytes: Uint8Array, rules: CompiledPackLike): RedactExpectedCustom {
+  const decoded = decodeInput(bytes);
+  if (!decoded.validUtf8) throw new VectorError('masquage : entrée hors UTF-8');
+  const text = decoded.text;
+  const raw = engine.rawScan(text, rules);
+  const initial = readScanResult(raw);
+  const upstream = engine.redactAndRescan(text, rules);
+  if (!initial.complete) {
+    if (upstream !== '') throw new VectorError('texte rendu après une analyse incomplète');
+    return { failure: 'incomplete', neutral: false, redacted: null };
+  }
+  if (initial.findings.length === 0) {
+    if (upstream !== text) throw new VectorError('texte sans constat non rendu tel quel');
+    return { failure: 'none', neutral: false, redacted: describeText(bytes) };
+  }
+  let neutral = false;
+  let out = engine.redact(text, raw, false);
+  let failure = sanitizeFailureOf(engine.scan(out, rules));
+  const hasCustom = initial.findings.some((finding) => finding.secretType === 'custom_rule');
+  if (failure !== 'none' && hasCustom) {
+    neutral = true;
+    out = engine.redact(text, raw, true);
+    failure = sanitizeFailureOf(engine.scan(out, rules));
+  }
+  if (failure === 'none' ? upstream !== out : upstream !== '') {
+    throw new VectorError(`texte rendu par redactAndRescan inattendu pour l’issue ${failure} (constats LOW)`);
+  }
+  return { failure, neutral, redacted: failure === 'none' ? describeText(utf8Bytes(out)) : null };
 }
 
 export { utf8Bytes };

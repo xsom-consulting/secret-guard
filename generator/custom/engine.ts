@@ -49,6 +49,12 @@ export interface CustomEngine {
   compileDetector(spec: unknown): unknown;
   newPack(payload: unknown, detectors: readonly unknown[]): CompiledPackLike;
   scan(content: string, rules: CompiledPackLike | undefined, meter?: WorkMeterLike): EngineResult;
+  /** Résultat brut de scan (constats avec leur détecteur), pour redact. */
+  rawScan(content: string, rules: CompiledPackLike): unknown;
+  /** redact d'origine sur les constats d'un résultat brut ; neutral : neutralCustomNames. */
+  redact(content: string, result: unknown, neutral: boolean): string;
+  /** redactAndRescan d'origine : texte rendu (vide en cas d'échec). */
+  redactAndRescan(content: string, rules: CompiledPackLike): string;
   normalizeTerm(term: string): string;
   normalizeWord(word: string): string;
   termDigest(salt: Uint8Array, normalized: string): string;
@@ -113,6 +119,8 @@ export async function loadCustomEngine(directory: string): Promise<CustomEngine>
   const validatePattern = field<Fn>(index, 'validatePattern', 'function');
   const compileRulesPack = field<Fn>(index, 'compileRulesPack', 'function');
   const scan = field<Fn>(index, 'scan', 'function');
+  const redact = field<Fn>(index, 'redact', 'function');
+  const redactAndRescan = field<Fn>(index, 'redactAndRescan', 'function');
   const normalizeTerm = field<Fn>(index, 'normalizeTerm', 'function');
   const termDigest = field<Fn>(index, 'termDigest', 'function');
   const compileDetector = field<Fn>(pack, 'compileDetector', 'function');
@@ -133,6 +141,18 @@ export async function loadCustomEngine(directory: string): Promise<CustomEngine>
       readScanResult(
         scan(rules === undefined ? { content } : meter === undefined ? { content, rules } : { content, rules, workMeter: meter }),
       ),
+    rawScan: (content, rules) => scan({ content, rules }),
+    redact: (content, result, neutral) => {
+      if (!isRecord(result) || !Array.isArray(result['findings'])) throw new UpstreamError('résultat brut hors forme');
+      const out = redact(content, result['findings'], neutral ? { neutralCustomNames: true } : {});
+      if (typeof out !== 'string') throw new UpstreamError('redact hors forme');
+      return out;
+    },
+    redactAndRescan: (content, rules) => {
+      const out = redactAndRescan({ content, rules });
+      if (!isRecord(out) || typeof out['content'] !== 'string') throw new UpstreamError('redactAndRescan hors forme');
+      return out['content'];
+    },
     normalizeTerm: (term) => {
       const out = normalizeTerm(term);
       if (typeof out !== 'string') throw new UpstreamError('normalizeTerm hors forme');

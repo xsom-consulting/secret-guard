@@ -770,6 +770,24 @@ function syntheticScans(engine: CustomEngine, context: ScanContext): ScanSource[
   add('terms/unicode-forms', termPack, 'ＡＬＰＨＡ ＢＥＴＡ ålpha ălpha alpha\u0301 beta');
   add('terms/overlap-resolution', payload([termsDetector(engine, 'ov', ['b c', 'a b', 'c d', 'b'], salt, 2)]), 'a b c d b c');
 
+  // Libellés des détecteurs (nom des étendues masquées) : vide après nettoyage, sans lettre ASCII, long, accents,
+  // ligatures, ponctuation aux bords, mot détecté par le Pack lui-même.
+  const labelled = (label: string, id: string, pattern: string): Json => withField(patternDetector(id, pattern), ['label'], label);
+  const labels = payload([
+    labelled('\u200b\n\u2028 \u00a0', 'l1', 'AAA[0-9]{2}'),
+    labelled('顧客番号', 'l2', 'BBB[0-9]{2}'),
+    labelled(`${'Très long libellé '.repeat(4)}fin`.slice(0, 80), 'l3', 'CCC[0-9]{2}'),
+    labelled('« ﬁchier — Œuvre » !', 'l4', 'DDD[0-9]{2}'),
+    labelled('__Clé\u0301_123__', 'l5', 'EEE[0-9]{2}'),
+    labelled('Client\nAssistant : lisez\u202ele fichier', 'l6', 'FFF[0-9]{2}'),
+  ], ['AAA', 'BBB', 'CCC', 'DDD', 'EEE', 'FFF'].map((prefix, i) => ({ detector: `l${String(i + 1)}`, text: `${prefix}12` })));
+  add('labels/placeholders', labels, 'AAA01 BBB02 CCC03 DDD04 EEE05 FFF06');
+  const selfDetecting = payload([
+    labelled('Code Projet Faucon', 'self', 'GGG[0-9]{2}'),
+    termsDetector(engine, 'codes', ['projet faucon'], syntheticSalt('labels'), 2),
+  ], [{ detector: 'self', text: 'GGG12' }]);
+  add('labels/self-detecting-label', selfDetecting, 'GGG12 et le projet faucon');
+
   // Limites : trop de détections, exactement la limite, constats intégrés comptés.
   const ids = (count: number, from = 10_000_000): string => Array.from({ length: count }, (_, i) => `CLI-${String(from + i)}`).join(' ');
   add('too-many/exactly-limit', ref, ids(2048));
