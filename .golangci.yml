@@ -59,7 +59,7 @@ linters:
             - pkg: "plugin"
               desc: "le programme livré ne charge aucun code"
 
-        # Le moteur (detect), le Pack (pack) et les limites (internal/limits) sont purs. Ni E/S, ni réseau, ni appel
+        # Le moteur (detect), le Pack (pack), le Pack de règles du client (custom) et les limites (internal/limits) sont purs. Ni E/S, ni réseau, ni appel
         # système, ni horloge, ni hasard, ni journal : les bornes sont des budgets de travail, pas des délais. Les
         # tests en sont exclus (« !$test ») : ils lisent le corpus de parité.
         engine-pure:
@@ -69,6 +69,7 @@ linters:
           files:
             - "**/detect/**"
             - "**/pack/**"
+            - "**/custom/**"
             - "**/internal/limits/**"
             - "!$test"
           allow:
@@ -90,6 +91,10 @@ linters:
             - "embed"
             - "github.com/xsom-consulting/secret-guard/internal/limits"
             - "github.com/xsom-consulting/secret-guard/pack"
+            # Pack de règles du client, exécuté par detect (Options.Custom).
+            - "github.com/xsom-consulting/secret-guard/custom"
+            # Listes fermées du schéma du Pack de règles du client (slices.Contains).
+            - "slices"
           deny:
             - pkg: "os"
               desc: "le moteur est pur : aucune E/S"
