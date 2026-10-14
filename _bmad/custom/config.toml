@@ -1,0 +1,12 @@
+# Team configuration for this repository. Personal overrides stay untracked.
+[core]
+user_name = "Maintainer"
+project_name = "secret-guard"
+communication_language = "English"
+document_output_language = "English"
+output_folder = "../product-planning/secret-guard/_bmad-output"
+
+[modules.bmm]
+planning_artifacts = "../product-planning/secret-guard/docs/planning"
+implementation_artifacts = "../product-planning/secret-guard/docs/stories"
+project_knowledge = "."
