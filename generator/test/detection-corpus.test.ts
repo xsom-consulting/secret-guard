@@ -227,13 +227,15 @@ const REDACT_VECTORS = 'vectors/redact.json';
 describe('recherche de secrets', () => {
   const config = parseToml(read(new URL('.gitleaks.toml', REPOSITORY))) as Record<string, unknown>;
   const allowlists = (config['allowlists'] ?? []) as Record<string, unknown>[];
+  const fileAllowlists = allowlists.filter((allowlist) => allowlist['targetRules'] === undefined);
 
-  it('l’exception de la recherche de secrets ne couvre que les fichiers de cas du corpus et les vecteurs du masquage (le Pack initial et sa copie d’origine restent analysés)', () => {
+  it('les exceptions de fichiers ne couvrent que les cas du corpus et les vecteurs du masquage (le Pack initial et sa copie d’origine restent analysés)', () => {
     expect(Object.keys(config).sort()).toEqual(['allowlists', 'extend']);
     expect(config['extend']).toEqual({ useDefault: true });
     // Ni règle générale (regexes, stopwords, commits, targetRules), ni exception hors de ses chemins.
-    for (const allowlist of allowlists) expect(Object.keys(allowlist).sort()).toEqual(['description', 'paths']);
-    const patterns = allowlists.flatMap((allowlist) => allowlist['paths'] as string[]).map((source) => new RegExp(source));
+    expect(fileAllowlists).toHaveLength(2);
+    for (const allowlist of fileAllowlists) expect(Object.keys(allowlist).sort()).toEqual(['description', 'paths']);
+    const patterns = fileAllowlists.flatMap((allowlist) => allowlist['paths'] as string[]).map((source) => new RegExp(source));
     const tracked = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
       cwd: REPOSITORY,
       encoding: 'utf8',
@@ -252,6 +254,25 @@ describe('recherche de secrets', () => {
     expect(exempted).not.toContain(`vectors/detection/${MANIFEST_FILE}`);
     // Le générateur, le moteur, ses tests et le Pack restent analysés.
     expect(exempted.some((path) => !path.startsWith('vectors/detection/') && path !== REDACT_VECTORS)).toBe(false);
+  });
+
+  it('la seule exception BMad reconnaît exactement le SHA-256 du modèle, dans son manifeste et pour une seule règle', () => {
+    const scoped = allowlists.filter((allowlist) => allowlist['targetRules'] !== undefined);
+    expect(scoped).toHaveLength(1);
+    const { description, ...criteria } = scoped[0]!;
+    expect(typeof description).toBe('string');
+    const checksum = createHash('sha256')
+      .update(readFileSync(new URL('.agents/skills/bmad-ux/assets/key-screens.md', REPOSITORY)))
+      .digest('hex');
+    expect(criteria).toEqual({
+      targetRules: ['generic-api-key'],
+      condition: 'AND',
+      paths: ['^_bmad/_config/files-manifest\\.csv$'],
+      regexTarget: 'match',
+      regexes: [`^key-screens\\.md","${checksum}"$`],
+    });
+    const manifest = read(new URL('_bmad/_config/files-manifest.csv', REPOSITORY));
+    expect(manifest).toContain(`bmad-ux/assets/key-screens.md","${checksum}"`);
   });
 
   it('aucun fichier .gitleaksignore : pas d’empreinte ignorée hors des exceptions de chemin', () => {
@@ -470,4 +491,3 @@ describe('outils du générateur', () => {
     );
   });
 });
-
