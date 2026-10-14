@@ -3,6 +3,14 @@
 useDefault = true
 
 [[allowlists]]
+description = "Verified BMad template SHA-256, not a credential; only this exact match in the installer manifest."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^_bmad/_config/files-manifest\.csv$''']
+regexTarget = "match"
+regexes = ['''^key-screens\.md","ff1c5060673dd595edd61e76806bae876264ec6895c2eaadf8a6190785bf5f7b"$''']
+
+[[allowlists]]
 description = "Corpus de parité de détection : valeurs synthétiques écrites par generator/corpus/ (qui reste analysé). Fichiers de cas du dossier seulement (ni manifeste, ni sous-dossier, ni autre extension) ; test : generator/test/detection-corpus.test.ts."
 paths = ['''^vectors/detection/(?:rules|views|edge|limits|upstream)(?:-[a-z0-9]+)*\.json$''']
 
