@@ -16,6 +16,7 @@ Deux paquets l'accompagnent, portés de la même origine : `hidden` (instruction
 - Plusieurs lectures du même texte : telle quelle, normalisée (NFKC, caractères invisibles retirés), décodée une fois (pourcentage, échappements JSON, base64), lignes coupées rejointes.
 - Expressions régulières RE2 seulement (`regexp` de Go) : temps linéaire, aucun retour arrière.
 - Travail borné : entrée de 1 Mio au plus, budgets de décodages, de fenêtres et de vues ; au-delà, l'analyse est déclarée incomplète.
+- Vitesse : le 19 octobre 2026, sur un Apple M2 Pro, 64 Kio de code sans secret sont analysés en 9,2 ms (67,5 ms en v0.3.0, ×7,4), grâce à une porte littérale exacte et à l'exécution en parallèle des familles de règles sans budget partagé, sans changer un seul résultat ([docs/bench.md](docs/bench.md)).
 
 ### Ce qu'il ne fait jamais
 
@@ -43,6 +44,8 @@ for _, f := range result.Findings {
 	// f.RuleID, f.SecretType, f.Encoding, f.Score, f.Level, f.ByteStart, f.ByteEnd
 }
 ```
+
+`detect.Options{Workers: n}` borne le nombre de fils d'une analyse (0, par défaut : 8 au plus ; 1 : analyse séquentielle, sur un seul fil) ; le résultat est le même quel que soit `Workers`, et le moteur ne lit pas le nombre de processeurs.
 
 `detect.ScanWithFingerprint(content, rules, key)` ajoute à chaque constat une Empreinte locale : HMAC-SHA256 de la valeur, tronqué à 16 octets, sous une clé de 32 octets fournie par l'appelant (`detect.NewFingerprintKey`). Elle permet de reconnaître qu'une même valeur revient sans la garder ; sans la clé, rien ne la relie à la valeur.
 
@@ -222,7 +225,7 @@ Secret Guard is a secret detection engine (API keys, tokens, private keys, passw
 
 It is the Go port of the Secret Guard TypeScript engine (origin, license and changes: [UPSTREAM.md](UPSTREAM.md)). The port returns exactly the original results on a frozen corpus of 823 cases (`TestParity`).
 
-**What it does**: 35 rules (initial Pack), several readings of the same text (as is, NFKC-normalized, decoded once from percent, JSON escapes and base64, wrapped lines joined), RE2 regular expressions only (linear time), bounded work (1 MiB input, decoding, window and view budgets).
+**What it does**: 35 rules (initial Pack), several readings of the same text (as is, NFKC-normalized, decoded once from percent, JSON escapes and base64, wrapped lines joined), RE2 regular expressions only (linear time), bounded work (1 MiB input, decoding, window and view budgets). Speed: on 19 October 2026, on an Apple M2 Pro, 64 KiB of code without secrets is scanned in 9.2 ms (67.5 ms in v0.3.0, ×7.4), thanks to an exact literal gate and to running the rule families without shared budget in parallel, with no result changed ([docs/bench.md](docs/bench.md)).
 
 **What it never does**: no network, no telemetry, no language model (the engine, `custom`, `hidden` and `mentions` import no network, file, clock, randomness or logging package: `depguard` rule proven by `tools/depguardcheck`; the WebAssembly module imports no `sock_*` or `path_open`); no detected value in the output (a finding carries rule, secret type, reading, score, level and byte span, never the value, an excerpt, a mask or an unsalted hash); never "nothing found" by default (an incomplete scan returns `complete: false` and no finding, so the caller blocks). The engine only finds what its rules describe: it lowers the risk, it does not remove it.
 
@@ -230,7 +233,7 @@ It is the Go port of the Secret Guard TypeScript engine (origin, license and cha
 
 **@-mentioned files** (`mentions`): Claude Code adds the content of a file referenced with `@` in a prompt without any tool call, so no `PreToolUse` hook fires for it, not even one matching `Read` ([hooks documentation](https://code.claude.com/docs/en/hooks)). `mentions.Parse(prompt)` finds these files (`@path`, `@"path with spaces"`, `@path#L10-20`, trailing `, ; : ! ? )` removed, e-mail addresses ignored, duplicates merged) without reading or resolving anything, so that a `UserPromptSubmit` hook can resolve, read (as the user) and scan them itself. Parity: 122 cases produced by the original `mentionedPaths` (`TestMentionsParity`).
 
-**Go API**: `pack.Initial()` or `pack.Decode(bytes)` (strict RulePack decoding), `detect.LoadRules(pack)`, `detect.Scan(content, rules, detect.Options{LanguageID: …})`, `detect.ScanWithFingerprint(content, rules, key)` (local fingerprint: HMAC-SHA256 truncated to 16 bytes under a 32-byte caller key). Decide on `Result.Complete` and `Result.Failure`, never on the number of findings. The Pack schema is a copy; the program that signs and distributes Packs (xSOM Fleet) remains the source of the signed contract, and `TestSchemaCopy` checks the copy.
+**Go API**: `pack.Initial()` or `pack.Decode(bytes)` (strict RulePack decoding), `detect.LoadRules(pack)`, `detect.Scan(content, rules, detect.Options{LanguageID: …})`, `detect.ScanWithFingerprint(content, rules, key)` (local fingerprint: HMAC-SHA256 truncated to 16 bytes under a 32-byte caller key). `detect.Options{Workers: n}` bounds the number of threads of a scan (0, the default: at most 8; 1: sequential, single thread); the result is the same whatever `Workers` is, and the engine never reads the number of processors. Decide on `Result.Complete` and `Result.Failure`, never on the number of findings. The Pack schema is a copy; the program that signs and distributes Packs (xSOM Fleet) remains the source of the signed contract, and `TestSchemaCopy` checks the copy.
 
 **Redaction**: `detect.RedactAndRescan(content, rules, options, detect.RedactOptions{})` replaces each detected secret with a `<REDACTED_rule>` label (overlapping or touching spans merged, bytes outside spans kept as is), then scans the redacted text again; it returns the text only when both scans are complete and the second finds nothing (`SanitizeNone`), otherwise no text (`SanitizeIncomplete`, `SanitizeResidual`) and the redacted copy is wiped. `detect.Redact(content, result, options)` redacts from a given result without a rescan and refuses an incomplete scan. Redaction is for a user who chooses to send a redacted version of their text (clipboard, chat message); it is not for a coding assistant hook, which can only allow or block the text as is. Like detection, it lowers the risk, it does not remove it.
 

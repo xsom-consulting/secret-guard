@@ -38,14 +38,14 @@ func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bo
 }
 
 // scanPrivateKeys : en-tête PEM de clé privée jusqu'à sa marque de fin, ou jusqu'à la fin du texte si elle manque
-// (private_key_pem_incomplete), comme Secret Guard.
+// (private_key_pem_incomplete), comme Secret Guard. Sans littéral de la porte de l'en-tête, rien n'est cherché.
 func (r *Rules) scanPrivateKeys(v *view) []finding {
 	complete, incomplete := r.engine[rulePrivateKeyComplete], r.engine[rulePrivateKeyIncomplete]
 	header := complete
 	if header == nil {
 		header = incomplete
 	}
-	if header == nil {
+	if header == nil || !header.gate.admits(v.text) {
 		return nil
 	}
 	var findings []finding
@@ -78,9 +78,13 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 // scanFixedPattern exécute une règle « motif seul » du Pack : chaque correspondance (matchAll), valeur détectée =
 // groupe capturant 1 s'il a participé, sinon la correspondance entière (capturedRange de Secret Guard, qui la cherche
 // par lastIndexOf) ; valeur fictive ou exemple public ignorés ; bornes minLength/maxLength (unités UTF-16, 0 =
-// absente) ; validateur nommé.
+// absente) ; validateur nommé. Aucun littéral de la porte de la règle dans le texte de la vue : aucune correspondance
+// possible, le motif n'est pas exécuté.
 func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
+	if !r.gate.admits(text) {
+		return findings, nil
+	}
 	capture := r.pattern.NumSubexp() >= 1
 	for _, m := range r.pattern.FindAllSubmatchIndex(text, -1) {
 		start, end := m[0], m[1]
@@ -217,9 +221,12 @@ func nextJWT(matcher *jwtMatcher, pos int) (int, int, bool) {
 }
 
 // scanJWT exécute la règle jwt : chaque correspondance du motif d'origine, valeur fictive ignorée, bornes du Pack,
-// validateur de structure.
+// validateur de structure. Sans littéral de la porte dans le texte de la vue, aucune correspondance n'est cherchée.
 func scanJWT(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
+	if !r.gate.admits(text) {
+		return findings, nil
+	}
 	matcher := newJWTMatcher(text)
 	for pos := 0; ; {
 		c, end, ok := nextJWT(matcher, pos)

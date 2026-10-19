@@ -301,7 +301,7 @@ var allowedExported = map[string][]string{
 	"Level":       nil,
 	"Finding":     {"RuleID", "SecretType", "Encoding", "Score", "Level", "ByteStart", "ByteEnd", "LocalFingerprint"},
 	"Result":      {"Complete", "Failure", "Findings"},
-	"Options":     {"LanguageID", "Custom"},
+	"Options":     {"LanguageID", "Custom", "Workers"},
 	"Rules":       {},
 	"PackRefusal": nil,
 	"PackError":   {"RuleID", "Reason"},
