@@ -98,6 +98,11 @@ linters:
             - "github.com/xsom-consulting/secret-guard/custom"
             # Listes fermées du schéma du Pack de règles du client (slices.Contains).
             - "slices"
+            # Familles de règles sans budget partagé exécutées en parallèle (detect/detectors.go) : sync.WaitGroup
+            # seulement, chaque fil écrit dans sa case, fusion déterministe dans l'ordre séquentiel, sans état partagé
+            # entre les fils. « $ » : sync seul, pas ses sous-paquets (sync/atomic reste refusé). Le nombre de fils
+            # vient d'Options.Workers : runtime reste refusé.
+            - "sync$"
           deny:
             - pkg: "os"
               desc: "le moteur est pur : aucune E/S"

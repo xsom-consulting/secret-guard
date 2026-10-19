@@ -123,7 +123,9 @@ type rule struct {
 	score                  int
 	validator              validator
 	pattern                *regexp.Regexp
-	minLength, maxLength   int
+	// gate : porte littérale du motif (prefilter.go), nil sans porte (la règle s'exécute toujours).
+	gate                 *literalGate
+	minLength, maxLength int
 }
 
 // Rules est un Pack de règles chargé : règles « motif seul » dans l'ordre du Pack (jwt compris), règles dont le
@@ -262,15 +264,19 @@ func loadRule(spec ruleSpec, expected map[string]engineRule) (*rule, error) {
 		return nil, refuse(spec.RuleID, RefusalPatternRequired)
 	}
 	var pattern *regexp.Regexp
+	var gate *literalGate
 	if spec.Pattern != "" {
 		compiled, err := regexp.Compile(spec.Pattern)
 		if err != nil {
 			return nil, refuse(spec.RuleID, RefusalPatternNotRE2)
 		}
-		if parsed, err := syntax.Parse(spec.Pattern, syntax.Perl); err != nil || minMatchLength(parsed) == 0 {
+		parsed, err := syntax.Parse(spec.Pattern, syntax.Perl)
+		if err != nil || minMatchLength(parsed) == 0 {
 			return nil, refuse(spec.RuleID, RefusalPatternMatchesEmpty)
 		}
 		pattern = compiled
+		// Littéraux obligatoires, calculés une fois, depuis l'arbre analysé avec les drapeaux de regexp.Compile.
+		gate = gateFor(parsed)
 	}
 	if e, isEngine := expected[spec.RuleID]; isEngine {
 		if spec.Family != e.family || spec.SecretType != e.secretType || spec.Validator != e.validator ||
@@ -282,7 +288,7 @@ func loadRule(spec ruleSpec, expected map[string]engineRule) (*rule, error) {
 	}
 	return &rule{
 		id: spec.RuleID, family: spec.Family, secretType: spec.SecretType, score: spec.Score, validator: check,
-		pattern: pattern, minLength: spec.MinLength, maxLength: spec.MaxLength,
+		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength,
 	}, nil
 }
 

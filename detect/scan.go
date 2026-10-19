@@ -51,6 +51,7 @@ func scan(content []byte, rules *Rules, options Options, key *FingerprintKey) (r
 		return incomplete(FailureScanLimit)
 	}
 	s := scanStateFor(rules)
+	s.workers = options.Workers
 	defer s.views.wipe()
 	defer func() {
 		if recover() != nil {
@@ -81,13 +82,15 @@ var scanStateFor = newScanState
 func incomplete(failure Failure) Result { return Result{Failure: failure} }
 
 // scanState porte les budgets partagés d'une analyse : un budget de vues, de fenêtres et de décodages, et
-// l'ensemble des candidats base64 déjà vus, pour toute l'analyse (textes décodés compris).
+// l'ensemble des candidats base64 déjà vus, pour toute l'analyse (textes décodés compris). workers est
+// Options.Workers (detectors.go).
 type scanState struct {
 	rules   *Rules
 	views   *viewBudget
 	windows *windowBudget
 	decode  *decodeBudget
 	seen    map[sourceRange]struct{}
+	workers int
 }
 
 func appendBounded(target []finding, additions []finding) ([]finding, error) {
@@ -108,8 +111,10 @@ func (s *scanState) fixed(v *view, allowStructured bool) ([]finding, error) {
 	return found, err
 }
 
-// detectors suit scanDetectors de Secret Guard.
-func (s *scanState) detectors(v *view, entropy bool, lang language, allowStructured bool) ([]finding, error) {
+// sequentialDetectors suit scanDetectors de Secret Guard : familles exécutées l'une après l'autre, par l'appelant
+// (Options.Workers à 1, ou vue plus courte que parallelMinViewBytes). detectors (detectors.go) choisit entre elle et
+// parallelDetectors, qui rend exactement le même résultat.
+func (s *scanState) sequentialDetectors(v *view, entropy bool, lang language, allowStructured bool) ([]finding, error) {
 	fixed, err := s.fixed(v, allowStructured)
 	if err != nil {
 		return nil, err
