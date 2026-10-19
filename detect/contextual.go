@@ -637,7 +637,9 @@ func heredocTerminator(text []byte, bodyStart int, marker []byte) int {
 func (ctx *contextualText) safeContextualValue(m *assignmentMatch, p *parsedValue, lang language) bool {
 	text := ctx.text
 	value := text[p.start:p.valueEnd]
-	if safeLiteral(value) && !hasExpressionTail(text, p) {
+	// Extension de ce module : un Substitut après un schéma d'authentification (« Bearer XXXX1 ») ou dans le corps d'un
+	// bloc PEM est une valeur fictive, comme un Substitut seul (safeLiteral).
+	if (safeLiteral(value) || isAuthSchemeSubstitute(value) || isSubstitutePEM(value)) && !hasExpressionTail(text, p) {
 		return true
 	}
 	if ctx.isBareEnvironmentAssignment(m, lang) {
