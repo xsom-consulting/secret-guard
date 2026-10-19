@@ -61,6 +61,12 @@ func expurgateVectorInputs() []expurgateVectorInput {
 		{"gabarit/meme-valeur", "A " + token + " B " + token, "", 1},
 		{"residu/affectation-ligne-suivante", "API_KEY=" + token + "\nNEXT=another", "", 1},
 		{"residu/bloc-yaml", "app_secret: |\n  " + strings.Repeat("aZ3k", 6) + "\n  " + strings.Repeat("Lm2P", 6) + "\nnext: 1\n", "yaml", 1},
+		{"ligne/shell-ligne-suivante", "export A=" + token + "\nexport B=x", "shellscript", 1},
+		{"ligne/shell-crlf", "export A=" + token + "\r\nexport B=x", "shellscript", 1},
+		{"ligne/dotenv-meme-jeton", "GITHUB_TOKEN=" + token + "\nOTHER=1\nAGAIN=" + token + "\nZ=2", "dotenv", 1},
+		{"ligne/dotenv-crlf", "GITHUB_TOKEN=" + token + "\r\nOTHER=1\r\n", "dotenv", 1},
+		{"ligne/jeton-coupe", "clé " + token[:24] + "\n" + token[24:] + " suite", "", 1},
+		{"ligne/suite-en-fin-de-texte", "clé " + token + "\n" + strings.Repeat("aB3d", 4), "", 1},
 		{"sans-constat", "rien à signaler", "", 1},
 	}
 }

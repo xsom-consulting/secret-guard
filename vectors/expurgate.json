@@ -1003,20 +1003,30 @@
           "auth:\n  token: g",
           "hp_XXXXXXXXXXXXX",
           "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXX1\n"
+          "XXXXXX1\n  passwo",
+          "rd: XXXXXXXXXXXX",
+          "XXX2\n"
         ],
         "substitutions": [
           {
             "ruleId": "github_token",
             "secretType": "provider_token",
             "byteStart": 15,
-            "byteEnd": 84,
+            "byteEnd": 55,
             "utf16Start": 15,
-            "utf16End": 84,
+            "utf16End": 55,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 68,
+            "byteEnd": 84,
+            "utf16Start": 68,
+            "utf16End": 84,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXX2"
           }
         ]
       }
@@ -1194,21 +1204,21 @@
       "expected": {
         "failure": "none",
         "text": [
+          "API_KEY=ghp_XXXX",
           "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXX2"
+          "XXXXXXXXXXXXXXX1",
+          "\nNEXT=another"
         ],
         "substitutions": [
           {
-            "ruleId": "contextual_api_key",
-            "secretType": "api_key",
-            "byteStart": 0,
-            "byteEnd": 61,
-            "utf16Start": 0,
-            "utf16End": 61,
-            "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 8,
+            "byteEnd": 48,
+            "utf16Start": 8,
+            "utf16End": 48,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
           }
         ]
       }
@@ -1251,6 +1261,256 @@
             "utf16End": 75,
             "ordinal": 1,
             "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/shell-ligne-suivante",
+      "input": [
+        "ZXhwb3J0",
+        "IEE9Z2hw",
+        "X2FCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZApleHBv",
+        "cnQgQj14"
+      ],
+      "languageId": "shellscript",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export A=ghp_XXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "1\nexport B=x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 9,
+            "byteEnd": 49,
+            "utf16Start": 9,
+            "utf16End": 49,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/shell-crlf",
+      "input": [
+        "ZXhwb3J0",
+        "IEE9Z2hw",
+        "X2FCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZA0KZXhw",
+        "b3J0IEI9",
+        "eA=="
+      ],
+      "languageId": "shellscript",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export A=ghp_XXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "1\r\nexport B=x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 9,
+            "byteEnd": 49,
+            "utf16Start": 9,
+            "utf16End": 49,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/dotenv-meme-jeton",
+      "input": [
+        "R0lUSFVC",
+        "X1RPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2QK",
+        "T1RIRVI9",
+        "MQpBR0FJ",
+        "Tj1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "Clo9Mg=="
+      ],
+      "languageId": "dotenv",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "GITHUB_TOKEN=ghp",
+          "_XXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXX1\nOTHER=1\nAG",
+          "AIN=ghp_XXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXX2\nZ=2"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 68,
+            "byteEnd": 108,
+            "utf16Start": 68,
+            "utf16End": 108,
+            "ordinal": 2,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/dotenv-crlf",
+      "input": [
+        "R0lUSFVC",
+        "X1RPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2QN",
+        "Ck9USEVS",
+        "PTENCg=="
+      ],
+      "languageId": "dotenv",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "GITHUB_TOKEN=ghp",
+          "_XXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXX1\r\nOTHER=1\r\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/jeton-coupe",
+      "input": [
+        "Y2zDqSBn",
+        "aHBfYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2QK",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZCBz",
+        "dWl0ZQ=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "clé ghp_XXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXX1 s",
+          "uite"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 5,
+            "byteEnd": 46,
+            "utf16Start": 4,
+            "utf16End": 45,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ligne/suite-en-fin-de-texte",
+      "input": [
+        "Y2zDqSBn",
+        "aHBfYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkCmFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2Q="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "clé ghp_XXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 5,
+            "byteEnd": 62,
+            "utf16Start": 4,
+            "utf16End": 61,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
           }
         ]
       }
