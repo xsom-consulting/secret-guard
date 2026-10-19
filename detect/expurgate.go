@@ -65,11 +65,19 @@ type expurgatedSpan struct {
 // être appelé plusieurs fois pour un même constat et doit alors rendre le même numéro. Les octets hors des étendues
 // sont gardés tels quels. Rend aussi, pour chaque Substitut, sa Substitution (positions dans le texte d'origine).
 //
+// Expurgate n'a pas la clé d'Empreinte locale : il ne peut pas calculer l'Empreinte locale des octets qu'il remplace.
+// Un Substitut garde l'Empreinte locale de son constat représentatif seulement si l'étendue remplacée est exactement
+// celle de ce constat (ni rétrécie à la partie secrète, ni élargie par une fusion) ; sinon, un constat qui porte une
+// Empreinte locale fait refuser l'expurgation (ErrExpurgateSpan) : jamais une Empreinte locale qui ne serait pas celle
+// du texte remplacé, et que l'appelant prendrait pour numéroter. Un constat sans Empreinte locale donne une Substitution
+// sans Empreinte locale. ExpurgateAndRescan, qui a la clé, donne à chaque Substitut l'Empreinte locale de ses octets.
+//
 // Expurgate ne prouve pas que le résultat est sûr ; ExpurgateAndRescan l'analyse de nouveau.
 //
 // Refus, sans texte : numéro absent (ordinal nil, ou qui rend faux) ou hors de 1 à 999 (ErrExpurgateOrdinal) ;
 // analyse incomplète (ErrExpurgateIncomplete) ; contenu hors UTF-8 (ErrExpurgateEncoding) ; étendue hors du contenu ou
-// qui coupe un caractère (ErrExpurgateSpan).
+// qui coupe un caractère, ou étendue remplacée autre que celle de son constat qui porte une Empreinte locale
+// (ErrExpurgateSpan).
 func Expurgate(content []byte, result Result, ordinal func(Finding) (int, bool)) ([]byte, []Substitution, error) {
 	if ordinal == nil {
 		return nil, nil, ErrExpurgateOrdinal
@@ -77,7 +85,7 @@ func Expurgate(content []byte, result Result, ordinal func(Finding) (int, bool))
 	if !result.Complete || result.Failure != FailureNone {
 		return nil, nil, ErrExpurgateIncomplete
 	}
-	text, substitutions, _, err := expurgate(content, result.Findings, nil, ordinal)
+	text, substitutions, _, err := expurgate(content, result.Findings, nil, nil, nil, ordinal)
 	return text, substitutions, err
 }
 
@@ -91,8 +99,16 @@ var widenings = []func(content []byte, start, end int) (int, int){widenToToken, 
 // (Expurgate), puis analyse le texte expurgé avec les mêmes règles, clé et options. S'il reste un constat (résidu), son
 // étendue, ramenée au texte d'origine, est élargie au jeton qui la contient (suite de caractères sans espace), puis, au
 // tour suivant, à sa ligne, et remplacée en entier ; un résidu après l'élargissement à la ligne fait échouer
-// l'expurgation (SanitizeResidual). Une étendue élargie a l'Empreinte locale de son texte d'origine entier (vide sans
-// clé).
+// l'expurgation (SanitizeResidual).
+//
+// Avant ce remplacement, un constat d'une règle « motif seul » dont l'étendue prend, par la vue jointe des jetons
+// coupés, le premier mot de la ligne suivante est ramené à sa première ligne quand elle est à elle seule une valeur de
+// la règle (firstLineSecretEnd) : « export A=<jeton>\nexport B=x » garde « \nexport B=x ».
+//
+// Avec key, chaque Substitut (et le constat que reçoit ordinal) a l'Empreinte locale des octets d'origine qu'il remplace
+// exactement, que l'étendue soit celle d'un constat, rétrécie, fusionnée ou élargie : même texte remplacé, même
+// Empreinte locale, et deux Substituts d'Empreintes locales égales remplacent le même texte. Sans key, aucune
+// Empreinte locale.
 //
 // Le texte et les Substitutions sont rendus seulement si les analyses sont complètes et que la dernière n'a aucun
 // constat (SanitizeNone) ; sinon nil, avec SanitizeIncomplete (analyse incomplète, clé absente ou effacée, texte
@@ -123,7 +139,7 @@ func ExpurgateAndRescan(content []byte, rules *Rules, key *FingerprintKey, optio
 	}
 	var widened []Finding
 	for step := 0; ; step++ {
-		text, substitutions, spans, err := expurgate(content, initial.Findings, widened, ordinal)
+		text, substitutions, spans, err := expurgate(content, initial.Findings, widened, rules, key, ordinal)
 		if err != nil {
 			failure := SanitizeIncomplete
 			if errors.Is(err, ErrExpurgateOrdinal) {
@@ -148,17 +164,16 @@ func ExpurgateAndRescan(content []byte, rules *Rules, key *FingerprintKey, optio
 				RuleID: r.RuleID, SecretType: r.SecretType, Encoding: r.Encoding, Score: r.Score, Level: r.Level,
 				ByteStart: start, ByteEnd: end,
 			}
-			if key != nil && end > start {
-				w.LocalFingerprint = localFingerprint(*key, content[start:end])
-			}
 			widened = append(widened, w)
 		}
 	}
 }
 
-// expurgate est l'expurgation d'Expurgate et d'ExpurgateAndRescan : constats rétrécis à leur partie secrète, étendues
-// élargies (widened) gardées entières, fusion, numéros, puis texte écrit dans un seul tableau à sa taille exacte.
-func expurgate(content []byte, findings, widened []Finding, ordinal func(Finding) (int, bool)) ([]byte, []Substitution, []expurgatedSpan, error) {
+// expurgate est l'expurgation d'Expurgate et d'ExpurgateAndRescan : constats rétrécis à leur partie secrète (puis, avec
+// rules, à leur première ligne quand elle est à elle seule un secret de leur règle : firstLineSecretEnd), étendues
+// élargies (widened) gardées entières, fusion, Empreintes locales (substitutionFingerprint), numéros, puis texte écrit
+// dans un seul tableau à sa taille exacte.
+func expurgate(content []byte, findings, widened []Finding, rules *Rules, key *FingerprintKey, ordinal func(Finding) (int, bool)) ([]byte, []Substitution, []expurgatedSpan, error) {
 	if !utf8.Valid(content) {
 		return nil, nil, nil, ErrExpurgateEncoding
 	}
@@ -171,6 +186,9 @@ func expurgate(content []byte, findings, widened []Finding, ordinal func(Finding
 			continue
 		}
 		f.ByteStart, f.ByteEnd = secretPart(content, f)
+		if end, ok := firstLineSecretEnd(content, rules, f); ok {
+			f.ByteEnd = end
+		}
 		targets = append(targets, f)
 	}
 	for _, f := range widened {
@@ -182,6 +200,9 @@ func expurgate(content []byte, findings, widened []Finding, ordinal func(Finding
 		}
 	}
 	merged := mergeExpurgateTargets(targets)
+	if key != nil && !key.usable() {
+		return nil, nil, nil, ErrExpurgateIncomplete
+	}
 	substitutions := make([]Substitution, 0, len(merged))
 	size := len(content)
 	units, cursor := 0, 0
@@ -189,6 +210,11 @@ func expurgate(content []byte, findings, widened []Finding, ordinal func(Finding
 		if ordinal == nil {
 			return nil, nil, nil, ErrExpurgateOrdinal
 		}
+		fingerprint, ok := substitutionFingerprint(content, findings, rep, key)
+		if !ok {
+			return nil, nil, nil, ErrExpurgateSpan
+		}
+		rep.LocalFingerprint = fingerprint
 		number, ok := ordinal(rep)
 		if !ok {
 			return nil, nil, nil, ErrExpurgateOrdinal
@@ -219,6 +245,26 @@ func expurgate(content []byte, findings, widened []Finding, ordinal func(Finding
 		cursor = s.ByteEnd
 	}
 	return append(out, content[cursor:]...), substitutions, spans, nil
+}
+
+// substitutionFingerprint rend l'Empreinte locale du Substitut de l'étendue fusionnée rep : avec key, celle des octets
+// d'origine remplacés, content[rep.ByteStart:rep.ByteEnd] (calcul de ScanWithFingerprint). Sans key (Expurgate) :
+// l'Empreinte locale du constat représentatif si l'un des constats reçus a exactement l'étendue remplacée et cette
+// Empreinte locale ; vide si le représentant n'en porte pas ; sinon faux (ErrExpurgateSpan) : une Empreinte locale qui
+// ne serait pas celle du texte remplacé n'est jamais rendue.
+func substitutionFingerprint(content []byte, findings []Finding, rep Finding, key *FingerprintKey) (string, bool) {
+	if key != nil {
+		return localFingerprint(*key, content[rep.ByteStart:rep.ByteEnd]), true
+	}
+	if rep.LocalFingerprint == "" {
+		return "", true
+	}
+	for _, f := range findings {
+		if f.ByteStart == rep.ByteStart && f.ByteEnd == rep.ByteEnd && f.LocalFingerprint == rep.LocalFingerprint {
+			return rep.LocalFingerprint, true
+		}
+	}
+	return "", false
 }
 
 // validExpurgateSpan dit si l'étendue d'un constat est dans le contenu et ne coupe aucun caractère UTF-8.
@@ -294,6 +340,55 @@ func secretPart(content []byte, f Finding) (int, int) {
 		return f.ByteStart, f.ByteEnd
 	}
 	return f.ByteStart + start, f.ByteStart + end
+}
+
+// firstLineSecretEnd rend la fin de la première ligne de l'étendue d'un constat d'une règle « motif seul » de rules
+// (constat représentatif d'une étendue fusionnée par dedupeOverlaps compris) quand l'étendue passe une fin de ligne
+// (« \n », « \r ») et que :
+//   - la partie avant la première fin de ligne est à elle seule, exactement, une valeur de la règle (scanFixedPattern ou
+//     scanJWT sur cette seule partie : motif, valeur fictive, bornes, validateur) ;
+//   - l'étendue s'arrête, dans content, devant un séparateur d'affectation ou de commande (« = », « : », espace,
+//     tabulation) : ce qu'elle prend sur la ligne suivante est un mot de cette ligne (« export », nom d'une variable
+//     d'un fichier .env), et non la suite d'un jeton coupé.
+//
+// L'étendue vient alors d'une vue jointe (lineWrappedFixedViews) qui a recollé à un jeton complet le premier mot de la
+// ligne suivante : seule la première ligne est remplacée, la fin de ligne et la ligne suivante sont gardées. Sinon
+// (secret réellement coupé par un retour à la ligne, règle sans motif, étendue d'une autre forme, analyse du segment en
+// échec), faux : l'étendue entière est remplacée.
+func firstLineSecretEnd(content []byte, rules *Rules, f Finding) (int, bool) {
+	if rules == nil || !rules.loaded || isCustomFinding(f) {
+		return 0, false
+	}
+	span := content[f.ByteStart:f.ByteEnd]
+	lineEnd := bytes.IndexAny(span, "\r\n")
+	if lineEnd <= 0 || f.ByteEnd >= len(content) || strings.IndexByte("=: \t", content[f.ByteEnd]) < 0 {
+		return 0, false
+	}
+	var fixed *rule
+	for _, r := range rules.fixed {
+		if r.id == f.RuleID {
+			fixed = r
+			break
+		}
+	}
+	if fixed == nil || fixed.pattern == nil {
+		return 0, false
+	}
+	segment := span[:lineEnd]
+	scanRule := scanFixedPattern
+	if fixed.id == ruleJWT {
+		scanRule = scanJWT
+	}
+	found, err := scanRule(identityView(segment), fixed, &decodeBudget{}, nil)
+	if err != nil {
+		return 0, false
+	}
+	for _, candidate := range found {
+		if candidate.start == 0 && candidate.end == len(segment) {
+			return f.ByteStart + lineEnd, true
+		}
+	}
+	return 0, false
 }
 
 // urlPasswordRange rend l'étendue du mot de passe d'une URL à identifiants, si span est exactement un candidat de

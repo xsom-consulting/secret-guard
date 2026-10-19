@@ -640,6 +640,297 @@ func TestExpurgateResidualLadder(t *testing.T) {
 	})
 }
 
+// fingerprintOrdinals numérote par Empreinte locale, à partir de 1 : même Empreinte locale, même numéro (ce que fait
+// l'appelant qui veut le même Substitut pour la même valeur).
+func fingerprintOrdinals() func(Finding) (int, bool) {
+	seen := map[string]int{}
+	return func(f Finding) (int, bool) {
+		if n, ok := seen[f.LocalFingerprint]; ok {
+			return n, true
+		}
+		seen[f.LocalFingerprint] = 1 + len(seen)
+		return seen[f.LocalFingerprint], true
+	}
+}
+
+// TestExpurgateSubstitutionFingerprint : avec la clé, l'Empreinte locale d'un Substitut (et du constat que reçoit
+// ordinal) est celle des octets d'origine qu'il remplace exactement, que l'étendue soit fusionnée, rétrécie ou élargie ;
+// sans la clé (Expurgate), l'Empreinte locale d'un constat n'est gardée que pour son étendue exacte.
+func TestExpurgateSubstitutionFingerprint(t *testing.T) {
+	rules := loadInitialRules(t)
+	key := randomKey(t)
+	defer key.Wipe()
+	token := syntheticGitHubToken()
+	// checkFingerprints exige, pour chaque Substitution, l'Empreinte locale de content[ByteStart:ByteEnd], et la même
+	// Empreinte locale pour le constat reçu par ordinal à cette étendue.
+	checkFingerprints := func(t *testing.T, content []byte, subs []Substitution, seen map[[2]int]string) {
+		t.Helper()
+		for _, s := range subs {
+			want := localFingerprint(key, content[s.ByteStart:s.ByteEnd])
+			if s.LocalFingerprint != want || seen[[2]int{s.ByteStart, s.ByteEnd}] != want {
+				t.Errorf("Substitution %d-%d : Empreinte locale qui n'est pas celle des octets remplacés", s.ByteStart, s.ByteEnd)
+			}
+		}
+	}
+	recording := func(seen map[[2]int]string) func(Finding) (int, bool) {
+		return func(f Finding) (int, bool) {
+			seen[[2]int{f.ByteStart, f.ByteEnd}] = f.LocalFingerprint
+			return 1, true
+		}
+	}
+	t.Run("étendue fusionnée de deux constats qui se touchent : Empreinte locale des octets fusionnés", func(t *testing.T) {
+		content := []byte("A " + token + "!" + token + " B")
+		end := 2 + len(token)
+		calls := 0
+		defer swapExpurgateScan(func(c []byte, r *Rules, o Options, k *FingerprintKey) Result {
+			calls++
+			if calls > 1 {
+				return scan(c, r, o, k)
+			}
+			// Deux constats qui se touchent, chacun avec l'Empreinte locale de sa seule valeur.
+			return Result{Complete: true, Failure: FailureNone, Findings: []Finding{
+				{RuleID: "github_token", SecretType: "provider_token", Score: 95, ByteStart: 2, ByteEnd: end + 1,
+					LocalFingerprint: localFingerprint(key, content[2:end+1])},
+				{RuleID: "github_token", SecretType: "provider_token", Score: 95, ByteStart: end + 1, ByteEnd: end + 1 + len(token),
+					LocalFingerprint: localFingerprint(key, content[end+1:end+1+len(token)])},
+			}}
+		})()
+		seen := map[[2]int]string{}
+		_, subs, result := ExpurgateAndRescan(content, rules, &key, Options{}, recording(seen))
+		if result.Failure != SanitizeNone || len(subs) != 1 || subs[0].ByteStart != 2 || subs[0].ByteEnd != end+1+len(token) ||
+			subs[0].LocalFingerprint == result.Initial.Findings[0].LocalFingerprint {
+			t.Fatalf("%s %+v", result.Failure, subs)
+		}
+		checkFingerprints(t, content, subs, seen)
+	})
+	t.Run("même jeton sur deux lignes : même Empreinte locale, celle du jeton", func(t *testing.T) {
+		content := []byte("GITHUB_TOKEN=" + token + "\nOTHER=1\nAGAIN=" + token + "\nZ=2")
+		seen := map[[2]int]string{}
+		_, subs, result := expurgateBoth(t, content, rules, &key, Options{}, func() func(Finding) (int, bool) { return recording(seen) })
+		if result.Failure != SanitizeNone || len(subs) != 2 || subs[0].LocalFingerprint != subs[1].LocalFingerprint ||
+			subs[0].LocalFingerprint != localFingerprint(key, []byte(token)) {
+			t.Fatalf("%s %+v", result.Failure, subs)
+		}
+		checkFingerprints(t, content, subs, seen)
+	})
+	t.Run("partie secrète d'une URL : Empreinte locale du seul mot de passe", func(t *testing.T) {
+		content := []byte("postgres://app:" + syntheticPassword() + "@db/x")
+		seen := map[[2]int]string{}
+		_, subs, result := ExpurgateAndRescan(content, rules, &key, Options{}, recording(seen))
+		if result.Failure != SanitizeNone || len(subs) != 1 || subs[0].LocalFingerprint != localFingerprint(key, []byte(syntheticPassword())) {
+			t.Fatalf("%s %+v", result.Failure, subs)
+		}
+		checkFingerprints(t, content, subs, seen)
+	})
+	t.Run("résidu élargi au jeton puis à la ligne : Empreinte locale des octets élargis", func(t *testing.T) {
+		content := []byte("a b\nkey " + token + " suite\nfin")
+		for _, cleanAfter := range []int{2, 3} {
+			calls := 0
+			restore := swapExpurgateScan(func(text []byte, r *Rules, o Options, k *FingerprintKey) Result {
+				calls++
+				if calls == 1 || calls > cleanAfter {
+					return scan(text, r, o, k)
+				}
+				return Result{Complete: true, Failure: FailureNone, Findings: []Finding{{RuleID: "r", ByteStart: 4, ByteEnd: 7}}}
+			})
+			seen := map[[2]int]string{}
+			_, subs, result := ExpurgateAndRescan(content, rules, &key, Options{}, recording(seen))
+			restore()
+			if result.Failure != SanitizeNone || len(subs) == 0 || subs[0].ByteStart != 4 {
+				t.Fatalf("%d : %s %+v", cleanAfter, result.Failure, subs)
+			}
+			checkFingerprints(t, content, subs, seen)
+		}
+	})
+	t.Run("Expurgate sans clé : Empreinte locale gardée pour l'étendue exacte du constat seulement", func(t *testing.T) {
+		password := syntheticPassword()
+		content := []byte("A " + token + " postgres://app:" + password + "@db/x")
+		result := ScanWithFingerprint(content, rules, key)
+		if !result.Complete || len(result.Findings) != 2 {
+			t.Fatalf("%+v", result.Findings)
+		}
+		// Étendue exacte : Empreinte locale du constat gardée.
+		exact := Result{Complete: true, Failure: FailureNone, Findings: result.Findings[:1]}
+		_, subs, err := Expurgate(content, exact, fixedOrdinal(1))
+		if err != nil || len(subs) != 1 || subs[0].LocalFingerprint != result.Findings[0].LocalFingerprint {
+			t.Fatalf("%+v %v", subs, err)
+		}
+		// Étendue rétrécie au mot de passe : refus, aucun texte.
+		text, subs, err := Expurgate(content, result, fixedOrdinal(1))
+		if !errors.Is(err, ErrExpurgateSpan) || text != nil || subs != nil {
+			t.Fatalf("%q %+v %v", text, subs, err)
+		}
+		// Étendue fusionnée par l'expurgation, dont le représentant porte une Empreinte locale : refus.
+		touching := Result{Complete: true, Failure: FailureNone, Findings: []Finding{
+			{RuleID: "a", Score: 90, ByteStart: 0, ByteEnd: 4, LocalFingerprint: localFingerprint(key, content[0:4])},
+			{RuleID: "b", Score: 10, ByteStart: 4, ByteEnd: 8, LocalFingerprint: localFingerprint(key, content[4:8])},
+		}}
+		if _, _, err := Expurgate(content, touching, fixedOrdinal(1)); !errors.Is(err, ErrExpurgateSpan) {
+			t.Fatalf("fusion acceptée : %v", err)
+		}
+		// Sans Empreinte locale : étendue rétrécie admise, Substitution sans Empreinte locale.
+		_, subs, err = Expurgate(content, Scan(content, rules, Options{}), fixedOrdinal(1))
+		if err != nil || len(subs) != 2 || subs[0].LocalFingerprint != "" || subs[1].LocalFingerprint != "" {
+			t.Fatalf("%+v %v", subs, err)
+		}
+	})
+	t.Run("clé effacée entre les analyses : aucun texte", func(t *testing.T) {
+		wiped := randomKey(t)
+		content := []byte("A " + token)
+		calls := 0
+		defer swapExpurgateScan(func(c []byte, r *Rules, o Options, k *FingerprintKey) Result {
+			calls++
+			result := scan(c, r, o, k)
+			if calls == 1 {
+				wiped.Wipe()
+			}
+			return result
+		})()
+		text, _, result := ExpurgateAndRescan(content, rules, &wiped, Options{}, fixedOrdinal(1))
+		if text != nil || result.Failure != SanitizeIncomplete {
+			t.Fatalf("%+v", result)
+		}
+	})
+}
+
+// TestExpurgateLineBreak : un jeton complet en fin de ligne, suivi d'une ligne qui commence par un mot, donne un
+// constat dont l'étendue (fusion avec la vue jointe des jetons coupés) prend ce mot. Seule la première ligne est
+// remplacée ; la fin de ligne et la ligne suivante restent, et le Substitut a l'Empreinte locale du seul jeton. Un
+// secret réellement coupé par un retour à la ligne est remplacé en entier. Les étendues de détection ne changent pas.
+func TestExpurgateLineBreak(t *testing.T) {
+	rules := loadInitialRules(t)
+	token := syntheticGitHubToken()
+	substitute := func(n string) string { return "ghp_" + strings.Repeat("X", 36-len(n)) + n }
+	raw := make([]byte, FingerprintKeyBytes)
+	if _, err := rand.Read(raw); err != nil {
+		t.Fatal(err)
+	}
+	key, err := NewFingerprintKey(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer key.Wipe()
+	alone := ScanWithFingerprint([]byte(token), rules, key)
+	if len(alone.Findings) != 1 {
+		t.Fatalf("%+v", alone)
+	}
+	tokenFingerprint := alone.Findings[0].LocalFingerprint
+	t.Run("première ligne seule remplacée, fin de ligne et ligne suivante gardées (LF, CRLF, .env)", func(t *testing.T) {
+		for _, c := range []struct {
+			name, input, want string
+			spans             [][2]int
+		}{
+			{"shell", "export A=" + token + "\nexport B=x", "export A=" + substitute("1") + "\nexport B=x", [][2]int{{9, 49}}},
+			{"shell CRLF", "export A=" + token + "\r\nexport B=x", "export A=" + substitute("1") + "\r\nexport B=x", [][2]int{{9, 49}}},
+			{
+				".env, même jeton deux fois", "GITHUB_TOKEN=" + token + "\nOTHER=1\nAGAIN=" + token + "\nZ=2",
+				"GITHUB_TOKEN=" + substitute("1") + "\nOTHER=1\nAGAIN=" + substitute("1") + "\nZ=2", [][2]int{{13, 53}, {68, 108}},
+			},
+			{
+				".env CRLF, même jeton deux fois", "GITHUB_TOKEN=" + token + "\r\nOTHER=1\r\nAGAIN=" + token + "\r\nZ=2",
+				"GITHUB_TOKEN=" + substitute("1") + "\r\nOTHER=1\r\nAGAIN=" + substitute("1") + "\r\nZ=2", [][2]int{{13, 53}, {70, 110}},
+			},
+			{"YAML", "token: " + token + "\nnext: 1", "token: " + substitute("1") + "\nnext: 1", [][2]int{{7, 47}}},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				initial := ScanWithFingerprint([]byte(c.input), rules, key)
+				if !initial.Complete || len(initial.Findings) != len(c.spans) || !bytes.ContainsAny([]byte(c.input[initial.Findings[0].ByteStart:initial.Findings[0].ByteEnd]), "\r\n") {
+					t.Fatalf("cas sans étendue qui passe la fin de ligne : %+v", initial.Findings)
+				}
+				text, subs, result := expurgateBoth(t, []byte(c.input), rules, &key, Options{}, fingerprintOrdinals)
+				if result.Failure != SanitizeNone || string(text) != c.want || len(subs) != len(c.spans) {
+					t.Fatalf("%s : %q %+v", result.Failure, text, subs)
+				}
+				for i, s := range subs {
+					if s.ByteStart != c.spans[i][0] || s.ByteEnd != c.spans[i][1] || s.UTF16Start != s.ByteStart || s.UTF16End != s.ByteEnd ||
+						s.RuleID != "github_token" || s.LocalFingerprint != tokenFingerprint || s.Ordinal != 1 {
+						t.Errorf("Substitution %+v, étendue attendue %v", s, c.spans[i])
+					}
+				}
+				if again := Scan(text, rules, Options{}); !again.Complete || len(again.Findings) > 0 {
+					t.Fatalf("constat après expurgation : %+v", again.Findings)
+				}
+			})
+		}
+	})
+	t.Run("le numéro reçoit le constat ramené à la première ligne, avec son Empreinte locale", func(t *testing.T) {
+		var got []Finding
+		_, _, result := ExpurgateAndRescan([]byte("export A="+token+"\nexport B=x"), rules, &key, Options{}, func(f Finding) (int, bool) {
+			got = append(got, f)
+			return 1, true
+		})
+		if result.Failure != SanitizeNone || len(got) != 1 || got[0].ByteStart != 9 || got[0].ByteEnd != 49 || got[0].LocalFingerprint != tokenFingerprint {
+			t.Fatalf("%+v", got)
+		}
+	})
+	t.Run("secret réellement coupé, ou suite ambiguë : étendue entière remplacée", func(t *testing.T) {
+		head, tail := "ghp_"+strings.Repeat("aB3d", 5), strings.Repeat("aB3d", 4)
+		for _, c := range []struct{ name, input string }{
+			// Première ligne trop courte pour la règle : jeton coupé.
+			{"jeton coupé", "TOKEN=" + head + "\n" + tail + " suite"},
+			{"jeton coupé CRLF", "TOKEN=" + head + "\r\n" + tail + " suite"},
+			// Première ligne complète, mais la suite finit le texte (ou sa ligne) : rien ne dit que ce n'est pas la fin
+			// du jeton.
+			{"suite en fin de texte", "TOKEN=" + token + "\n" + tail},
+			{"suite en fin de ligne", "TOKEN=" + token + "\n" + tail + "\nfin"},
+		} {
+			t.Run(c.name, func(t *testing.T) {
+				initial := Scan([]byte(c.input), rules, Options{})
+				if !initial.Complete || len(initial.Findings) != 1 {
+					t.Fatalf("%+v", initial.Findings)
+				}
+				f := initial.Findings[0]
+				if !bytes.ContainsAny([]byte(c.input[f.ByteStart:f.ByteEnd]), "\r\n") {
+					t.Fatalf("constat qui ne passe pas la fin de ligne : %+v", f)
+				}
+				if _, ok := firstLineSecretEnd([]byte(c.input), rules, f); ok {
+					t.Fatal("rétréci à la première ligne")
+				}
+				// Étendue entière remplacée (l'échelle des résidus peut l'élargir encore).
+				text, subs, result := expurgateBoth(t, []byte(c.input), rules, nil, Options{}, func() func(Finding) (int, bool) { return fixedOrdinal(1) })
+				if result.Failure != SanitizeNone || len(subs) != 1 || subs[0].ByteStart > f.ByteStart || subs[0].ByteEnd < f.ByteEnd ||
+					bytes.Contains(text, []byte("aB3d")) {
+					t.Fatalf("%s : %q %+v, constat %+v", result.Failure, text, subs, f)
+				}
+			})
+		}
+	})
+	t.Run("sans règles (Expurgate) : étendue entière remplacée", func(t *testing.T) {
+		content := []byte("export A=" + token + "\nexport B=x")
+		text, subs, err := Expurgate(content, Scan(content, rules, Options{}), fixedOrdinal(1))
+		if err != nil || len(subs) != 1 || subs[0].ByteEnd != 56 || string(text) != "export A=ghp_"+strings.Repeat("X", 42)+"1 B=x" {
+			t.Fatalf("%q %+v %v", text, subs, err)
+		}
+	})
+	t.Run("rétrécissement réservé aux règles « motif seul » dont la première ligne est une valeur exacte", func(t *testing.T) {
+		content := []byte("export A=" + token + "\nexport B=x")
+		for _, c := range []struct {
+			f    Finding
+			want bool
+		}{
+			{Finding{RuleID: "github_token", ByteStart: 9, ByteEnd: 56}, true},
+			{Finding{RuleID: "github_token", ByteStart: 8, ByteEnd: 56}, false},           // « = » en tête : pas une valeur exacte
+			{Finding{RuleID: "github_token", ByteStart: 9, ByteEnd: 49}, false},           // aucune fin de ligne
+			{Finding{RuleID: "github_token", ByteStart: 9, ByteEnd: len(content)}, false}, // fin du texte
+			{Finding{RuleID: "openai_key", ByteStart: 9, ByteEnd: 56}, false},             // autre règle
+			{Finding{RuleID: "high_entropy", ByteStart: 9, ByteEnd: 56}, false},           // règle sans motif du Pack
+			{Finding{RuleID: "contextual_generic_secret", ByteStart: 9, ByteEnd: 56}, false},
+			{Finding{RuleID: customRulePrefix + "x", SecretType: customSecretType, ByteStart: 9, ByteEnd: 56}, false},
+		} {
+			_, ok := firstLineSecretEnd(content, rules, c.f)
+			if ok != c.want {
+				t.Errorf("%+v : %v", c.f, ok)
+			}
+		}
+		if _, ok := firstLineSecretEnd(content, nil, Finding{RuleID: "github_token", ByteStart: 9, ByteEnd: 56}); ok {
+			t.Error("rétréci sans règles")
+		}
+		if _, ok := firstLineSecretEnd(content, &Rules{}, Finding{RuleID: "github_token", ByteStart: 9, ByteEnd: 56}); ok {
+			t.Error("rétréci avec des règles non chargées")
+		}
+	})
+}
+
 // TestExpurgateRedactResiduals rejoue par ExpurgateAndRescan chaque cas des vecteurs du masquage, dont les cinq que le
 // masquage laisse en résidu : le nombre de résidus restants est consigné, l'objectif est 0. Un échec ne rend aucun
 // texte ; un texte rendu est sans constat à une nouvelle analyse indépendante.
