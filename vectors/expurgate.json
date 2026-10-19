@@ -1,0 +1,1275 @@
+{
+  "formatVersion": 1,
+  "description": "Expurgation (detect.ExpurgateAndRescan, sans clé d'Empreinte locale) : entrée en base64 et texte expurgé, coupés en morceaux à joindre (recherche de secrets du dépôt) ; numéros donnés dans l'ordre où les étendues sont vues à partir de firstOrdinal (même début, même numéro). Extension de ce module, sans origine TypeScript ; écrit par go test ./detect -run '^TestExpurgateVectors$' -update.",
+  "cases": [
+    {
+      "id": "matrice/jeton-github",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Q="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=ghp",
+          "_XXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/url",
+      "input": [
+        "cG9zdGdy",
+        "ZXM6Ly9h",
+        "cHA6WHE3",
+        "TG0yUHo5",
+        "IVdyNFRu",
+        "NUBkYjo1",
+        "NDMyL3g="
+      ],
+      "firstOrdinal": 2,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "postgres://app:X",
+          "XXXXXXXXXXXXXX2@",
+          "db:5432/x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "database_url_credentials",
+            "secretType": "database_credentials",
+            "byteStart": 15,
+            "byteEnd": 31,
+            "utf16Start": 15,
+            "utf16End": 31,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/bearer",
+      "input": [
+        "QXV0aG9y",
+        "aXphdGlv",
+        "bjogQmVh",
+        "cmVyIGFa",
+        "M2tROW1X",
+        "MnhMN3BS",
+        "NHRZOHZC",
+        "MW5DNg=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "Authorization: B",
+          "earer XXXXXXXXXX",
+          "XXXXXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_access_token",
+            "secretType": "access_token",
+            "byteStart": 22,
+            "byteEnd": 46,
+            "utf16Start": 22,
+            "utf16End": 46,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/bearer-jeton-github",
+      "input": [
+        "QXV0aG9y",
+        "aXphdGlv",
+        "bjogQmVh",
+        "cmVyIGdo",
+        "cF9hQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2Q="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "Authorization: B",
+          "earer ghp_XXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 22,
+            "byteEnd": 62,
+            "utf16Start": 22,
+            "utf16End": 62,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/pem",
+      "input": [
+        "LS0tLS1C",
+        "RUdJTiBS",
+        "U0EgUFJJ",
+        "VkFURSBL",
+        "RVktLS0t",
+        "LQpNSUlF",
+        "b3dJQkFB",
+        "S0NBUUVB",
+        "cTdMbTJQ",
+        "ejlXcjRU",
+        "bnE3TG0y",
+        "UHo5V3I0",
+        "VG5xN0xt",
+        "MlB6OVdy",
+        "NFRucTdM",
+        "bTJQejlX",
+        "cjRUbgph",
+        "WjNrUTlt",
+        "VzJ4TDdh",
+        "WjNrUTlt",
+        "VzJ4TDdh",
+        "WjNrUTlt",
+        "VzJ4TDdh",
+        "WjNrUTlt",
+        "VzJ4TDcK",
+        "LS0tLS1F",
+        "TkQgUlNB",
+        "IFBSSVZB",
+        "VEUgS0VZ",
+        "LS0tLS0K"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "-----BEGIN RSA P",
+          "RIVATE KEY-----\n",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXX1\n-----END R",
+          "SA PRIVATE KEY--",
+          "---\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "private_key_pem",
+            "secretType": "private_key",
+            "byteStart": 32,
+            "byteEnd": 149,
+            "utf16Start": 32,
+            "utf16End": 149,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/pem-crlf",
+      "input": [
+        "Y2zDqSA6",
+        "DQotLS0t",
+        "LUJFR0lO",
+        "IFJTQSBQ",
+        "UklWQVRF",
+        "IEtFWS0t",
+        "LS0tDQpN",
+        "SUlFb3dJ",
+        "QkFBS0NB",
+        "UUVBcTdM",
+        "bTJQejlX",
+        "cjRUbnE3",
+        "TG0yUHo5",
+        "V3I0VG5x",
+        "N0xtMlB6",
+        "OVdyNFRu",
+        "cTdMbTJQ",
+        "ejlXcjRU",
+        "bg0KYVoz",
+        "a1E5bVcy",
+        "eEw3YVoz",
+        "a1E5bVcy",
+        "eEw3YVoz",
+        "a1E5bVcy",
+        "eEw3YVoz",
+        "a1E5bVcy",
+        "eEw3DQot",
+        "LS0tLUVO",
+        "RCBSU0Eg",
+        "UFJJVkFU",
+        "RSBLRVkt",
+        "LS0tLQ0K"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "clé :\r\n-----BEG",
+          "IN RSA PRIVATE K",
+          "EY-----\r\nXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXX1\r",
+          "\n-----END RSA PR",
+          "IVATE KEY-----\r\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "private_key_pem",
+            "secretType": "private_key",
+            "byteStart": 41,
+            "byteEnd": 159,
+            "utf16Start": 40,
+            "utf16End": 158,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/pem-json",
+      "input": [
+        "eyJrZXki",
+        "OiAiLS0t",
+        "LS1CRUdJ",
+        "TiBSU0Eg",
+        "UFJJVkFU",
+        "RSBLRVkt",
+        "LS0tLVxu",
+        "TUlJRW93",
+        "SUJBQUtD",
+        "QVFFQXE3",
+        "TG0yUHo5",
+        "V3I0VG5x",
+        "N0xtMlB6",
+        "OVdyNFRu",
+        "cTdMbTJQ",
+        "ejlXcjRU",
+        "bnE3TG0y",
+        "UHo5V3I0",
+        "VG5cbmFa",
+        "M2tROW1X",
+        "MnhMN2Fa",
+        "M2tROW1X",
+        "MnhMN2Fa",
+        "M2tROW1X",
+        "MnhMN2Fa",
+        "M2tROW1X",
+        "MnhMN1xu",
+        "LS0tLS1F",
+        "TkQgUlNB",
+        "IFBSSVZB",
+        "VEUgS0VZ",
+        "LS0tLS0i",
+        "fQ=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "{\"key\": \"-----BE",
+          "GIN RSA PRIVATE ",
+          "KEY-----\\nXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXX1",
+          "\\n-----END RSA P",
+          "RIVATE KEY-----\"",
+          "}"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "private_key_pem",
+            "secretType": "private_key",
+            "byteStart": 42,
+            "byteEnd": 160,
+            "utf16Start": 42,
+            "utf16End": 160,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/pem-incomplet",
+      "input": [
+        "LS0tLS1C",
+        "RUdJTiBQ",
+        "UklWQVRF",
+        "IEtFWS0t",
+        "LS0tCk1J",
+        "SUVvd3E3",
+        "TG0yUHo5",
+        "V3I0VG5x",
+        "N0xtMlB6",
+        "OVdyNFRu",
+        "cTdMbTJQ",
+        "ejlXcjRU",
+        "bnE3TG0y",
+        "UHo5V3I0",
+        "VG4K"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "-----BEGIN PRIVA",
+          "TE KEY-----\nXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXX1\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "private_key_pem_incomplete",
+            "secretType": "private_key",
+            "byteStart": 28,
+            "byteEnd": 86,
+            "utf16Start": 28,
+            "utf16End": 86,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/cli-basic-auth",
+      "input": [
+        "Y3VybCAt",
+        "dSBhZG1p",
+        "bjpYcTdM",
+        "bTJQejkh",
+        "V3I0VG41",
+        "IGh0dHBz",
+        "Oi8veA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "curl -u admin:XX",
+          "XXXXXXXXXXXXX1 h",
+          "ttps://x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "cli_basic_auth",
+            "secretType": "password",
+            "byteStart": 14,
+            "byteEnd": 30,
+            "utf16Start": 14,
+            "utf16End": 30,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/faux-substitut-fin",
+      "input": [
+        "VE9LRU49",
+        "Z2hwX1hY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WFgxYQ=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "TOKEN=ghp_XXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 6,
+            "byteEnd": 46,
+            "utf16Start": 6,
+            "utf16End": 46,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/faux-substitut-corps",
+      "input": [
+        "VE9LRU49",
+        "Z2hwX1hY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WEFYWFhY",
+        "WFhYWFhY",
+        "WFhYWFhY",
+        "WFhYMQ=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "TOKEN=ghp_XXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 6,
+            "byteEnd": 46,
+            "utf16Start": 6,
+            "utf16End": 46,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/numero-999",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Q="
+      ],
+      "firstOrdinal": 999,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=ghp",
+          "_XXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XX999"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 999,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX999"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/numero-trop-grand",
+      "input": [
+        "QT1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "CkJfUEFT",
+        "U1dPUkQ9",
+        "WHE3TG0y",
+        "UHo5IVdy",
+        "NFRuNQ=="
+      ],
+      "firstOrdinal": 999,
+      "expected": {
+        "failure": "ordinal_refused",
+        "text": null,
+        "substitutions": []
+      }
+    },
+    {
+      "id": "longueur/minimum",
+      "input": [
+        "cG9zdGdy",
+        "ZXM6Ly91",
+        "OnA0c3NA",
+        "ZGIveA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "postgres://u:XXX",
+          "X1@db/x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "database_url_credentials",
+            "secretType": "database_credentials",
+            "byteStart": 13,
+            "byteEnd": 17,
+            "utf16Start": 13,
+            "utf16End": 17,
+            "ordinal": 1,
+            "replacement": "XXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "longueur/points-de-code",
+      "input": [
+        "UEFTU1dP",
+        "UkQ9w6lY",
+        "cTdMbTJQ",
+        "ejkhV3I0",
+        "VG418J+Y",
+        "gA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "PASSWORD=XXXXXXX",
+          "XXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 9,
+            "byteEnd": 31,
+            "utf16Start": 9,
+            "utf16End": 28,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "utf16/non-ascii",
+      "input": [
+        "w6nwn5iA",
+        "IGNsw6kg",
+        "wqsgZ2hw",
+        "X2FCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZCDCuwpE",
+        "Ql9QQVNT",
+        "V09SRD1Y",
+        "cTdMbTJQ",
+        "ejkhV3I0",
+        "VG4KZmlu",
+        "IPCfmIA="
+      ],
+      "firstOrdinal": 10,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "é😀 clé « g",
+          "hp_XXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXX10 »\nDB_PA",
+          "SSWORD=XXXXXXXXX",
+          "XXXX11\nfin 😀"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 15,
+            "byteEnd": 55,
+            "utf16Start": 10,
+            "utf16End": 50,
+            "ordinal": 10,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX10"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 71,
+            "byteEnd": 86,
+            "utf16Start": 65,
+            "utf16End": 80,
+            "ordinal": 11,
+            "replacement": "XXXXXXXXXXXXX11"
+          }
+        ]
+      }
+    },
+    {
+      "id": "utf8/refuse",
+      "input": [
+        "VE9LRU49",
+        "Z2hwX2FC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZAr/"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "incomplete",
+        "text": null,
+        "substitutions": []
+      }
+    },
+    {
+      "id": "matrice/en-tete-curl",
+      "input": [
+        "Y3VybCAt",
+        "SCAiQXV0",
+        "aG9yaXph",
+        "dGlvbjog",
+        "QmVhcmVy",
+        "IGFaM2tR",
+        "OW1XMnhM",
+        "N3BSNHRZ",
+        "OHZCMW5D",
+        "NiIgaHR0",
+        "cHM6Ly94"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "curl -H \"Authori",
+          "zation: Bearer X",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXX1\" https:/",
+          "/x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_access_token",
+            "secretType": "access_token",
+            "byteStart": 31,
+            "byteEnd": 55,
+            "utf16Start": 31,
+            "utf16End": 55,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/url-jeton-utilisateur",
+      "input": [
+        "Z2l0IGNs",
+        "b25lIGh0",
+        "dHBzOi8v",
+        "Z2hwX2FC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZDp4",
+        "LW9hdXRo",
+        "LWJhc2lj",
+        "QGdpdGh1",
+        "Yi5jb20v",
+        "by9yLmdp",
+        "dA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "git clone XXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 10,
+            "byteEnd": 91,
+            "utf16Start": 10,
+            "utf16End": 91,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/url-cle-utilisateur",
+      "input": [
+        "Z2l0IGNs",
+        "b25lIGh0",
+        "dHBzOi8v",
+        "YVoza1E5",
+        "bVcyeEw3",
+        "cFI0dFk4",
+        "dkIxbkM2",
+        "Ongtb2F1",
+        "dGgtYmFz",
+        "aWNAZ2l0",
+        "aHViLmNv",
+        "bS9vL3Iu",
+        "Z2l0"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "git clone https:",
+          "//XXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXX1@github.",
+          "com/o/r.git"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "basic_auth_url",
+            "secretType": "password",
+            "byteStart": 18,
+            "byteEnd": 56,
+            "utf16Start": 18,
+            "utf16End": 56,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/curl-u-cle-api",
+      "input": [
+        "Y3VybCAt",
+        "dSBhWjNr",
+        "UTltVzJ4",
+        "TDdwUjR0",
+        "WTh2QjFu",
+        "QzY6WCBo",
+        "dHRwczov",
+        "L3g="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "curl -u XXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "X1 https://x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "cli_basic_auth",
+            "secretType": "password",
+            "byteStart": 8,
+            "byteEnd": 34,
+            "utf16Start": 8,
+            "utf16End": 34,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/prefixe-hors-regle",
+      "input": [
+        "UEFTU1dP",
+        "UkQ9ZGFw",
+        "aXE3TG1x",
+        "N0xtcTdM",
+        "bXE3TG0K",
+        "REJfUEFT",
+        "U1dPUkQ9",
+        "QUtJQXE3",
+        "TG1xN0xt",
+        "cTdMbXE3",
+        "TG0="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "PASSWORD=XXXXXXX",
+          "XXXXXXXXXXXX1\nDB",
+          "_PASSWORD=XXXXXX",
+          "XXXXXXXXXXXXX2"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 9,
+            "byteEnd": 29,
+            "utf16Start": 9,
+            "utf16End": 29,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 42,
+            "byteEnd": 62,
+            "utf16Start": 42,
+            "utf16End": 62,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/schema-dans-mot-de-passe",
+      "input": [
+        "REJfUEFT",
+        "U1dPUkQ9",
+        "IlRva2Vu",
+        "IHE3TG1x",
+        "N0xtcTdM",
+        "bXE3TG0i"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "DB_PASSWORD=\"XXX",
+          "XXXXXXXXXXXXXXXX",
+          "XX1\""
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 13,
+            "byteEnd": 35,
+            "utf16Start": 13,
+            "utf16End": 35,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gabarit/json",
+      "input": [
+        "eyJ0b2tl",
+        "biI6ICJn",
+        "aHBfYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkIiwg",
+        "InBhc3N3",
+        "b3JkIjog",
+        "IlhxN0xt",
+        "MlB6OSFX",
+        "cjRUbjUi",
+        "fQ=="
+      ],
+      "languageId": "json",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "{\"token\": \"ghp_X",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XX1\", \"password\"",
+          ": \"XXXXXXXXXXXXX",
+          "XX2\"}"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 11,
+            "byteEnd": 51,
+            "utf16Start": 11,
+            "utf16End": 51,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 67,
+            "byteEnd": 83,
+            "utf16Start": 67,
+            "utf16End": 83,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gabarit/yaml",
+      "input": [
+        "YXV0aDoK",
+        "ICB0b2tl",
+        "bjogZ2hw",
+        "X2FCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZAogIHBh",
+        "c3N3b3Jk",
+        "OiBYcTdM",
+        "bTJQejkh",
+        "V3I0VG41",
+        "Cg=="
+      ],
+      "languageId": "yaml",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "auth:\n  token: g",
+          "hp_XXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXX1\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 15,
+            "byteEnd": 84,
+            "utf16Start": 15,
+            "utf16End": 84,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gabarit/dotenv",
+      "input": [
+        "QVBJX0tF",
+        "WT1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "CkRCX1BB",
+        "U1NXT1JE",
+        "PVhxN0xt",
+        "MlB6OSFX",
+        "cjRUbjUK"
+      ],
+      "languageId": "dotenv",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "API_KEY=ghp_XXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXX1",
+          "\nDB_PASSWORD=XXX",
+          "XXXXXXXXXXXX2\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 8,
+            "byteEnd": 48,
+            "utf16Start": 8,
+            "utf16End": 48,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 61,
+            "byteEnd": 77,
+            "utf16Start": 61,
+            "utf16End": 77,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gabarit/shell",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PSJnaHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "IiAmJiBj",
+        "dXJsIC11",
+        "IGFkbWlu",
+        "OlhxN0xt",
+        "MlB6OSFX",
+        "cjRUbjUg",
+        "aHR0cHM6",
+        "Ly94"
+      ],
+      "languageId": "shellscript",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=XXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XX1"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 99,
+            "utf16Start": 13,
+            "utf16End": 99,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "gabarit/meme-valeur",
+      "input": [
+        "QSBnaHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "IEIgZ2hw",
+        "X2FCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "A ghp_XXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXX1 B ghp",
+          "_XXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXX2"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 2,
+            "byteEnd": 42,
+            "utf16Start": 2,
+            "utf16End": 42,
+            "ordinal": 1,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          },
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 45,
+            "byteEnd": 85,
+            "utf16Start": 45,
+            "utf16End": 85,
+            "ordinal": 2,
+            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "residu/affectation-ligne-suivante",
+      "input": [
+        "QVBJX0tF",
+        "WT1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "Ck5FWFQ9",
+        "YW5vdGhl",
+        "cg=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXX2"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_api_key",
+            "secretType": "api_key",
+            "byteStart": 0,
+            "byteEnd": 61,
+            "utf16Start": 0,
+            "utf16End": 61,
+            "ordinal": 2,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "residu/bloc-yaml",
+      "input": [
+        "YXBwX3Nl",
+        "Y3JldDog",
+        "fAogIGFa",
+        "M2thWjNr",
+        "YVoza2Fa",
+        "M2thWjNr",
+        "YVozawog",
+        "IExtMlBM",
+        "bTJQTG0y",
+        "UExtMlBM",
+        "bTJQTG0y",
+        "UApuZXh0",
+        "OiAxCg=="
+      ],
+      "languageId": "yaml",
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "app_secret: XXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXXXXXXXX",
+          "XXXXXXXXXX1\n"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_generic_secret",
+            "secretType": "generic_secret",
+            "byteStart": 12,
+            "byteEnd": 75,
+            "utf16Start": 12,
+            "utf16End": 75,
+            "ordinal": 1,
+            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "sans-constat",
+      "input": [
+        "cmllbiDD",
+        "oCBzaWdu",
+        "YWxlcg=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "rien à signaler"
+        ],
+        "substitutions": []
+      }
+    }
+  ]
+}

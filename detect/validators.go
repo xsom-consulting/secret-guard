@@ -46,5 +46,8 @@ func isPlaceholder(value []byte) bool {
 // isExactPublicExample suit isExactPublicExample de Secret Guard.
 func isExactPublicExample(value []byte) bool { return publicExamples[string(value)] }
 
-// safeLiteral suit safeLiteral de Secret Guard.
-func safeLiteral(value []byte) bool { return isPlaceholder(value) || isExactPublicExample(value) }
+// safeLiteral suit safeLiteral de Secret Guard, et reconnaît en plus un Substitut (substitute.go), espaces de
+// JavaScript retirés aux deux bouts : extension de ce module, sans effet sur une valeur hors de sa grammaire.
+func safeLiteral(value []byte) bool {
+	return isPlaceholder(value) || isExactPublicExample(value) || isSubstitute(jsTrim(value))
+}
