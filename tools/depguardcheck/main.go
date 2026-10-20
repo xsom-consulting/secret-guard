@@ -45,8 +45,10 @@ func injections() []injection {
 		for _, imp := range []string{
 			"os", "io/fs", "io/ioutil", "net", "net/http", "syscall", "golang.org/x/sys/cpu", "time", "math/rand",
 			"crypto/rand", "log", "log/slog", "unsafe", "plugin", "os/exec",
-			// Hors de la liste fermée.
-			"fmt", "path/filepath", "runtime", "mime", "hash/maphash", "golang.org/x/text/language",
+			// Hors de la liste fermée. sync est admis seul (fils des familles sans budget, detect/detectors.go) :
+			// ses sous-paquets restent refusés, et runtime aussi (le nombre de fils vient d'Options.Workers).
+			"fmt", "path/filepath", "runtime", "runtime/debug", "sync/atomic", "mime", "hash/maphash",
+			"golang.org/x/text/language",
 			// Aucun condensat non salé dans le moteur.
 			"crypto/md5", "crypto/sha1",
 		} {

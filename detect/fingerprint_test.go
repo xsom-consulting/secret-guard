@@ -542,8 +542,13 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 		// Seules fonctions exportées qui rendent du texte : messages d'erreur et clé masquée.
 		textAllowed := map[string]bool{"Error": true, "String": true, "GoString": true}
 		// Seules fonctions exportées qui rendent des octets : le texte de l'appelant sans les valeurs détectées, chaque
-		// étendue remplacée par un libellé (TestRedactLeavesNoValue).
-		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true}
+		// étendue remplacée par un libellé (TestRedactLeavesNoValue) ou chaque partie secrète par un Substitut
+		// (TestExpurgateCorpus).
+		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true, "Expurgate": true, "ExpurgateAndRescan": true}
+		// Seules fonctions exportées qui rendent une autre tranche : les Substitutions d'une expurgation (positions,
+		// règle, numéro, Substitut, jamais la valeur), et la table fermée des préfixes publics des Substituts, qui ne
+		// dépend d'aucune valeur.
+		slicesAllowed := map[string]string{"Expurgate": "Substitution", "ExpurgateAndRescan": "Substitution", "SubstitutePrefixes": "string"}
 		checked := 0
 		for _, entry := range entries {
 			name := entry.Name()
@@ -563,7 +568,13 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 				for _, result := range fn.Type.Results.List {
 					switch r := result.Type.(type) {
 					case *ast.ArrayType:
-						if elem, ok := r.Elt.(*ast.Ident); !ok || elem.Name != "byte" || r.Len != nil || !bytesAllowed[fn.Name.Name] {
+						elem, ok := r.Elt.(*ast.Ident)
+						switch {
+						case !ok || r.Len != nil:
+							t.Errorf("%s : rend un tableau ou une tranche", fn.Name.Name)
+						case elem.Name == "byte" && bytesAllowed[fn.Name.Name]:
+						case elem.Name != "byte" && slicesAllowed[fn.Name.Name] == elem.Name:
+						default:
 							t.Errorf("%s : rend un tableau ou une tranche", fn.Name.Name)
 						}
 					case *ast.Ident:

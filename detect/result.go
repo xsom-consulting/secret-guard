@@ -72,6 +72,11 @@ type Options struct {
 	// Custom est un Pack de règles du client compilé par custom.Compile (nil : aucun). Ses détections s'ajoutent aux
 	// constats des règles intégrées (custom.go) ; il n'en retire ni n'en affaiblit aucun.
 	Custom *custom.Pack
+	// Workers borne le nombre de fils qui exécutent en même temps les familles de règles sans budget partagé d'une
+	// vue (fil de l'appelant compris) : 0, min(8, nombre de ces familles) ; 1 (ou une valeur négative), l'analyse
+	// séquentielle. Sans effet sur le résultat, identique quel que soit Workers ; le moteur ne lit pas le nombre de
+	// processeurs : à l'appelant de le choisir.
+	Workers int
 }
 
 func (o Options) language() language {

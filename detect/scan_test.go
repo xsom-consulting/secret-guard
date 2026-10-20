@@ -301,7 +301,7 @@ var allowedExported = map[string][]string{
 	"Level":       nil,
 	"Finding":     {"RuleID", "SecretType", "Encoding", "Score", "Level", "ByteStart", "ByteEnd", "LocalFingerprint"},
 	"Result":      {"Complete", "Failure", "Findings"},
-	"Options":     {"LanguageID", "Custom"},
+	"Options":     {"LanguageID", "Custom", "Workers"},
 	"Rules":       {},
 	"PackRefusal": nil,
 	"PackError":   {"RuleID", "Reason"},
@@ -312,15 +312,19 @@ var allowedExported = map[string][]string{
 	"RedactOptions":   {"Custom", "NeutralCustomNames"},
 	"SanitizeFailure": nil,
 	"SanitizeResult":  {"Failure", "Initial", "Final"},
+	// Expurgation : étendue remplacée dans le texte d'origine, numéro et Substitut écrit (préfixe public de la table
+	// fermée, des X, le numéro), jamais la valeur, que l'appelant lit lui-même dans son texte.
+	"Substitution": {"RuleID", "SecretType", "ByteStart", "ByteEnd", "UTF16Start", "UTF16End", "LocalFingerprint", "Ordinal", "Replacement"},
 }
 
 // allowedCustomFields sont les seuls champs pointeurs des structures exportées : le Pack de règles du client d'une
 // analyse et d'un masquage.
 var allowedCustomFields = map[string]bool{"Options.Custom": true, "RedactOptions.Custom": true}
 
-// allowedFingerprintField est le seul champ dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé de
-// l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash).
-const allowedFingerprintField = "Finding.LocalFingerprint"
+// allowedFingerprintFields sont les seuls champs dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé
+// de l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash), d'un constat et du constat
+// représentatif d'un Substitut (recopiée du constat, ou calculée sous la même clé sur l'étendue élargie).
+var allowedFingerprintFields = map[string]bool{"Finding.LocalFingerprint": true, "Substitution.LocalFingerprint": true}
 
 var forbiddenFieldWords = regexp.MustCompile(`(?i)value|excerpt|snippet|mask|redact|hash|digest|sha\d|fingerprint|preview|match|text|content|^secret$|^raw|data$`)
 
@@ -378,14 +382,20 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		// Variables exportées : liste fermée (constantes : types de la liste fermée ou entiers, vérifiés par le
 		// compilateur et par les types ci-dessous).
 		slices.Sort(values)
-		if want := []string{"ErrFingerprintKeyInvalid", "ErrPackUnusable", "ErrRedactIncomplete", "ErrRedactSpan"}; !slices.Equal(values, want) {
+		if want := []string{
+			"ErrExpurgateEncoding", "ErrExpurgateIncomplete", "ErrExpurgateOrdinal", "ErrExpurgateSpan", "ErrFingerprintKeyInvalid", "ErrPackUnusable",
+			"ErrRedactIncomplete", "ErrRedactSpan",
+		}; !slices.Equal(values, want) {
 			t.Errorf("variables exportées %v, attendu %v", values, want)
 		}
 		slices.Sort(funcs)
 		if want := []string{
 			// méthode Has : Rules.Has, rend un booléen, jamais une valeur. Redact et RedactAndRescan rendent le texte
-			// de l'appelant sans les valeurs détectées (TestNoExportedFunctionReturnsValue, TestRedactLeavesNoValue).
-			"DecisionForLevel", "LoadRules", "NewFingerprintKey", "Redact", "RedactAndRescan", "Scan", "ScanWithFingerprint",
+			// de l'appelant sans les valeurs détectées (TestNoExportedFunctionReturnsValue, TestRedactLeavesNoValue) ;
+			// Expurgate et ExpurgateAndRescan, le texte où chaque partie secrète est remplacée par un Substitut, et des
+			// Substitutions sans valeur (TestExpurgateCorpus) ; SubstitutePrefixes, la table fermée des préfixes publics.
+			"DecisionForLevel", "Expurgate", "ExpurgateAndRescan", "LoadRules", "NewFingerprintKey", "Redact", "RedactAndRescan",
+			"Scan", "ScanWithFingerprint", "SubstitutePrefixes",
 			"méthode Error", "méthode GoString", "méthode Has", "méthode String", "méthode Unwrap", "méthode Wipe",
 		}; !slices.Equal(funcs, want) {
 			t.Errorf("fonctions exportées %v, attendu %v", funcs, want)
@@ -397,6 +407,7 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 			reflect.TypeFor[Result](), reflect.TypeFor[Options](), reflect.TypeFor[Rules](), reflect.TypeFor[PackRefusal](),
 			reflect.TypeFor[PackError](), reflect.TypeFor[FingerprintKey](), reflect.TypeFor[Decision](),
 			reflect.TypeFor[RedactOptions](), reflect.TypeFor[SanitizeFailure](), reflect.TypeFor[SanitizeResult](),
+			reflect.TypeFor[Substitution](),
 		} {
 			if !found[typ.Name()] {
 				t.Errorf("type %s absent du relevé", typ.Name())
@@ -424,7 +435,7 @@ func checkExportedType(t *testing.T, typ reflect.Type, allowed []string) {
 			continue
 		}
 		exported = append(exported, field.Name)
-		if forbiddenFieldWords.MatchString(field.Name) && typ.Name()+"."+field.Name != allowedFingerprintField {
+		if forbiddenFieldWords.MatchString(field.Name) && !allowedFingerprintFields[typ.Name()+"."+field.Name] {
 			t.Errorf("%s.%s : nom de champ interdit", typ.Name(), field.Name)
 		}
 		kind := field.Type.Kind()

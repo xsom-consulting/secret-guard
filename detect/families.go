@@ -38,14 +38,15 @@ func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bo
 }
 
 // scanPrivateKeys : en-tête PEM de clé privée jusqu'à sa marque de fin, ou jusqu'à la fin du texte si elle manque
-// (private_key_pem_incomplete), comme Secret Guard.
+// (private_key_pem_incomplete), comme Secret Guard. Sans littéral de la porte de l'en-tête, rien n'est cherché. Un
+// bloc dont le corps est un Substitut n'est pas un constat (extension de ce module).
 func (r *Rules) scanPrivateKeys(v *view) []finding {
 	complete, incomplete := r.engine[rulePrivateKeyComplete], r.engine[rulePrivateKeyIncomplete]
 	header := complete
 	if header == nil {
 		header = incomplete
 	}
-	if header == nil {
+	if header == nil || !header.gate.admits(v.text) {
 		return nil
 	}
 	var findings []finding
@@ -60,14 +61,16 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 		endMarker = append(endMarker, "-----END "...)
 		endMarker = append(endMarker, text[m[2]:m[3]]...)
 		endMarker = append(endMarker, "-----"...)
-		viewEnd := len(text)
+		viewEnd, bodyEnd := len(text), len(text)
 		found := bytes.Index(text[lastIndex:], endMarker)
 		matched, reason := incomplete, "private_key_header_without_bounded_end"
 		if found >= 0 {
-			viewEnd = lastIndex + found + len(endMarker)
+			viewEnd, bodyEnd = lastIndex+found+len(endMarker), lastIndex+found
 			matched, reason = complete, "complete_private_key_block"
 		}
-		if matched != nil {
+		// Corps fait d'un Substitut (expurgate.go), entre l'en-tête et la marque de fin (ou la fin du texte) : valeur
+		// fictive, extension de ce module.
+		if matched != nil && !isSubstitutePEMBody(text, m[1], bodyEnd) {
 			reasons := append(encodingReasons(v.encoding), reason)
 			findings = append(findings, newFinding(v, matched, m[0], viewEnd, matched.score-encodingPenalty(v.encoding), reasons))
 		}
@@ -77,10 +80,14 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 
 // scanFixedPattern exécute une règle « motif seul » du Pack : chaque correspondance (matchAll), valeur détectée =
 // groupe capturant 1 s'il a participé, sinon la correspondance entière (capturedRange de Secret Guard, qui la cherche
-// par lastIndexOf) ; valeur fictive ou exemple public ignorés ; bornes minLength/maxLength (unités UTF-16, 0 =
-// absente) ; validateur nommé.
+// par lastIndexOf) ; valeur fictive ou exemple public ignorés (Substitut en fin de ligne d'une vue jointe compris,
+// extension de ce module) ; bornes minLength/maxLength (unités UTF-16, 0 = absente) ; validateur nommé. Aucun littéral
+// de la porte de la règle dans le texte de la vue : aucune correspondance possible, le motif n'est pas exécuté.
 func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
+	if !r.gate.admits(text) {
+		return findings, nil
+	}
 	capture := r.pattern.NumSubexp() >= 1
 	for _, m := range r.pattern.FindAllSubmatchIndex(text, -1) {
 		start, end := m[0], m[1]
@@ -90,7 +97,7 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			end = start + len(value)
 		}
 		value := text[start:end]
-		if safeLiteral(value) || !withinBounds(value, r.minLength, r.maxLength) {
+		if safeLiteral(value) || isSubstituteBeforeJoin(v, start, end) || !withinBounds(value, r.minLength, r.maxLength) {
 			continue
 		}
 		if r.validator != nil {
@@ -217,9 +224,12 @@ func nextJWT(matcher *jwtMatcher, pos int) (int, int, bool) {
 }
 
 // scanJWT exécute la règle jwt : chaque correspondance du motif d'origine, valeur fictive ignorée, bornes du Pack,
-// validateur de structure.
+// validateur de structure. Sans littéral de la porte dans le texte de la vue, aucune correspondance n'est cherchée.
 func scanJWT(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
+	if !r.gate.admits(text) {
+		return findings, nil
+	}
 	matcher := newJWTMatcher(text)
 	for pos := 0; ; {
 		c, end, ok := nextJWT(matcher, pos)
