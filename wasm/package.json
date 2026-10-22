@@ -1,0 +1,58 @@
+{
+  "name": "@xsom-consulting/secret-guard-wasm",
+  "version": "0.5.0",
+  "description": "Secret Guard secret detection engine as a WebAssembly (WASI preview 1) module, with loaders for Node and browsers. Local only: no network, no file access, never returns a detected value.",
+  "license": "Apache-2.0",
+  "author": "xSOM Consulting",
+  "homepage": "https://github.com/xsom-consulting/secret-guard#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xsom-consulting/secret-guard.git",
+    "directory": "wasm"
+  },
+  "bugs": "https://github.com/xsom-consulting/secret-guard/security/advisories/new",
+  "keywords": ["secret-detection", "secrets", "dlp", "webassembly", "wasi", "prompt"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=22"
+  },
+  "exports": {
+    ".": {
+      "types": "./secret-guard.d.mts",
+      "default": "./secret-guard.mjs"
+    },
+    "./node": {
+      "types": "./node.d.mts",
+      "default": "./node.mjs"
+    },
+    "./browser": {
+      "types": "./browser.d.mts",
+      "default": "./browser.mjs"
+    },
+    "./wasi": {
+      "types": "./wasi.d.mts",
+      "default": "./wasi.mjs"
+    },
+    "./secret-guard.wasm": "./secret-guard.wasm",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "secret-guard.mjs",
+    "secret-guard.d.mts",
+    "node.mjs",
+    "node.d.mts",
+    "browser.mjs",
+    "browser.d.mts",
+    "wasi.mjs",
+    "wasi.d.mts",
+    "secret-guard.wasm",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

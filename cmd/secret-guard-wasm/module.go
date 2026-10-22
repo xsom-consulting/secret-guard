@@ -16,6 +16,9 @@
 //	sg_scan_with_fingerprint(pointeur, longueur) → i64       même chose, avec l'Empreinte locale de chaque constat
 //	sg_redact(pointeur, longueur, langage, longueur) → i64   masquage : document JSON, « \n », texte masqué (redact.go)
 //	sg_find_hidden(pointeur, longueur) → i64                 rapport JSON des instructions cachées (hidden.go)
+//	sg_expurgate(pointeur, longueur, langage, longueur, demande, longueur) → i64
+//	                                                         expurgation par Substituts typés : document JSON, « \n »,
+//	                                                         texte expurgé ; exige la clé d'Empreinte locale (expurgate.go)
 //
 // Le résultat est le document JSON de la ligne de commande (internal/report) : jamais la valeur détectée. Le module
 // n'importe que les fonctions WASI que demande le runtime Go (mémoire, hasard des tables de hachage, horloge du
