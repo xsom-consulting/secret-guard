@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2024",
+    "lib": [
+      "es2024",
+      "dom"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": false,
+    "noEmit": true,
+    "types": []
+  },
+  "files": [
+    "types-check.mts",
+    "secret-guard.d.mts",
+    "wasi.d.mts",
+    "node.d.mts",
+    "browser.d.mts"
+  ]
+}
