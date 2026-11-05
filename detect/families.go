@@ -303,7 +303,12 @@ func (r *Rules) scanCredentialURLs(v *view) []finding {
 		candidate := stripTrailingURLPunctuation(text[m[0]:tailEnd])
 		password, ok := urlPassword(candidate)
 		if !ok || password == "" {
-			continue
+			// URL abîmée (« schéma://utilisateur:< motdepasse@hôte ») : morceaux recollés (urlrepair.go).
+			end, _, _, repaired, found := brokenCredentialURL(text, m[0], m[0]+len(candidate))
+			if !found {
+				continue
+			}
+			candidate, password, pos = text[m[0]:end], repaired, end
 		}
 		if decoded, ok := decodeURIComponent(password); ok {
 			password = decoded
@@ -450,7 +455,8 @@ func (r *Rules) scanEntropy(v *view) []finding {
 	text := v.text
 	for _, m := range entropy.pattern.FindAllIndex(text, -1) {
 		value := text[m[0]:m[1]]
-		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) || !hasStrongEntropy(v, m[0], m[1]) {
+		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) ||
+			isPathContinuation(v, m[0], value) || isWordSlug(value) || !hasStrongEntropy(v, m[0], m[1]) {
 			continue
 		}
 		score := entropy.score
