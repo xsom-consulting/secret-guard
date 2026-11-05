@@ -455,7 +455,8 @@ func (r *Rules) scanEntropy(v *view) []finding {
 	text := v.text
 	for _, m := range entropy.pattern.FindAllIndex(text, -1) {
 		value := text[m[0]:m[1]]
-		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) || !hasStrongEntropy(v, m[0], m[1]) {
+		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) ||
+			isPathContinuation(v, m[0], value) || isWordSlug(value) || !hasStrongEntropy(v, m[0], m[1]) {
 			continue
 		}
 		score := entropy.score
