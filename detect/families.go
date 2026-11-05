@@ -303,7 +303,12 @@ func (r *Rules) scanCredentialURLs(v *view) []finding {
 		candidate := stripTrailingURLPunctuation(text[m[0]:tailEnd])
 		password, ok := urlPassword(candidate)
 		if !ok || password == "" {
-			continue
+			// URL abîmée (« schéma://utilisateur:< motdepasse@hôte ») : morceaux recollés (urlrepair.go).
+			end, _, _, repaired, found := brokenCredentialURL(text, m[0], m[0]+len(candidate))
+			if !found {
+				continue
+			}
+			candidate, password, pos = text[m[0]:end], repaired, end
 		}
 		if decoded, ok := decodeURIComponent(password); ok {
 			password = decoded

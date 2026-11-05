@@ -329,6 +329,9 @@ func secretPart(content []byte, f Finding) (int, int) {
 	switch f.RuleID {
 	case ruleDatabaseURL, ruleBasicAuthURL:
 		start, end, ok = urlPasswordRange(span)
+		if !ok {
+			start, end, ok = brokenURLPasswordRange(span)
+		}
 	case ruleCLIBasicAuth:
 		start, end, ok = basicAuthPasswordRange(span)
 	case rulePrivateKeyComplete:
