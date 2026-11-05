@@ -50,6 +50,8 @@ func TestEntropyIgnoresPaths(t *testing.T) {
 		"fichier d'une session":            "/Users/jdupont/.claude/projects/" + project + "/88ed6807-bc07-4e5b-b33b-494065655130/tool-results/bqc0i47ng.txt",
 		"binaire d'une extension":          "/Users/jdupont/.vscode/extensions/anthropic.claude-code-2.1.318-darwin-arm64/resources/native-binary/claude",
 		"nom en tirets seul":               project,
+		"chemin relatif":                   "cd DEV/ai-website/frontend/public/signal-media && ls",
+		"chemin relatif en majuscules":     "ls PRO/02-COMPANIES/Exemple-Conseil/DEV/site-web",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if n := entropyFindings(t, rules, content); n != 0 {
@@ -64,9 +66,10 @@ func TestEntropyKeepsTokens(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		token := randomToken(t, 40)
 		for name, content := range map[string]string{
-			"jeton seul":                 token,
-			"jeton dans le chemin d'URL": "curl https://api.exemple.fr/v1/" + token + "/status",
-			"jeton après un point":       "valeur." + token,
+			"jeton seul":                   token,
+			"jeton dans le chemin d'URL":   "curl https://api.exemple.fr/v1/" + token + "/status",
+			"jeton après un point":         "valeur." + token,
+			"jeton dans un chemin relatif": "cp out/" + token + "/build .",
 		} {
 			if n := entropyFindings(t, rules, content); n == 0 {
 				t.Fatalf("%s : jeton aléatoire non détecté", name)

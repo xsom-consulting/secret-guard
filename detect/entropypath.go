@@ -11,15 +11,16 @@ package detect
 
 import "bytes"
 
-// isPathContinuation dit si la suite [start, start+len(value)) de la vue est la suite d'un chemin : précédée d'un point
-// ou d'une barre oblique, elle contient une barre oblique, n'a que des caractères de chemin, et chacun de ses segments
-// de 16 unités ou plus est fait de mots courts (isShortWords) ou écarté de l'entropie : un jeton dans le chemin d'une
-// URL reste détecté.
+// isPathContinuation dit si la suite [start, start+len(value)) de la vue est un chemin : elle contient une barre
+// oblique et n'a que des caractères de chemin, et
+//   - précédée d'un point ou d'une barre oblique (suite d'un chemin coupé par un point), chacun de ses segments de 16
+//     unités ou plus est fait de mots courts (isShortWords) ou écarté de l'entropie ;
+//   - sinon (chemin relatif, « DEV/site/frontend/public »), chacun de ses mots est un mot de nom de dossier
+//     (isNameWord).
+//
+// Un jeton dans le chemin d'une URL reste détecté.
 func isPathContinuation(v *view, start int, value []byte) bool {
 	text := v.text
-	if start == 0 || (text[start-1] != '.' && text[start-1] != '/') {
-		return false
-	}
 	if !bytes.Contains(value, []byte("/")) {
 		return false
 	}
@@ -28,12 +29,42 @@ func isPathContinuation(v *view, start int, value []byte) bool {
 			return false
 		}
 	}
+	if start == 0 || (text[start-1] != '.' && text[start-1] != '/') {
+		for _, word := range bytes.FieldsFunc(value, func(r rune) bool { return r == '/' || r == '-' || r == '_' }) {
+			if !isNameWord(word) {
+				return false
+			}
+		}
+		return true
+	}
 	for _, segment := range bytes.Split(value, []byte("/")) {
 		if utf16Units(segment) >= 16 && !entropyExcluded(segment) && !isShortWords(segment) {
 			return false
 		}
 	}
 	return true
+}
+
+// isNameWord dit si word est un mot de nom de dossier : 12 caractères au plus, en minuscules (« frontend »), avec une
+// majuscule initiale (« Documents »), ou en majuscules (« DEV ») ; chiffres admis. Une suite aléatoire de jeton mêle
+// majuscules et minuscules au hasard et n'a presque jamais cette forme.
+func isNameWord(word []byte) bool {
+	if len(word) == 0 || len(word) > shortWordMax {
+		return false
+	}
+	var upperAfterFirst, lower bool
+	for i, c := range word {
+		switch {
+		case c >= 'A' && c <= 'Z':
+			if i > 0 {
+				upperAfterFirst = true
+			}
+		case c >= 'a' && c <= 'z':
+			lower = true
+		}
+	}
+	// Majuscules après la première lettre : seulement un mot tout en majuscules.
+	return !upperAfterFirst || !lower
 }
 
 // shortWordMax : longueur la plus grande d'un mot d'un segment de chemin (« native-binary », « darwin-arm64 »).
