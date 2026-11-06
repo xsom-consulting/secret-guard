@@ -128,7 +128,7 @@ for (const { name, load } of loaders) {
       assert.throws(() => guard.expurgate(input), SecretGuardError); // sans clé d'Empreinte locale
       guard.setFingerprintKey(Uint8Array.from({ length: 32 }, (_, i) => i + 1));
       const result = guard.expurgate(input);
-      const substitute = 'ghp_' + 'X'.repeat(token.length - 5) + '1';
+      const substitute = 'gh' + 'p_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]';
       assert.equal(result.failure, 'none');
       assert.equal(decoder.decode(result.text), `export A=${substitute}\nexport B=${substitute}\n`);
       assert.equal(result.substitutions.length, 2);
@@ -136,7 +136,10 @@ for (const { name, load } of loaders) {
       const { localFingerprint } = result.substitutions[0];
       assert.ok(!JSON.stringify({ ...result, text: null }).includes(token.slice(4, 12)));
       const again = guard.expurgate(input, { known: [{ localFingerprint, ordinal: 42 }] });
-      assert.ok(decoder.decode(again.text).includes('X42\n'));
+      assert.ok(decoder.decode(again.text).includes('n°42 : jeton GitHub, pas la vraie valeur]\n'));
+      const english = guard.expurgate(input, { substituteLanguage: 'en' });
+      assert.ok(decoder.decode(english.text).includes('[secret masked by xSOM #1: GitHub token, not the real value]\n'));
+      assert.throws(() => guard.expurgate(input, { substituteLanguage: 'de' }), SecretGuardError);
       const other = guard.expurgate(input, { known: [{ localFingerprint: 'f'.repeat(32), ordinal: 7 }], minOrdinal: 20 });
       assert.deepEqual(other.substitutions.map((s) => s.ordinal), [20, 20]);
       const full = guard.expurgate(input, { known: [{ localFingerprint: 'f'.repeat(32), ordinal: 999 }] });

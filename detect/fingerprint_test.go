@@ -546,9 +546,12 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 		// (TestExpurgateCorpus).
 		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true, "Expurgate": true, "ExpurgateAndRescan": true}
 		// Seules fonctions exportées qui rendent une autre tranche : les Substitutions d'une expurgation (positions,
-		// règle, numéro, Substitut, jamais la valeur), et la table fermée des préfixes publics des Substituts, qui ne
-		// dépend d'aucune valeur.
-		slicesAllowed := map[string]string{"Expurgate": "Substitution", "ExpurgateAndRescan": "Substitution", "SubstitutePrefixes": "string"}
+		// règle, numéro, Substitut, jamais la valeur), et les tables fermées des préfixes publics et des types de secret
+		// des Substituts, qui ne dépendent d'aucune valeur.
+		slicesAllowed := map[string]string{
+			"Expurgate": "Substitution", "ExpurgateAndRescan": "Substitution", "SubstitutePrefixes": "string",
+			"SubstituteLabels": "SubstituteLabel", "FindSubstitutes": "SubstituteSpan",
+		}
 		checked := 0
 		for _, entry := range entries {
 			name := entry.Name()

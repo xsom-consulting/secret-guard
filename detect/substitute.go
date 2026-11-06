@@ -1,10 +1,23 @@
-// Substituts : valeurs fictives typées qui remplacent la partie secrète d'un constat (Expurgate, expurgate.go).
+// Substituts : textes typés qui remplacent la partie secrète d'un constat (Expurgate, expurgate.go).
 //
-// Extension propre à ce module, sans origine dans Secret Guard (avis dans UPSTREAM.md). Un Substitut s'écrit
-// « préfixe public, puis des X majuscules, puis un numéro de 1 à 3 chiffres » : grammaire ^(?:<préfixe>)?X{3,}[0-9]{1,3}$,
-// où le préfixe vient d'une table fermée. Le moteur reconnaît un Substitut comme une valeur fictive (safeLiteral,
-// scanPrivateKeys, safeContextualValue) : un texte expurgé, analysé de nouveau, ne bloque pas sur ses Substituts. Un
-// corps qui porte autre chose que des X reste détecté : la grammaire n'admet aucune autre lettre.
+// Extension propre à ce module, sans origine dans Secret Guard (avis dans UPSTREAM.md). Un Substitut dit lui-même au
+// lecteur (un modèle de langage) ce qu'il remplace : préfixe public facultatif, puis, entre crochets, le numéro et le
+// type de secret, en français ou en anglais :
+//
+//	[secret masqué par xSOM n°1 : mot de passe de base de données, pas la vraie valeur]
+//	ghp_[secret masqué par xSOM n°2 : jeton GitHub, pas la vraie valeur]
+//	[secret masked by xSOM #1: database password, not the real value]
+//
+// Grammaire exacte et fermée : préfixe de la table fermée substituteRulePrefixes (ou aucun), puis l'une des deux formes
+// ci-dessus, octet pour octet, avec un numéro de 1 à 999 sans zéro de tête et un type de la table fermée
+// substituteLabels de la même langue (ou SubstituteDefaultLabel). Rien d'autre : ni espace de plus, ni autre casse, ni
+// type d'une autre langue. Le Substitut ne porte rien de la valeur, sauf le préfixe public de sa règle : ni sa longueur,
+// ni un de ses caractères. Le moteur reconnaît un Substitut comme une valeur fictive (safeLiteral, scanPrivateKeys,
+// safeContextualValue, argument de curl -u) : un texte expurgé, analysé de nouveau, ne bloque pas sur ses Substituts.
+// Un texte qui ne suit pas exactement la grammaire reste analysé comme tout autre texte.
+//
+// Depuis la v0.5.0, l'ancienne forme (« préfixe, X majuscules, numéro ») n'est plus reconnue : c'est un texte ordinaire,
+// détecté s'il a la forme d'un secret.
 
 package detect
 
@@ -18,18 +31,149 @@ import (
 )
 
 const (
-	// substituteFiller est le caractère de remplissage d'un Substitut.
-	substituteFiller = 'X'
-	// substituteMinFiller : nombre de X le plus petit qu'écrit substituteFor (minimum « XXXX<n> »).
-	substituteMinFiller = 4
-	// substituteGrammarMinFiller : nombre de X le plus petit qu'admet la grammaire (X{3,}).
-	substituteGrammarMinFiller = 3
-	// substituteMaxDigits : nombre de chiffres le plus grand du numéro ([0-9]{1,3}).
-	substituteMaxDigits = 3
 	// MaxSubstituteOrdinal est le plus grand numéro d'un Substitut ; MinSubstituteOrdinal, le plus petit.
 	MinSubstituteOrdinal = 1
 	MaxSubstituteOrdinal = 999
+	// substituteMaxDigits : nombre de chiffres le plus grand du numéro.
+	substituteMaxDigits = 3
+	// substituteMaxPrefix : longueur du plus long préfixe de la table (vérifiée par un test).
+	substituteMaxPrefix = len("https://hooks.slack.com/services/")
 )
+
+// SubstituteLanguage est la langue du texte d'un Substitut.
+type SubstituteLanguage string
+
+const (
+	// SubstituteFrench : « [secret masqué par xSOM n°<numéro> : <type>, pas la vraie valeur] ». Langue par défaut
+	// (valeur vide).
+	SubstituteFrench SubstituteLanguage = "fr"
+	// SubstituteEnglish : « [secret masked by xSOM #<numéro>: <type>, not the real value] ».
+	SubstituteEnglish SubstituteLanguage = "en"
+)
+
+// substituteForm est la forme d'un Substitut dans une langue : début jusqu'au numéro, séparateur entre le numéro et le
+// type, fin après le type.
+type substituteForm struct {
+	language       SubstituteLanguage
+	open, mid, end string
+}
+
+// substituteForms : les deux formes, dans l'ordre où la grammaire les essaie.
+var substituteForms = []substituteForm{
+	{SubstituteFrench, "[secret masqué par xSOM n°", " : ", ", pas la vraie valeur]"},
+	{SubstituteEnglish, "[secret masked by xSOM #", ": ", ", not the real value]"},
+}
+
+// SubstituteDefaultLabel est le type écrit pour une règle absente de la table substituteLabels (Pack du client,
+// entropie…), dans les deux langues.
+const SubstituteDefaultLabel = "secret"
+
+// SubstituteLabel est le type de secret écrit dans un Substitut pour une règle, en français et en anglais.
+type SubstituteLabel struct {
+	RuleID  string
+	French  string
+	English string
+}
+
+// substituteLabels est la table fermée des types de secret, par règle (repli : SubstituteDefaultLabel). Un type est
+// public : il dit la nature du secret, jamais la valeur. Même table que le Mod de l'organisation de xSOM Fleet.
+var substituteLabels = []SubstituteLabel{
+	{"private_key_pem", "clé privée", "private key"},
+	{"private_key_pem_incomplete", "clé privée", "private key"},
+	{"contextual_private_key", "clé privée", "private key"},
+	{"github_fine_grained_pat", "jeton GitHub", "GitHub token"},
+	{"github_token", "jeton GitHub", "GitHub token"},
+	{"gitlab_pat", "jeton GitLab", "GitLab token"},
+	{"openrouter_key", "clé d’API OpenRouter", "OpenRouter API key"},
+	{"anthropic_key", "clé d’API Anthropic", "Anthropic API key"},
+	{"openai_key", "clé d’API OpenAI", "OpenAI API key"},
+	{"stripe_secret_key", "clé secrète Stripe", "Stripe secret key"},
+	{"slack_token", "jeton Slack", "Slack token"},
+	{"slack_webhook", "webhook Slack", "Slack webhook"},
+	{"google_api_key", "clé d’API Google", "Google API key"},
+	{"google_oauth_token", "jeton OAuth Google", "Google OAuth token"},
+	{"sendgrid_key", "clé d’API SendGrid", "SendGrid API key"},
+	{"npm_token", "jeton npm", "npm token"},
+	{"huggingface_token", "jeton Hugging Face", "Hugging Face token"},
+	{"databricks_pat", "jeton Databricks", "Databricks token"},
+	{"digitalocean_token", "jeton DigitalOcean", "DigitalOcean token"},
+	{"shopify_token", "jeton Shopify", "Shopify token"},
+	{"azure_storage_key", "clé de stockage Azure", "Azure storage key"},
+	{"aws_access_key_id", "identifiant de clé d’accès AWS", "AWS access key ID"},
+	{"contextual_cloud_credential", "identifiant cloud", "cloud credential"},
+	{"jwt", "jeton JWT", "JWT"},
+	{"database_url_credentials", "mot de passe de base de données", "database password"},
+	{"contextual_database_credentials", "identifiants de base de données", "database credentials"},
+	{"basic_auth_url", "mot de passe", "password"},
+	{"contextual_password", "mot de passe", "password"},
+	{"cli_basic_auth", "mot de passe", "password"},
+	{"docker_auth", "mot de passe", "password"},
+	{"contextual_api_key", "clé d’API", "API key"},
+	{"contextual_access_token", "jeton d’accès", "access token"},
+	{"cookie_session_credential", "cookie de session", "session cookie"},
+}
+
+// substituteLabelByRule : la table, par règle.
+var substituteLabelByRule = func() map[string]SubstituteLabel {
+	byRule := make(map[string]SubstituteLabel, len(substituteLabels))
+	for _, l := range substituteLabels {
+		byRule[l.RuleID] = l
+	}
+	return byRule
+}()
+
+// substituteLabelSets : types admis par la grammaire, par langue (table et repli), sans doublon, du plus long au plus
+// court.
+var substituteLabelSets = func() map[SubstituteLanguage][]string {
+	sets := map[SubstituteLanguage][]string{}
+	add := func(language SubstituteLanguage, label string) {
+		for _, known := range sets[language] {
+			if known == label {
+				return
+			}
+		}
+		sets[language] = append(sets[language], label)
+	}
+	for _, l := range substituteLabels {
+		add(SubstituteFrench, l.French)
+		add(SubstituteEnglish, l.English)
+	}
+	add(SubstituteFrench, SubstituteDefaultLabel)
+	add(SubstituteEnglish, SubstituteDefaultLabel)
+	for _, labels := range sets {
+		sort.SliceStable(labels, func(i, j int) bool { return len(labels[i]) > len(labels[j]) })
+	}
+	return sets
+}()
+
+// SubstituteLabels rend une copie de la table fermée des types de secret des Substituts, dans son ordre.
+func SubstituteLabels() []SubstituteLabel { return append([]SubstituteLabel(nil), substituteLabels...) }
+
+// substituteLabelOf rend le type de la règle ruleID dans la langue (repli : SubstituteDefaultLabel).
+func substituteLabelOf(ruleID string, language SubstituteLanguage) string {
+	l, ok := substituteLabelByRule[ruleID]
+	switch {
+	case !ok:
+		return SubstituteDefaultLabel
+	case language == SubstituteEnglish:
+		return l.English
+	default:
+		return l.French
+	}
+}
+
+// substituteFormOf rend la forme de la langue (vide : français) ; faux pour une autre langue.
+func substituteFormOf(language SubstituteLanguage) (substituteForm, bool) {
+	if language == "" {
+		language = SubstituteFrench
+	}
+	for _, form := range substituteForms {
+		if form.language == language {
+			return form, true
+		}
+	}
+	return substituteForm{}, false
+}
 
 // substituteRulePrefixes est la table fermée des préfixes publics, par règle « motif seul » du Pack initial dont le
 // motif les porte (test TestSubstitutePrefixesFromInitialPack). Un préfixe est public : il dit le type de secret,
@@ -98,26 +242,142 @@ func SubstitutePrefixes() []string { return append([]string(nil), substitutePref
 // l'appelant ne donne pas.
 var ErrExpurgateOrdinal = errors.New("expurgation refusée : numéro de Substitut absent ou hors de 1 à 999")
 
-// isSubstitute dit si value suit la grammaire des Substituts : ^(?:<préfixe>)?X{3,}[0-9]{1,3}$, X majuscules
-// seulement, préfixe de la table fermée (ou aucun). Sans retrait d'espaces : un Substitut est exact.
+// ErrExpurgateLanguage refuse une langue de Substitut autre que SubstituteFrench, SubstituteEnglish ou vide.
+var ErrExpurgateLanguage = errors.New("expurgation refusée : langue de Substitut inconnue")
+
+// substituteBodyLength rend la longueur du corps de Substitut (crochets compris, sans préfixe) qui commence text, ou 0
+// si text ne commence pas par un corps exact de la grammaire.
+func substituteBodyLength(text []byte) int {
+	length, _ := parseSubstituteBody(text)
+	return length
+}
+
+// parseSubstituteBody rend la longueur et le numéro du corps de Substitut qui commence text, ou 0, 0.
+func parseSubstituteBody(text []byte) (int, int) {
+	for _, form := range substituteForms {
+		if !bytes.HasPrefix(text, []byte(form.open)) {
+			continue
+		}
+		rest := text[len(form.open):]
+		digits := 0
+		for digits < len(rest) && digits <= substituteMaxDigits && isASCIIDigit(rest[digits]) {
+			digits++
+		}
+		if digits == 0 || digits > substituteMaxDigits || rest[0] == '0' {
+			return 0, 0
+		}
+		ordinal, err := strconv.Atoi(string(rest[:digits]))
+		if err != nil {
+			return 0, 0
+		}
+		rest = rest[digits:]
+		if !bytes.HasPrefix(rest, []byte(form.mid)) {
+			return 0, 0
+		}
+		rest = rest[len(form.mid):]
+		for _, label := range substituteLabelSets[form.language] {
+			if bytes.HasPrefix(rest, []byte(label)) && bytes.HasPrefix(rest[len(label):], []byte(form.end)) {
+				return len(form.open) + digits + len(form.mid) + len(label) + len(form.end), ordinal
+			}
+		}
+		return 0, 0
+	}
+	return 0, 0
+}
+
+// SubstituteSpan est l'étendue [ByteStart, ByteEnd) d'un Substitut exact dans un texte (préfixe public compris) et son
+// numéro. Elle ne porte aucune valeur : un Substitut n'en contient pas.
+type SubstituteSpan struct {
+	ByteStart int
+	ByteEnd   int
+	Ordinal   int
+}
+
+// substitutePrefixesLongestFirst : la table des préfixes, du plus long au plus court.
+var substitutePrefixesLongestFirst = func() []string {
+	sorted := append([]string(nil), substitutePrefixes...)
+	sort.SliceStable(sorted, func(i, j int) bool { return len(sorted[i]) > len(sorted[j]) })
+	return sorted
+}()
+
+// FindSubstitutes rend, dans l'ordre et sans chevauchement, les Substituts exacts de la grammaire présents dans text :
+// chaque corps entre crochets (« [secret masqué par xSOM n°…] », « [secret masked by xSOM #…] ») avec, s'il le
+// précède immédiatement, le plus long préfixe de la table. Un texte qui ne suit pas exactement la grammaire n'en est
+// pas un. Sert à l'appelant qui doit juger un texte comme si chaque Substitut était un mot opaque : une commande, par
+// exemple, dont un Substitut (espaces, crochets, dièse) changerait sinon le découpage en mots.
+func FindSubstitutes(text []byte) []SubstituteSpan {
+	var spans []SubstituteSpan
+	for cursor := 0; cursor < len(text); {
+		open := bytes.IndexByte(text[cursor:], '[')
+		if open < 0 {
+			break
+		}
+		at := cursor + open
+		length, ordinal := parseSubstituteBody(text[at:])
+		if length == 0 {
+			cursor = at + 1
+			continue
+		}
+		start := at
+		for _, prefix := range substitutePrefixesLongestFirst {
+			if at-len(prefix) >= cursor && bytes.Equal(text[at-len(prefix):at], []byte(prefix)) {
+				start = at - len(prefix)
+				break
+			}
+		}
+		spans = append(spans, SubstituteSpan{ByteStart: start, ByteEnd: at + length, Ordinal: ordinal})
+		cursor = at + length
+	}
+	return spans
+}
+
+// substituteAt rend la fin du Substitut (préfixe de la table ou aucun, puis corps exact) qui commence text[start:], et
+// faux s'il n'y en a pas. Un préfixe n'est lu que s'il est suivi d'un corps.
+func substituteAt(text []byte, start int) (int, bool) {
+	if start < 0 || start >= len(text) {
+		return 0, false
+	}
+	rest := text[start:]
+	open := bytes.IndexByte(rest[:min(len(rest), substituteMaxPrefix+1)], '[')
+	if open < 0 || (open > 0 && !substitutePrefixSet[string(rest[:open])]) {
+		return 0, false
+	}
+	length := substituteBodyLength(rest[open:])
+	if length == 0 {
+		return 0, false
+	}
+	return start + open + length, true
+}
+
+// isSubstitute dit si value est exactement un Substitut de la grammaire, sans retrait d'espaces : un Substitut est
+// exact.
 func isSubstitute(value []byte) bool {
-	digits := 0
-	for digits < len(value) && isASCIIDigit(value[len(value)-1-digits]) {
-		digits++
+	end, ok := substituteAt(value, 0)
+	return ok && end == len(value)
+}
+
+// isSubstituteFragment dit si text[start:end], valeur lue par une règle qui s'arrête à une espace, une virgule ou un
+// dièse (argument de curl -u sans guillemets, valeur d'affectation sans guillemets, cookie), est le début d'un Substitut
+// complet qui commence en start et finit proprement (substituteEndsCleanly) : la valeur coupée est un morceau du
+// Substitut, pas un secret. Un Substitut suivi d'autres caractères (« …valeur]abc ») ne l'est pas.
+func isSubstituteFragment(text []byte, start, end int) bool {
+	stop, ok := substituteAt(text, start)
+	return ok && end <= stop && substituteEndsCleanly(text, stop)
+}
+
+// substituteEndsCleanly dit si le Substitut qui finit en stop est suivi de la fin du texte, d'une espace, d'une fin de
+// ligne, d'un guillemet (au plus précédé d'une barre oblique inverse, chaîne échappée) ou d'une fin de valeur
+// (« , ; # } ) ] »), et non d'autres caractères qui lui seraient collés.
+func substituteEndsCleanly(text []byte, stop int) bool {
+	if stop >= len(text) {
+		return true
 	}
-	if digits == 0 || digits > substituteMaxDigits {
-		return false
+	c := text[stop]
+	if c == '\\' && stop+1 < len(text) {
+		c = text[stop+1]
+		return c == '"' || c == '\'' || c == '`'
 	}
-	rest := value[:len(value)-digits]
-	filler := 0
-	for filler < len(rest) && rest[len(rest)-1-filler] == substituteFiller {
-		filler++
-	}
-	if filler < substituteGrammarMinFiller {
-		return false
-	}
-	head := rest[:len(rest)-filler]
-	return len(head) == 0 || substitutePrefixSet[string(head)]
+	return bytes.IndexByte([]byte(" \t\r\n\"'`,;#})]"), c) >= 0
 }
 
 // substitutePrefixOf rend le préfixe le plus long de la règle ruleID par lequel commence value, ou "" (règle sans
@@ -131,23 +391,20 @@ func substitutePrefixOf(value []byte, ruleID string) string {
 	return ""
 }
 
-// substituteFor construit le Substitut de value, trouvée par la règle ruleID, au numéro ordinal : préfixe le plus long
-// de cette règle par lequel commence value, puis des X, puis le numéro, à la longueur de value en points de code. La
-// place manque : sans préfixe ; elle manque encore : « XXXX<n> », plus long que value. Numéro hors de 1 à 999 :
-// ErrExpurgateOrdinal.
-func substituteFor(value []byte, ruleID string, ordinal int) (string, error) {
+// substituteFor construit le Substitut de value, trouvée par la règle ruleID, au numéro ordinal, dans la langue
+// language (vide : français) : préfixe le plus long de cette règle par lequel commence value (ou aucun), puis le corps
+// avec le numéro et le type de la règle. Rien d'autre de la valeur : ni sa longueur, ni un de ses caractères. Numéro
+// hors de 1 à 999 : ErrExpurgateOrdinal ; langue inconnue : ErrExpurgateLanguage.
+func substituteFor(value []byte, ruleID string, ordinal int, language SubstituteLanguage) (string, error) {
 	if ordinal < MinSubstituteOrdinal || ordinal > MaxSubstituteOrdinal {
 		return "", ErrExpurgateOrdinal
 	}
-	number := strconv.Itoa(ordinal)
-	length := utf8.RuneCount(value)
-	prefix := substitutePrefixOf(value, ruleID)
-	filler := length - len(prefix) - len(number)
-	if prefix == "" || filler < substituteMinFiller {
-		prefix = ""
-		filler = max(length-len(number), substituteMinFiller)
+	form, ok := substituteFormOf(language)
+	if !ok {
+		return "", ErrExpurgateLanguage
 	}
-	return prefix + strings.Repeat(string(substituteFiller), filler) + number, nil
+	return substitutePrefixOf(value, ruleID) + form.open + strconv.Itoa(ordinal) + form.mid +
+		substituteLabelOf(ruleID, form.language) + form.end, nil
 }
 
 // Schémas d'authentification dont le mot n'est pas secret : la valeur qui suit l'est (« Bearer <jeton> »).

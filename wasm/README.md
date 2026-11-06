@@ -35,8 +35,8 @@ const result = guard.scan(new TextEncoder().encode(text));
 
 guard.setFingerprintKey(crypto.getRandomValues(new Uint8Array(32)));
 const { failure, substitutions, text: expurgated } = guard.expurgate(new TextEncoder().encode(text), { known: [] });
-// failure 'none': each secret is replaced by a typed Substitute (ghp_XXX…1) of the same length; same value, same
-// number (pass the previous substitutions back as `known`). Otherwise expurgated is null: send nothing.
+// failure 'none': each secret is replaced by a typed Substitute ('[secret masqué par xSOM n°1 : jeton GitHub, pas la
+// vraie valeur]', after the public prefix; { substituteLanguage: 'en' } for English); same value, same number (pass the previous substitutions back as `known`). Otherwise expurgated is null: send nothing.
 
 const hidden = guard.findHidden(new TextEncoder().encode(text)); // hidden instructions (tag characters, bidi…)
 ```
@@ -67,7 +67,7 @@ navigateur ou une extension de navigateur.
 - **Mêmes résultats que le moteur Go.** Chaque Release exécute le module et le moteur Go natif sur tout le corpus du
   dépôt (823 cas de détection, vecteurs de l'expurgation et des instructions cachées) et exige des documents identiques.
 
-`expurgate` remplace chaque secret par un Substitut typé (`ghp_XXX…1`) à la longueur de la valeur ; une même valeur
+`expurgate` remplace chaque secret par un Substitut typé (`[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]`, après le préfixe public ; en anglais avec `substituteLanguage: 'en'`), sans rien de la valeur ; une même valeur
 reprend son numéro si l'appelant redonne les Substituts déjà posés (`known`). Exige `setFingerprintKey`.
 
 **Intégrité.** Chaque Release GitHub publie les SHA-256 de `secret-guard.wasm` et de l'archive npm (`SHA256SUMS`) et

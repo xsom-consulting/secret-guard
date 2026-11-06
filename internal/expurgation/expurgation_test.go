@@ -38,12 +38,14 @@ func key(t *testing.T) *detect.FingerprintKey {
 func TestParseRequest(t *testing.T) {
 	fp := strings.Repeat("0a", 16)
 	for _, accepted := range []string{"", `{}`, `{"known":[]}`, `{"known":null}`, `{"minOrdinal":0}`, `{"minOrdinal":999}`,
+		`{"substituteLanguage":"fr"}`, `{"substituteLanguage":"en"}`, `{"substituteLanguage":""}`,
 		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1},{"localFingerprint":"` + strings.Repeat("b", 32) + `","ordinal":999}]}`} {
 		if _, ok := ParseRequest([]byte(accepted)); !ok {
 			t.Errorf("refusée : %q", accepted)
 		}
 	}
 	for _, refused := range []string{`null`, `[]`, `1`, `{`, `{"x":1}`, `{} 1`, `{"minOrdinal":-1}`, `{"minOrdinal":1000}`,
+		`{"substituteLanguage":"de"}`, `{"substituteLanguage":"FR"}`, `{"substituteLanguage":1}`,
 		`{"known":[{"localFingerprint":"` + strings.ToUpper(fp) + `","ordinal":1}]}`,
 		`{"known":[{"localFingerprint":"` + fp[:31] + `","ordinal":1}]}`,
 		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1000}]}`,
@@ -66,8 +68,18 @@ func TestRun(t *testing.T) {
 	if !bytes.HasPrefix(document, []byte(`{"failure":"none"`)) || !bytes.HasSuffix(document, []byte("\n")) {
 		t.Fatalf("%s", document)
 	}
-	if strings.Count(string(text), "5\n") != 2 || bytes.Contains(text, []byte(token)) || bytes.Contains(document, []byte(token[4:12])) {
+	if strings.Count(string(text), "n°5 : jeton GitHub, pas la vraie valeur]\n") != 2 || bytes.Contains(text, []byte(token)) || bytes.Contains(document, []byte(token[4:12])) {
 		t.Fatalf("%q", text)
+	}
+	// Substituts en anglais à la demande.
+	_, text = Run(content, rules(t), key(t), detect.Options{}, Request{MinOrdinal: 5, SubstituteLanguage: detect.SubstituteEnglish})
+	if strings.Count(string(text), "#5: GitHub token, not the real value]\n") != 2 {
+		t.Fatalf("%q", text)
+	}
+	// Langue inconnue (demande non lue par ParseRequest) : échec, aucun texte.
+	document, text = Run(content, rules(t), key(t), detect.Options{}, Request{SubstituteLanguage: "de"})
+	if text != nil || !bytes.HasPrefix(document, []byte(`{"failure":"incomplete"`)) {
+		t.Fatalf("%s %q", document, text)
 	}
 	// Numérotation refusée par défense en profondeur (demande non lue par ParseRequest).
 	bad := Request{Known: []Known{{LocalFingerprint: "x", Ordinal: 1}}}

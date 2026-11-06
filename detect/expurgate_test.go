@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"unicode/utf16"
@@ -61,73 +62,174 @@ func expurgateBoth(t *testing.T, content []byte, rules *Rules, key *FingerprintK
 	return text, subs, result
 }
 
+// subFR et subEN écrivent à l'exécution le Substitut attendu : préfixe, numéro, type.
+func subFR(prefix string, n int, label string) string {
+	return prefix + "[secret masqué par xSOM n°" + strconv.Itoa(n) + " : " + label + ", pas la vraie valeur]"
+}
+
+func subEN(prefix string, n int, label string) string {
+	return prefix + "[secret masked by xSOM #" + strconv.Itoa(n) + ": " + label + ", not the real value]"
+}
+
+// oldSubstitute écrit à l'exécution un Substitut de l'ancienne forme (préfixe, X, numéro).
+func oldSubstitute(prefix string, filler int, n string) string {
+	return prefix + strings.Repeat("X", filler) + n
+}
+
 func TestSubstituteGrammar(t *testing.T) {
-	t.Run("grammaire ^(?:<préfixe>)?X{3,}[0-9]{1,3}$, X majuscules, préfixe de la table fermée", func(t *testing.T) {
-		for value, want := range map[string]bool{
-			"XXX1": true, "XXXX1": true, "XXXX999": true, "XXXX007": true, "ghp_XXX1": true, "sk-ant-XXXXXXX42": true,
-			"AKIAXXXXXXXXXXXXXXX1": true, "https://hooks.slack.com/services/XXXX1": true,
-			"": false, "XX1": false, "XXXX": false, "1": false, "XXXX1234": false, "xxxx1": false, "XXxX1": false,
-			"ghp_XXXX1a": false, "ghp_XXXXAXXXX1": false, "ghq_XXXX1": false, "GHP_XXXX1": false, "aghp_XXXX1": false,
-			"XXXX1 ": false, " XXXX1": false, "ghp_1": false, "XXXX٣": false, "XXXX１": false,
+	t.Run("grammaire exacte et fermée : préfixe de la table ou aucun, forme française ou anglaise, numéro, type", func(t *testing.T) {
+		valid := []string{
+			subFR("", 1, "mot de passe de base de données"), subFR("ghp_", 2, "jeton GitHub"), subFR("", 999, "secret"),
+			subFR("sk-ant-", 42, "clé d’API Anthropic"), subFR("https://hooks.slack.com/services/", 7, "webhook Slack"),
+			subEN("", 1, "database password"), subEN("ghp_", 2, "GitHub token"), subEN("AKIA", 999, "AWS access key ID"),
+			subEN("", 3, "secret"),
+		}
+		for _, value := range valid {
+			if !isSubstitute([]byte(value)) {
+				t.Errorf("%q non reconnu", value)
+			}
+		}
+		base := subFR("", 1, "mot de passe")
+		for _, value := range []string{
+			// Ancienne forme : texte ordinaire depuis la v0.5.0.
+			"", "[]", oldSubstitute("", 4, "1"), oldSubstitute("ghp_", 4, "1"), oldSubstitute("ghp_", 35, "1"),
+			subFR("", 0, "mot de passe"), subFR("", 1000, "mot de passe"), strings.Replace(base, "n°1", "n°01", 1),
+			strings.Replace(base, "n°1", "n°١", 1), strings.Replace(base, "n°1", "n°１", 1), strings.Replace(base, "n°1", "n° 1", 1),
+			subFR("", 1, "password"), subEN("", 1, "mot de passe"), subFR("", 1, "Mot de passe"), subFR("", 1, "mot de passe "),
+			subFR("", 1, "jeton inconnu"), subFR("", 1, ""), subFR("ghq_", 1, "jeton GitHub"), subFR("GHP_", 1, "jeton GitHub"),
+			subFR("aghp_", 1, "jeton GitHub"), subFR("x", 1, "secret"), " " + base, base + " ", base + "1", base[:len(base)-1],
+			strings.Replace(base, "masqué", "masque", 1), strings.Replace(base, "xSOM", "XSOM", 1), strings.Replace(base, " : ", ": ", 1),
+			strings.Replace(base, "[", "(", 1), strings.Replace(base, "]", ")", 1), strings.Replace(base, "pas la vraie valeur", "la vraie valeur", 1),
+			strings.Replace(subEN("", 1, "password"), "#1: ", "#1 : ", 1), base + "]",
 		} {
-			if got := isSubstitute([]byte(value)); got != want {
-				t.Errorf("%q : %v, attendu %v", value, got, want)
+			if isSubstitute([]byte(value)) {
+				t.Errorf("%q reconnu", value)
 			}
 		}
 	})
-	t.Run("SubstitutePrefixes rend une copie de la table fermée", func(t *testing.T) {
+	t.Run("substituteAt et isSubstituteFragment : Substitut complet au début, morceau coupé à une espace", func(t *testing.T) {
+		s := subFR("ghp_", 3, "jeton GitHub")
+		text := []byte(basicAuthCommand() + s + " https://x")
+		start := len(basicAuthCommand())
+		end, ok := substituteAt(text, start)
+		if !ok || end != start+len(s) {
+			t.Fatalf("%d %v", end, ok)
+		}
+		cut := start + strings.IndexByte(s, ' ')
+		if !isSubstituteFragment(text, start, cut) || !isSubstituteFragment(text, start, end) || isSubstituteFragment(text, start, end+1) {
+			t.Fatal("morceau d'un Substitut complet")
+		}
+		for _, glued := range []string{s + "abc https://x", s + "@", s} {
+			text := []byte(basicAuthCommand() + glued)
+			if got := isSubstituteFragment(text, start, cut); got != (glued == s) {
+				t.Errorf("%q : %v", glued, got)
+			}
+		}
+		if _, ok := substituteAt([]byte("x"+s), 0); ok {
+			t.Fatal("préfixe hors de la table")
+		}
+		if _, ok := substituteAt([]byte(s[:len(s)-1]), 0); ok {
+			t.Fatal("Substitut tronqué")
+		}
+	})
+	t.Run("SubstitutePrefixes et SubstituteLabels rendent des copies des tables fermées", func(t *testing.T) {
 		first := SubstitutePrefixes()
 		first[0] = "changé"
 		if second := SubstitutePrefixes(); second[0] == "changé" || !slices.Equal(second, substitutePrefixes) {
 			t.Fatal("table modifiable par l'appelant")
 		}
-		if !isSubstitute([]byte(SubstitutePrefixes()[0] + "XXXX1")) {
-			t.Fatal("préfixe de la table non reconnu")
+		labels := SubstituteLabels()
+		labels[0].French = "changé"
+		if again := SubstituteLabels(); again[0].French == "changé" || !slices.Equal(again, substituteLabels) {
+			t.Fatal("table des types modifiable par l'appelant")
+		}
+		longest := 0
+		for _, prefix := range substitutePrefixes {
+			longest = max(longest, len(prefix))
+			if strings.ContainsAny(prefix, "[]") {
+				t.Fatalf("préfixe %q avec un crochet", prefix)
+			}
+		}
+		if longest != substituteMaxPrefix {
+			t.Fatalf("préfixe le plus long : %d, borne %d", longest, substituteMaxPrefix)
+		}
+		seen := map[string]bool{}
+		for _, l := range substituteLabels {
+			if seen[l.RuleID] || l.French == "" || l.English == "" {
+				t.Fatalf("type de %s en double ou vide", l.RuleID)
+			}
+			seen[l.RuleID] = true
+			for _, label := range []string{l.French, l.English} {
+				// Un type ne porte ni crochet, ni guillemet, ni barre oblique inverse, ni séparateur de la grammaire.
+				if strings.ContainsAny(label, "[]\"'`\\,:#\n") || strings.TrimSpace(label) != label {
+					t.Fatalf("type %q", label)
+				}
+			}
 		}
 	})
 }
 
 func TestSubstituteFor(t *testing.T) {
-	t.Run("préfixe le plus long, X, numéro, à la longueur de la valeur en points de code", func(t *testing.T) {
+	t.Run("préfixe le plus long de la règle, numéro et type, rien d'autre de la valeur", func(t *testing.T) {
 		token := syntheticGitHubToken()
 		for _, c := range []struct {
-			value   string
-			ruleID  string
-			ordinal int
-			want    string
+			value    string
+			ruleID   string
+			ordinal  int
+			language SubstituteLanguage
+			want     string
 		}{
-			{token, "github_token", 1, "ghp_" + strings.Repeat("X", 35) + "1"},
-			{"Xq7Lm2Pz9!Wr4Tn5", "contextual_password", 2, strings.Repeat("X", 15) + "2"},
-			{"sk-ant-" + strings.Repeat("aB3d", 6), "anthropic_key", 42, "sk-ant-" + strings.Repeat("X", 22) + "42"},
-			{"sk-" + strings.Repeat("aB3d", 6), "openai_key", 999, "sk-" + strings.Repeat("X", 21) + "999"},
+			{token, "github_token", 1, "", subFR("ghp_", 1, "jeton GitHub")},
+			{token, "github_token", 1, SubstituteFrench, subFR("ghp_", 1, "jeton GitHub")},
+			{token, "github_token", 1, SubstituteEnglish, subEN("ghp_", 1, "GitHub token")},
+			{"Xq7Lm2Pz9!Wr4Tn5", "contextual_password", 2, "", subFR("", 2, "mot de passe")},
+			{"Xq7Lm2Pz9!Wr4Tn5", "database_url_credentials", 2, SubstituteEnglish, subEN("", 2, "database password")},
+			{"sk-ant-" + strings.Repeat("aB3d", 6), "anthropic_key", 42, "", subFR("sk-ant-", 42, "clé d’API Anthropic")},
+			{"sk-" + strings.Repeat("aB3d", 6), "openai_key", 999, "", subFR("sk-", 999, "clé d’API OpenAI")},
 			// Préfixe de la règle du constat seulement : un mot de passe ou une autre règle n'en a aucun.
-			{"dapi" + strings.Repeat("q7Lm", 4), "contextual_password", 1, strings.Repeat("X", 19) + "1"},
-			{"AKIA" + strings.Repeat("Q7LM", 4), "contextual_password", 1, strings.Repeat("X", 19) + "1"},
-			{token, "high_entropy", 1, strings.Repeat("X", 39) + "1"},
-			{token, "openai_key", 1, strings.Repeat("X", 39) + "1"},
-			// Place insuffisante avec le préfixe : sans préfixe.
-			{"ghp_abc", "github_token", 7, "XXXXXX7"},
-			// Minimum « XXXX<n> », plus long que la valeur.
-			{"ab", "", 3, "XXXX3"},
-			{"", "", 12, "XXXX12"},
-			// Longueur en points de code, pas en octets.
-			{"éé😀😀ééé", "", 5, "XXXXXX5"},
-			// Octet hors UTF-8 : un caractère.
-			{"ab\xffcd", "", 1, "XXXX1"},
+			{"dapi" + strings.Repeat("q7Lm", 4), "contextual_password", 1, "", subFR("", 1, "mot de passe")},
+			{"AKIA" + strings.Repeat("Q7LM", 4), "contextual_password", 1, "", subFR("", 1, "mot de passe")},
+			{token, "high_entropy", 1, "", subFR("", 1, "secret")},
+			{token, "openai_key", 1, SubstituteEnglish, subEN("", 1, "OpenAI API key")},
+			// Règle hors de la table (Pack du client, règle inconnue) : type « secret ».
+			{"valeur", "custom_interne", 5, "", subFR("", 5, "secret")},
+			{"valeur", "", 5, SubstituteEnglish, subEN("", 5, "secret")},
+			// Valeur courte, vide, hors ASCII ou hors UTF-8 : même forme, aucune longueur.
+			{"ghp_abc", "github_token", 7, "", subFR("ghp_", 7, "jeton GitHub")},
+			{"", "", 12, "", subFR("", 12, "secret")},
+			{"éé😀😀ééé", "", 5, "", subFR("", 5, "secret")},
+			{"ab\xffcd", "", 1, "", subFR("", 1, "secret")},
 		} {
-			got, err := substituteFor([]byte(c.value), c.ruleID, c.ordinal)
+			got, err := substituteFor([]byte(c.value), c.ruleID, c.ordinal, c.language)
 			if err != nil || got != c.want {
-				t.Errorf("%q, %d : %q (%v), attendu %q", c.value, c.ordinal, got, err, c.want)
+				t.Errorf("%q, %d, %q : %q (%v), attendu %q", c.ruleID, c.ordinal, c.language, got, err, c.want)
 			}
 			if !isSubstitute([]byte(got)) {
 				t.Errorf("%q hors de la grammaire", got)
 			}
 		}
 	})
-	t.Run("numéro hors de 1 à 999 : ErrExpurgateOrdinal", func(t *testing.T) {
+	t.Run("chaque type de la table, dans chaque langue, est dans la grammaire", func(t *testing.T) {
+		for _, l := range substituteLabels {
+			for _, language := range []SubstituteLanguage{SubstituteFrench, SubstituteEnglish} {
+				for _, n := range []int{1, 42, 999} {
+					got, err := substituteFor([]byte("valeur"), l.RuleID, n, language)
+					if err != nil || !isSubstitute([]byte(got)) {
+						t.Errorf("%s %s %d : %q %v", l.RuleID, language, n, got, err)
+					}
+				}
+			}
+		}
+	})
+	t.Run("numéro hors de 1 à 999 : ErrExpurgateOrdinal ; langue inconnue : ErrExpurgateLanguage", func(t *testing.T) {
 		for _, n := range []int{0, -1, 1000, 1 << 40} {
-			if got, err := substituteFor([]byte("valeur"), "", n); got != "" || !errors.Is(err, ErrExpurgateOrdinal) {
+			if got, err := substituteFor([]byte("valeur"), "", n, ""); got != "" || !errors.Is(err, ErrExpurgateOrdinal) {
 				t.Errorf("%d : %q %v", n, got, err)
+			}
+		}
+		for _, language := range []SubstituteLanguage{"de", "FR", "fr-FR", " en"} {
+			if got, err := substituteFor([]byte("valeur"), "", 1, language); got != "" || !errors.Is(err, ErrExpurgateLanguage) {
+				t.Errorf("%q : %q %v", language, got, err)
 			}
 		}
 	})
@@ -200,21 +302,40 @@ var substituteTemplates = []struct {
 	{"en-tête curl", "", func(s string) string { return `curl -H "Authorization: Bearer ` + s + `" https://x` }},
 	{"en-tête curl en JSON", "", func(s string) string { return `{"cmd": "curl -H \"Authorization: Bearer ` + s + `\" https://x"}` }},
 	{"code", "typescript", func(s string) string { return `const apiKey = "` + s + `";` }},
+	{"cookie", "", func(s string) string { return "Cookie: session=" + s + "; theme=dark" }},
+	{"Python", "python", func(s string) string { return `client = Client(password="` + s + `")` }},
+	{"phrase", "", func(s string) string { return "Le mot de passe est " + s + ", merci." }},
+}
+
+// neverDetectedSubstitutes : sans préfixe, chaque type de chaque langue aux numéros 1, 42 et 999 ; avec chaque préfixe de
+// la table, le type de sa règle et le repli, aux numéros 1 et 999, dans les deux langues.
+func neverDetectedSubstitutes() []string {
+	var substitutes []string
+	for _, n := range []int{1, 42, 999} {
+		for _, label := range substituteLabelSets[SubstituteFrench] {
+			substitutes = append(substitutes, subFR("", n, label))
+		}
+		for _, label := range substituteLabelSets[SubstituteEnglish] {
+			substitutes = append(substitutes, subEN("", n, label))
+		}
+	}
+	for _, r := range substituteRulePrefixes {
+		for _, prefix := range r.prefixes {
+			for _, n := range []int{1, 999} {
+				substitutes = append(substitutes,
+					subFR(prefix, n, substituteLabelOf(r.ruleID, SubstituteFrench)), subFR(prefix, n, SubstituteDefaultLabel),
+					subEN(prefix, n, substituteLabelOf(r.ruleID, SubstituteEnglish)), subEN(prefix, n, SubstituteDefaultLabel))
+			}
+		}
+	}
+	return substitutes
 }
 
 func TestSubstituteNeverDetected(t *testing.T) {
 	t.Run("un Substitut n'est jamais détecté, seul ni dans les gabarits shell, JSON, YAML, .env, URL et Bearer", func(t *testing.T) {
 		rules := loadInitialRules(t)
-		var substitutes []string
-		for _, prefix := range append([]string{""}, SubstitutePrefixes()...) {
-			for _, filler := range []int{4, 20, 36} {
-				for _, n := range []string{"1", "42", "999"} {
-					substitutes = append(substitutes, prefix+strings.Repeat("X", filler)+n)
-				}
-			}
-		}
 		checked := 0
-		for _, s := range substitutes {
+		for _, s := range neverDetectedSubstitutes() {
 			for _, tpl := range substituteTemplates {
 				if strings.Contains(s, "/") && strings.HasPrefix(tpl.name, "URL") {
 					continue // un « / » dans l'information utilisateur termine l'autorité : ce n'est plus un mot de passe.
@@ -231,22 +352,23 @@ func TestSubstituteNeverDetected(t *testing.T) {
 	t.Run("corps PEM fait d'un Substitut, lignes BEGIN et END intactes : jamais détecté", func(t *testing.T) {
 		rules := loadInitialRules(t)
 		for _, label := range []string{"RSA PRIVATE KEY", "PRIVATE KEY", "OPENSSH PRIVATE KEY", "PGP PRIVATE KEY BLOCK"} {
-			begin, end := "-----BEGIN "+label+"-----", "-----END "+label+"-----"
-			body := strings.Repeat("X", 120) + "7"
-			for name, text := range map[string]string{
-				"bloc":                 begin + "\n" + body + "\n" + end + "\n",
-				"bloc CRLF":            begin + "\r\n" + body + "\r\n" + end,
-				"incomplet":            "clé :\n" + begin + "\n" + body + "\n",
-				"JSON échappé":         `{"key": "` + begin + `\n` + body + `\n` + end + `"}`,
-				"affectation .env":     "PRIVATE_KEY=\"" + begin + "\n" + body + "\n" + end + "\"\n",
-				"affectation YAML":     "private_key: |\n  " + begin + "\n  " + body + "\n  " + end + "\n",
-				"bloc sans fin ligne":  begin + body + end,
-				"bloc dans un message": "Voici la clé :\n" + begin + "\n" + body + "\n" + end + "\nmerci",
-			} {
-				for _, language := range []string{"", "yaml", "dotenv"} {
-					result := Scan([]byte(text), rules, Options{LanguageID: language})
-					if !result.Complete || len(result.Findings) > 0 {
-						t.Errorf("%s, %s, %q : %+v", label, name, language, result.Findings)
+			begin, end := pemHeader(label), "-----END "+label+"-----"
+			for _, body := range []string{subFR("", 7, "clé privée"), subEN("", 7, "private key")} {
+				for name, text := range map[string]string{
+					"bloc":                 begin + "\n" + body + "\n" + end + "\n",
+					"bloc CRLF":            begin + "\r\n" + body + "\r\n" + end,
+					"incomplet":            "clé :\n" + begin + "\n" + body + "\n",
+					"JSON échappé":         `{"key": "` + begin + `\n` + body + `\n` + end + `"}`,
+					"affectation .env":     "PRIVATE_KEY=\"" + begin + "\n" + body + "\n" + end + "\"\n",
+					"affectation YAML":     "private" + "_key: |\n  " + begin + "\n  " + body + "\n  " + end + "\n",
+					"bloc sans fin ligne":  begin + body + end,
+					"bloc dans un message": "Voici la clé :\n" + begin + "\n" + body + "\n" + end + "\nmerci",
+				} {
+					for _, language := range []string{"", "yaml", "dotenv"} {
+						result := Scan([]byte(text), rules, Options{LanguageID: language})
+						if !result.Complete || len(result.Findings) > 0 {
+							t.Errorf("%s, %s, %q : %+v", label, name, language, result.Findings)
+						}
 					}
 				}
 			}
@@ -255,55 +377,70 @@ func TestSubstituteNeverDetected(t *testing.T) {
 }
 
 func TestFakeSubstituteDetected(t *testing.T) {
-	t.Run("un corps qui porte autre chose que des X reste détecté", func(t *testing.T) {
+	t.Run("un texte qui ressemble à un Substitut sans en être un reste analysé et détecté", func(t *testing.T) {
 		rules := loadInitialRules(t)
-		for _, value := range []string{
-			"ghp_" + strings.Repeat("X", 34) + "1a",
-			"ghp_" + strings.Repeat("X", 15) + "A" + strings.Repeat("X", 19) + "1",
-			"ghp_" + strings.Repeat("x", 35) + "1",
-			"ghp_" + strings.Repeat("X", 32) + "1234",
+		token := syntheticGitHubToken()
+		password := syntheticPassword() + "5"
+		base := subFR("", 1, "jeton GitHub")
+		for name, text := range map[string]string{
+			"jeton à la place du type":          "[secret masqué par xSOM n°1 : " + token + ", pas la vraie valeur]",
+			"jeton collé après le Substitut":    `export TOKEN="` + base + token[4:] + `"`,
+			"mot de passe collé":                `DB_PASSWORD="` + base + password + `"`,
+			"mot de passe devant":               `DB_PASSWORD="` + password + base + `"`,
+			"numéro 0":                          `export TOKEN="` + subFR("", 0, "jeton GitHub") + `"`,
+			"numéro 1000":                       `export TOKEN="` + subFR("", 1000, "jeton GitHub") + `"`,
+			"type d'une autre langue":           `export TOKEN="` + subFR("", 1, "GitHub token") + `"`,
+			"type hors de la table":             `export TOKEN="` + subFR("", 1, "jeton maison") + `"`,
+			"crochet fermant absent":            `export TOKEN="` + base[:len(base)-1] + `"`,
+			"curl -u, Substitut suivi de texte": basicAuthCommand() + base + "abc https://x",
+			"ancienne forme, jeton GitHub":      "export TOKEN=" + oldSubstitute("ghp_", 35, "1"),
+			"ancienne forme, corps altéré":      "export TOKEN=" + oldSubstitute("ghp_", 34, "1a"),
 		} {
-			for _, tpl := range []func(string) string{
-				func(s string) string { return s },
-				func(s string) string { return "export TOKEN=" + s },
-				func(s string) string { return "Authorization: Bearer " + s },
-			} {
-				result := Scan([]byte(tpl(value)), rules, Options{})
-				if !result.Complete || len(result.Findings) == 0 {
-					t.Errorf("%q non détecté", tpl(value))
-				}
+			result := Scan([]byte(text), rules, Options{})
+			if !result.Complete || len(result.Findings) == 0 {
+				t.Errorf("%s : non détecté", name)
 			}
 		}
 	})
 }
 
-// FuzzSubstituteGrammar : un caractère alphanumérique quelconque posé dans le corps d'un Substitut de jeton GitHub ;
-// si le corps n'est plus dans la grammaire, la valeur est détectée.
+// FuzzSubstituteGrammar : un octet quelconque posé dans un Substitut ; la grammaire n'admet le texte obtenu que s'il
+// est exactement un Substitut que le moteur écrirait (autre préfixe de la règle, autre numéro), et un Substitut admis
+// n'est jamais détecté.
 //
 //	go test ./detect -run '^$' -fuzz '^FuzzSubstituteGrammar$' -fuzztime=60s
 func FuzzSubstituteGrammar(f *testing.F) {
 	for _, seed := range []struct {
 		pos  uint
 		char byte
-	}{{0, 'a'}, {34, 'A'}, {35, 'b'}, {35, '7'}, {12, 'X'}, {3, '0'}} {
-		f.Add(seed.pos, seed.char)
+	}{{0, 'a'}, {4, '('}, {32, '2'}, {33, '0'}, {40, 'X'}, {60, ' '}, {5, 's'}} {
+		f.Add(seed.pos, seed.char, false)
+		f.Add(seed.pos, seed.char, true)
 	}
 	rules := loadInitialRules(f)
-	const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
-	f.Fuzz(func(t *testing.T, pos uint, char byte) {
-		body := []byte(strings.Repeat("X", 35) + "1")
-		body[pos%uint(len(body))] = alphabet[int(char)%len(alphabet)]
-		value := append([]byte("ghp_"), body...)
-		if isSubstitute(value) {
-			if result := Scan(value, rules, Options{}); !result.Complete || len(result.Findings) > 0 {
-				t.Fatalf("Substitut détecté : %+v", result)
-			}
+	// Ce qu'un seul octet changé peut encore donner : un autre préfixe de la règle (ghs_, gho_…) ou un autre numéro.
+	written := map[string]bool{}
+	for _, prefix := range substitutePrefixesByRule["github_token"] {
+		for n := 1; n <= 9; n++ {
+			written[subFR(prefix, n, "jeton GitHub")] = true
+			written[subEN(prefix, n, "GitHub token")] = true
+		}
+	}
+	f.Fuzz(func(t *testing.T, pos uint, char byte, english bool) {
+		original := subFR("ghp_", 1, "jeton GitHub")
+		if english {
+			original = subEN("ghp_", 1, "GitHub token")
+		}
+		value := []byte(original)
+		value[pos%uint(len(value))] = char
+		if !isSubstitute(value) {
 			return
 		}
-		for _, text := range [][]byte{value, append([]byte("export TOKEN="), value...)} {
-			if result := Scan(text, rules, Options{}); !result.Complete || len(result.Findings) == 0 {
-				t.Fatalf("corps altéré non détecté (position %d)", pos%uint(len(body)))
-			}
+		if !written[string(value)] {
+			t.Fatalf("%q admis par la grammaire", value)
+		}
+		if result := Scan(value, rules, Options{}); !result.Complete || len(result.Findings) > 0 {
+			t.Fatalf("Substitut détecté : %+v", result)
 		}
 	})
 }
@@ -324,24 +461,24 @@ func TestExpurgateMatrix(t *testing.T) {
 	opaque := "aZ3kQ9mW2xL7pR4tY8vB1nC6"
 	pem := syntheticPEM("\n")
 	for _, c := range []expurgateCase{
-		{"jeton GitHub", "export TOKEN=" + token, 1, "export TOKEN=ghp_" + strings.Repeat("X", 35) + "1", [][2]int{{13, 53}}},
-		{"URL", "postgres://app:" + password + "@db:5432/x", 2, "postgres://app:" + strings.Repeat("X", 15) + "2@db:5432/x", [][2]int{{15, 31}}},
-		{"Bearer", "Authorization: Bearer " + opaque, 3, "Authorization: Bearer " + strings.Repeat("X", 23) + "3", [][2]int{{22, 46}}},
-		{"Bearer et jeton GitHub", "Authorization: Bearer " + token, 4, "Authorization: Bearer ghp_" + strings.Repeat("X", 35) + "4", [][2]int{{22, 62}}},
-		{"cli_basic_auth", basicAuthCommand() + password + " https://x", 5, basicAuthCommand() + strings.Repeat("X", 15) + "5 https://x", [][2]int{{14, 30}}},
-		{"PEM", pem + "\n", 6, "-----BEGIN RSA PRIVATE KEY-----\n" + strings.Repeat("X", 116) + "6\n-----END RSA PRIVATE KEY-----\n", [][2]int{{32, 149}}},
-		{"PEM incomplet", pemHeader("PRIVATE KEY") + "\nMIIEow" + strings.Repeat("q7Lm2Pz9Wr4Tn", 4) + "\n", 7, pemHeader("PRIVATE KEY") + "\n" + strings.Repeat("X", 57) + "7\n", [][2]int{{28, 86}}},
-		{"numéro à trois chiffres", "export TOKEN=" + token, 999, "export TOKEN=ghp_" + strings.Repeat("X", 33) + "999", [][2]int{{13, 53}}},
-		{"en-tête curl", `curl -H "Authorization: Bearer ` + opaque + `" https://x`, 9, `curl -H "Authorization: Bearer ` + strings.Repeat("X", 23) + `9" https://x`, [][2]int{{31, 55}}},
-		{"jeton comme nom d'utilisateur d'une URL", "git clone https://" + opaque + ":x-oauth-basic@github.com/o/r.git", 1, "git clone https://" + strings.Repeat("X", 37) + "1@github.com/o/r.git", [][2]int{{18, 56}}},
+		{"jeton GitHub", "export TOKEN=" + token, 1, "export TOKEN=" + subFR("ghp_", 1, "jeton GitHub"), [][2]int{{13, 53}}},
+		{"URL", "postgres://app:" + password + "@db:5432/x", 2, "postgres://app:" + subFR("", 2, "mot de passe de base de données") + "@db:5432/x", [][2]int{{15, 31}}},
+		{"Bearer", "Authorization: Bearer " + opaque, 3, "Authorization: Bearer " + subFR("", 3, "jeton d’accès"), [][2]int{{22, 46}}},
+		{"Bearer et jeton GitHub", "Authorization: Bearer " + token, 4, "Authorization: Bearer " + subFR("ghp_", 4, "jeton GitHub"), [][2]int{{22, 62}}},
+		{"cli_basic_auth", basicAuthCommand() + password + " https://x", 5, basicAuthCommand() + subFR("", 5, "mot de passe") + " https://x", [][2]int{{14, 30}}},
+		{"PEM", pem + "\n", 6, pemHeader("RSA PRIVATE KEY") + "\n" + subFR("", 6, "clé privée") + "\n-----END RSA PRIVATE KEY-----\n", [][2]int{{32, 149}}},
+		{"PEM incomplet", pemHeader("PRIVATE KEY") + "\nMIIEow" + strings.Repeat("q7Lm2Pz9Wr4Tn", 4) + "\n", 7, pemHeader("PRIVATE KEY") + "\n" + subFR("", 7, "clé privée") + "\n", [][2]int{{28, 86}}},
+		{"numéro à trois chiffres", "export TOKEN=" + token, 999, "export TOKEN=" + subFR("ghp_", 999, "jeton GitHub"), [][2]int{{13, 53}}},
+		{"en-tête curl", `curl -H "Authorization: Bearer ` + opaque + `" https://x`, 9, `curl -H "Authorization: Bearer ` + subFR("", 9, "jeton d’accès") + `" https://x`, [][2]int{{31, 55}}},
+		{"jeton comme nom d'utilisateur d'une URL", "git clone https://" + opaque + ":x-oauth-basic@github.com/o/r.git", 1, "git clone https://" + subFR("", 1, "mot de passe") + "@github.com/o/r.git", [][2]int{{18, 56}}},
 		// Jeton GitHub en nom d'utilisateur : étendue fusionnée de deux règles, URL entière.
-		{"jeton GitHub comme nom d'utilisateur d'une URL", "git clone https://" + token + ":x-oauth-basic@github.com/o/r.git", 1, "git clone " + strings.Repeat("X", 80) + "1", [][2]int{{10, 91}}},
-		{"nom d'utilisateur ordinaire d'une URL", "https://deploy-bot:" + password + "@example.org/x", 1, "https://deploy-bot:" + strings.Repeat("X", 15) + "1@example.org/x", [][2]int{{19, 35}}},
-		{"clé d'API comme utilisateur de curl -u", curlUser(opaque) + "X https://x", 1, "curl -u " + strings.Repeat("X", 25) + "1 https://x", [][2]int{{8, 34}}},
-		{"mot de passe qui commence comme un jeton Databricks", "PASSWORD=dapi" + strings.Repeat("q7Lm", 4), 1, "PASSWORD=" + strings.Repeat("X", 19) + "1", [][2]int{{9, 29}}},
-		{"mot de passe qui commence comme une clé AWS", "DB_PASSWORD=AKIA" + strings.Repeat("q7Lm", 4), 1, "DB_PASSWORD=" + strings.Repeat("X", 19) + "1", [][2]int{{12, 32}}},
-		{"schéma dans un mot de passe : remplacé avec la valeur", `DB_PASSWORD="Token ` + strings.Repeat("q7Lm", 4) + `"`, 1, `DB_PASSWORD="` + strings.Repeat("X", 21) + `1"`, [][2]int{{13, 35}}},
-		{"faux Substitut détecté", "TOKEN=ghp_" + strings.Repeat("X", 34) + "1a", 8, "TOKEN=ghp_" + strings.Repeat("X", 35) + "8", [][2]int{{6, 46}}},
+		{"jeton GitHub comme nom d'utilisateur d'une URL", "git clone https://" + token + ":x-oauth-basic@github.com/o/r.git", 1, "git clone " + subFR("", 1, "jeton GitHub"), [][2]int{{10, 91}}},
+		{"nom d'utilisateur ordinaire d'une URL", "https://deploy-bot:" + password + "@example.org/x", 1, "https://deploy-bot:" + subFR("", 1, "mot de passe") + "@example.org/x", [][2]int{{19, 35}}},
+		{"clé d'API comme utilisateur de curl -u", curlUser(opaque) + "X https://x", 1, "curl -u " + subFR("", 1, "mot de passe") + " https://x", [][2]int{{8, 34}}},
+		{"mot de passe qui commence comme un jeton Databricks", "PASSWORD=dapi" + strings.Repeat("q7Lm", 4), 1, "PASSWORD=" + subFR("", 1, "mot de passe"), [][2]int{{9, 29}}},
+		{"mot de passe qui commence comme une clé AWS", "DB_PASSWORD=AKIA" + strings.Repeat("q7Lm", 4), 1, "DB_PASSWORD=" + subFR("", 1, "mot de passe"), [][2]int{{12, 32}}},
+		{"schéma dans un mot de passe : remplacé avec la valeur", `DB_PASSWORD="Token ` + strings.Repeat("q7Lm", 4) + `"`, 1, `DB_PASSWORD="` + subFR("", 1, "mot de passe") + `"`, [][2]int{{13, 35}}},
+		{"faux Substitut détecté", "TOKEN=ghp_" + strings.Repeat("X", 34) + "1a", 8, "TOKEN=" + subFR("ghp_", 8, "jeton GitHub"), [][2]int{{6, 46}}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			text, subs, result := expurgateBoth(t, []byte(c.input), rules, nil, Options{}, func() func(Finding) (int, bool) { return fixedOrdinal(c.ordinal) })
@@ -372,7 +509,7 @@ func TestExpurgate(t *testing.T) {
 		if result.Failure != SanitizeNone || len(subs) != 2 {
 			t.Fatalf("%s %+v", result.Failure, subs)
 		}
-		want := "é😀 clé « ghp_" + strings.Repeat("X", 34) + "10 »\nDB_PASSWORD=" + strings.Repeat("X", 13) + "11\nfin 😀"
+		want := "é😀 clé « " + subFR("ghp_", 10, "jeton GitHub") + " »\nDB_PASSWORD=" + subFR("", 11, "mot de passe") + "\nfin 😀"
 		if string(text) != want {
 			t.Fatalf("%q", text)
 		}
@@ -435,7 +572,7 @@ func TestExpurgate(t *testing.T) {
 			{RuleID: "d", Score: 50, ByteStart: 12, ByteEnd: 16},
 		}}
 		text, subs, err := Expurgate(content, result, startOrdinals(1))
-		if err != nil || string(text) != "01XXXXXXX1abXXXX2" || len(subs) != 2 || subs[0].RuleID != "a" ||
+		if err != nil || string(text) != "01"+subFR("", 1, "secret")+"ab"+subFR("", 2, "secret") || len(subs) != 2 || subs[0].RuleID != "a" ||
 			subs[0].ByteStart != 2 || subs[0].ByteEnd != 10 || subs[1].RuleID != "d" {
 			t.Fatalf("%q %+v %v", text, subs, err)
 		}
@@ -509,7 +646,7 @@ func TestExpurgateRefusals(t *testing.T) {
 			}
 		}
 		result := Result{Complete: true, Failure: FailureNone, Findings: []Finding{{ByteStart: 1, ByteEnd: 7}}}
-		if out, _, err := Expurgate(text, result, fixedOrdinal(1)); err != nil || string(out) != "aXXXX1b" {
+		if out, _, err := Expurgate(text, result, fixedOrdinal(1)); err != nil || string(out) != "a"+subFR("", 1, "secret")+"b" {
 			t.Errorf("%q %v", out, err)
 		}
 	})
@@ -590,8 +727,8 @@ func TestExpurgateResidualLadder(t *testing.T) {
 			subs       int
 			want       string
 		}{
-			{2, 2, "a b\nXXXX1 ghp_" + strings.Repeat("X", 35) + "1 suite\nfin"},
-			{3, 1, "a b\n" + strings.Repeat("X", 49) + "1\nfin"},
+			{2, 2, "a b\n" + subFR("", 1, "secret") + " " + subFR("ghp_", 1, "jeton GitHub") + " suite\nfin"},
+			{3, 1, "a b\n" + subFR("", 1, "secret") + "\nfin"},
 		} {
 			calls := 0
 			restore := swapExpurgateScan(func(text []byte, r *Rules, o Options, k *FingerprintKey) Result {
@@ -800,7 +937,7 @@ func TestExpurgateSubstitutionFingerprint(t *testing.T) {
 func TestExpurgateLineBreak(t *testing.T) {
 	rules := loadInitialRules(t)
 	token := syntheticGitHubToken()
-	substitute := func(n string) string { return "ghp_" + strings.Repeat("X", 36-len(n)) + n }
+	substitute := func(n string) string { number, _ := strconv.Atoi(n); return subFR("ghp_", number, "jeton GitHub") }
 	raw := make([]byte, FingerprintKeyBytes)
 	if _, err := rand.Read(raw); err != nil {
 		t.Fatal(err)
@@ -898,7 +1035,7 @@ func TestExpurgateLineBreak(t *testing.T) {
 	t.Run("sans règles (Expurgate) : étendue entière remplacée", func(t *testing.T) {
 		content := []byte("export A=" + token + "\nexport B=x")
 		text, subs, err := Expurgate(content, Scan(content, rules, Options{}), fixedOrdinal(1))
-		if err != nil || len(subs) != 1 || subs[0].ByteEnd != 56 || string(text) != "export A=ghp_"+strings.Repeat("X", 42)+"1 B=x" {
+		if err != nil || len(subs) != 1 || subs[0].ByteEnd != 56 || string(text) != "export A="+subFR("ghp_", 1, "jeton GitHub")+" B=x" {
 			t.Fatalf("%q %+v %v", text, subs, err)
 		}
 	})
@@ -940,7 +1077,7 @@ func TestExpurgateRedactResiduals(t *testing.T) {
 		vectors := loadRedactVectors(t)
 		corpus := redactCorpus(t)
 		counts := map[SanitizeFailure]int{}
-		residualCases, remaining := 0, 0
+		residualCases, remaining, overLimit := 0, 0, 0
 		for _, c := range vectors.Cases {
 			content, options, _ := c.input(t, corpus)
 			text, subs, result := ExpurgateAndRescan(content, rules, nil, options, startOrdinals(1))
@@ -958,11 +1095,16 @@ func TestExpurgateRedactResiduals(t *testing.T) {
 				if again := Scan(text, rules, options); !again.Complete || len(again.Findings) > 0 {
 					t.Errorf("%s : constat après expurgation", c.ID)
 				}
+			case result.Failure == SanitizeIncomplete && result.Initial.Complete && result.Final.Failure == FailureScanLimit:
+				// Texte proche de 1 Mio : le Substitut, plus long que la valeur, fait passer le texte expurgé au-delà de
+				// MaxInputBytes ; refus, jamais un texte non analysé.
+				overLimit++
 			case c.Expected.Failure == SanitizeNone && utf8.Valid(content):
 				t.Errorf("%s : masqué par Redact, refusé par l'expurgation (%s)", c.ID, result.Failure)
 			}
 		}
-		t.Logf("%d cas : %v ; résidus du masquage : %d, restants après expurgation : %d", len(vectors.Cases), counts, residualCases, remaining)
+		t.Logf("%d cas : %v ; résidus du masquage : %d, restants après expurgation : %d ; texte expurgé au-delà de 1 Mio : %d",
+			len(vectors.Cases), counts, residualCases, remaining, overLimit)
 		if residualCases != 5 || remaining != 0 {
 			t.Fatalf("%d résidus du masquage, %d restants", residualCases, remaining)
 		}
@@ -978,6 +1120,7 @@ func TestExpurgateCorpus(t *testing.T) {
 	t.Run("expurgation du corpus de parité", func(t *testing.T) {
 		rules := loadInitialRules(t)
 		counts := map[SanitizeFailure]int{}
+		refused := map[string]int{}
 		excused := 0
 		for _, file := range corpusFiles(t) {
 			for _, c := range loadCorpusFile(t, file) {
@@ -992,6 +1135,15 @@ func TestExpurgateCorpus(t *testing.T) {
 					if text != nil || subs != nil {
 						t.Errorf("%s : texte rendu après un échec", c.ID)
 					}
+					switch {
+					case !utf8.Valid(content):
+						refused["hors UTF-8"]++
+					case result.Initial.Complete && result.Final.Failure == FailureScanLimit:
+						// Substituts plus longs que les valeurs : texte expurgé au-delà de 1 Mio, refusé.
+						refused["au-delà de 1 Mio"]++
+					default:
+						t.Errorf("%s : expurgation refusée (%s)", c.ID, result.Failure)
+					}
 					continue
 				}
 				if diff := substitutionDifference(content, text, subs); diff != "" {
@@ -1003,7 +1155,7 @@ func TestExpurgateCorpus(t *testing.T) {
 				excused += replacedWindowsLeft(t, c.ID, content, text, subs)
 			}
 		}
-		t.Logf("issues : %v ; %d fenêtres présentes aussi hors des étendues remplacées dans l'entrée", counts, excused)
+		t.Logf("issues : %v (refus : %v) ; %d fenêtres présentes aussi hors des étendues remplacées dans l'entrée", counts, refused, excused)
 		if counts[SanitizeNone] == 0 || counts[SanitizeResidual] != 0 {
 			t.Fatalf("issues %v", counts)
 		}
@@ -1040,6 +1192,21 @@ func replacedWindowsLeft(t *testing.T, id string, content, text []byte, subs []S
 		covered = append(covered, Finding{ByteStart: s.ByteStart, ByteEnd: s.ByteEnd})
 	}
 	outside := outsideSpans(content, covered)
+	// Texte expurgé sans ses Substituts : leur texte est fixe (grammaire), il ne vient pas de la valeur ; il est vérifié
+	// à part, égal à celui que la grammaire écrit pour la règle et le numéro.
+	var kept []byte
+	cursor, shift := 0, 0
+	for _, s := range subs {
+		start := s.ByteStart + shift
+		kept = append(append(kept, text[cursor:start]...), 0)
+		cursor = start + len(s.Replacement)
+		shift += len(s.Replacement) - (s.ByteEnd - s.ByteStart)
+		want, err := substituteFor(content[s.ByteStart:s.ByteEnd], s.RuleID, s.Ordinal, "")
+		if err != nil || s.Replacement != want {
+			t.Errorf("%s : Substitut hors de la forme écrite pour sa règle et son numéro", id)
+		}
+	}
+	kept = append(kept, text[cursor:]...)
 	excused := 0
 	for _, s := range subs {
 		value := content[s.ByteStart:s.ByteEnd]
@@ -1053,7 +1220,7 @@ func replacedWindowsLeft(t *testing.T, id string, content, text []byte, subs []S
 			window := value[i : i+width]
 			switch {
 			case i+width <= public:
-			case !bytes.Contains(text, window):
+			case !bytes.Contains(kept, window):
 			case containsIn(outside, window):
 				excused++
 			default:
@@ -1075,7 +1242,7 @@ func FuzzExpurgate(f *testing.F) {
 		"", "rien à signaler", "TOKEN=" + token, token + token, "DB_PASSWORD=" + syntheticPassword() + "\n" + token,
 		"API_KEY=" + token + "\nNEXT=another", "Authorization: Bearer " + token, "postgres://app:" + syntheticPassword() + "@db/x",
 		syntheticPEM("\n"), basicAuthCommand() + syntheticPassword() + " https://x", "é😀 " + token + " \xff",
-		"ghp_" + strings.Repeat("X", 35) + "1", "app_secret: |\n  " + strings.Repeat("aZ3k", 6) + "\nnext: 1\n",
+		oldSubstitute("ghp_", 35, "1"), subFR("ghp_", 1, "jeton GitHub"), "TOKEN=" + subEN("", 2, "access token"), "app_secret: |\n  " + strings.Repeat("aZ3k", 6) + "\nnext: 1\n",
 	} {
 		f.Add([]byte(seed))
 	}
@@ -1103,6 +1270,90 @@ func FuzzExpurgate(f *testing.F) {
 		}
 		if again := Scan(text, rules, Options{}); !again.Complete || len(again.Findings) != 0 {
 			t.Fatal("constat après une expurgation réussie")
+		}
+	})
+}
+
+// TestExpurgateLanguage : Substituts en français par défaut, en anglais avec Options.SubstituteLanguage ; une autre
+// langue fait échouer l'expurgation sans texte ; le texte expurgé ne porte ni la valeur, ni sa longueur.
+func TestExpurgateLanguage(t *testing.T) {
+	rules := loadInitialRules(t)
+	token := syntheticGitHubToken()
+	password := syntheticPassword() + "5"
+	content := []byte("postgres://admin:" + password + "@db.exemple.fr:5432/prod\nexport GH=" + token)
+	for _, c := range []struct {
+		language SubstituteLanguage
+		want     string
+	}{
+		{"", "postgres://admin:" + subFR("", 1, "mot de passe de base de données") + "@db.exemple.fr:5432/prod\nexport GH=" + subFR("ghp_", 2, "jeton GitHub")},
+		{SubstituteFrench, "postgres://admin:" + subFR("", 1, "mot de passe de base de données") + "@db.exemple.fr:5432/prod\nexport GH=" + subFR("ghp_", 2, "jeton GitHub")},
+		{SubstituteEnglish, "postgres://admin:" + subEN("", 1, "database password") + "@db.exemple.fr:5432/prod\nexport GH=" + subEN("ghp_", 2, "GitHub token")},
+	} {
+		text, subs, result := expurgateBoth(t, content, rules, nil, Options{SubstituteLanguage: c.language}, func() func(Finding) (int, bool) { return startOrdinals(1) })
+		if result.Failure != SanitizeNone || string(text) != c.want || len(subs) != 2 {
+			t.Fatalf("%q : %s %q", c.language, result.Failure, text)
+		}
+		if bytes.Contains(text, []byte(password)) || bytes.Contains(text, []byte(token[4:12])) {
+			t.Fatal("valeur dans le texte expurgé")
+		}
+	}
+	// Même Substitut quelle que soit la longueur de la valeur.
+	short, _, _ := ExpurgateAndRescan([]byte("postgres://admin:"+password[:8]+"@db/x"), rules, nil, Options{}, fixedOrdinal(1))
+	long, _, _ := ExpurgateAndRescan([]byte("postgres://admin:"+password+password+"@db/x"), rules, nil, Options{}, fixedOrdinal(1))
+	if short == nil || !bytes.Equal(short, long) {
+		t.Fatalf("%q %q", short, long)
+	}
+	for _, language := range []SubstituteLanguage{"de", "FR", "fr-FR"} {
+		text, subs, result := ExpurgateAndRescan(content, rules, nil, Options{SubstituteLanguage: language}, fixedOrdinal(1))
+		if text != nil || subs != nil || result.Failure != SanitizeIncomplete {
+			t.Errorf("%q : %s", language, result.Failure)
+		}
+	}
+	// Une langue inconnue est refusée même sans constat.
+	if text, _, result := ExpurgateAndRescan([]byte("rien"), rules, nil, Options{SubstituteLanguage: "de"}, fixedOrdinal(1)); text != nil || result.Failure != SanitizeIncomplete {
+		t.Fatalf("%s", result.Failure)
+	}
+}
+
+func TestFindSubstitutes(t *testing.T) {
+	a, b := subFR("", 1, "mot de passe de base de données"), subEN("gh"+"p_", 12, "GitHub token")
+	text := "psql postgres://admin:" + a + "@db.exemple.fr:5432/prod && " + curlUser("x") + b + " https://x " +
+		"[secret masqué par xSOM n°3 : inconnu, pas la vraie valeur] " + strings.Repeat("X", 4) + "4 x" + subFR("sk-", 999, "secret")
+	got := FindSubstitutes([]byte(text))
+	first := strings.Index(text, a)
+	second := strings.Index(text, b)
+	third := strings.Index(text, "x"+subFR("sk-", 999, "secret")) + 1
+	want := []SubstituteSpan{
+		{ByteStart: first, ByteEnd: first + len(a), Ordinal: 1},
+		{ByteStart: second, ByteEnd: second + len(b), Ordinal: 12},
+		{ByteStart: third, ByteEnd: len(text), Ordinal: 999},
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("%+v, attendu %+v", got, want)
+	}
+	for _, none := range []string{"", "[", "[]", "[secret", subFR("", 1, "mot de passe")[1:], strings.Replace(a, "n°1", "n°0", 1)} {
+		if spans := FindSubstitutes([]byte(none)); len(spans) != 0 {
+			t.Errorf("%q : %+v", none, spans)
+		}
+	}
+}
+
+// FuzzFindSubstitutes : quelle que soit l'entrée, les étendues rendues sont dans l'ordre, sans chevauchement, et chacune
+// est exactement un Substitut de la grammaire, de numéro 1 à 999.
+//
+//	go test ./detect -run '^$' -fuzz '^FuzzFindSubstitutes$' -fuzztime=60s
+func FuzzFindSubstitutes(f *testing.F) {
+	for _, seed := range []string{"", "[", subFR("ghp_", 1, "jeton GitHub") + "x" + subEN("", 2, "password"), "a[" + subFR("", 3, "secret")} {
+		f.Add([]byte(seed))
+	}
+	f.Fuzz(func(t *testing.T, text []byte) {
+		cursor := 0
+		for _, s := range FindSubstitutes(text) {
+			if s.ByteStart < cursor || s.ByteEnd <= s.ByteStart || s.ByteEnd > len(text) || !isSubstitute(text[s.ByteStart:s.ByteEnd]) ||
+				s.Ordinal < MinSubstituteOrdinal || s.Ordinal > MaxSubstituteOrdinal {
+				t.Fatalf("%+v", s)
+			}
+			cursor = s.ByteEnd
 		}
 	})
 }

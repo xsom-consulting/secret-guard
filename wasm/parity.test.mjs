@@ -44,7 +44,11 @@ for (const { name, load } of loaders) {
           got = guard.scan(input, line.languageId ?? '');
           break;
         case 'expurgate': {
-          const { text: expurgated, ...document } = guard.expurgate(input, { languageId: line.languageId ?? '', minOrdinal: line.minOrdinal ?? 0 });
+          const { text: expurgated, ...document } = guard.expurgate(input, {
+            languageId: line.languageId ?? '',
+            minOrdinal: line.minOrdinal ?? 0,
+            ...(line.substituteLanguage === undefined ? {} : { substituteLanguage: line.substituteLanguage }),
+          });
           got = document;
           text = expurgated;
           break;

@@ -191,8 +191,8 @@ export class SecretGuard {
 
   /**
    * Expurge des octets (Uint8Array) : la partie secrète de chaque constat est remplacée par un Substitut typé (préfixe
-   * public de la règle, des X, un numéro de 1 à 999, à la longueur de la valeur), puis le texte expurgé est analysé de
-   * nouveau. Exige setFingerprintKey : le numéro d'un Substitut suit l'Empreinte locale de sa valeur. options.known,
+   * public de la règle, puis « [secret masqué par xSOM n°<numéro> : <type>, pas la vraie valeur] », numéro de 1 à 999 ;
+   * en anglais avec options.substituteLanguage 'en'), puis le texte expurgé est analysé de nouveau. Exige setFingerprintKey : le numéro d'un Substitut suit l'Empreinte locale de sa valeur. options.known,
    * les Substituts déjà posés ([{ localFingerprint, ordinal }]) : une même valeur reprend son numéro ; une nouvelle
    * prend le numéro suivant, au-dessus du plus grand connu et d'au moins options.minOrdinal. Rend { failure, initial,
    * final, substitutions, text } : failure 'none' avec text, les octets du texte expurgé ; sinon ('incomplete',
@@ -200,7 +200,11 @@ export class SecretGuard {
    */
   expurgate(bytes, options = {}) {
     const input = bytes.subarray(0, MAX_INPUT_BYTES + 1);
-    const request = encoder.encode(JSON.stringify({ known: options.known ?? [], minOrdinal: options.minOrdinal ?? 0 }));
+    const request = encoder.encode(JSON.stringify({
+      known: options.known ?? [],
+      minOrdinal: options.minOrdinal ?? 0,
+      ...(options.substituteLanguage === undefined ? {} : { substituteLanguage: options.substituteLanguage }),
+    }));
     const language = encoder.encode(options.languageId ?? '');
     if (input.length === 0) {
       const empty = { complete: true, failure: 'none', findings: [] };

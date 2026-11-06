@@ -68,7 +68,7 @@ func TestModuleExpurgate(t *testing.T) {
 			t.Fatalf("%+v %q", document, text)
 		}
 		s := document.Substitutions[0]
-		want := "ghp_" + strings.Repeat("X", len(token)-5) + "1"
+		want := "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
 		if s.RuleID != "github_token" || s.Ordinal != 1 || s.Replacement != want || s.ByteStart != 6 ||
 			s.ByteEnd != 6+len(token) || s.UTF16Start != 6 || len(s.LocalFingerprint) != 32 {
 			t.Fatalf("%+v", s)
@@ -85,7 +85,7 @@ func TestModuleExpurgate(t *testing.T) {
 		first, _, _ := expurgateBuffer(t, m, []byte("TOKEN="+token), "")
 		fingerprint := first.Substitutions[0].LocalFingerprint
 		known, text, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), `{"known":[{"localFingerprint":"`+fingerprint+`","ordinal":7}]}`)
-		if !ok || known.Substitutions[0].Ordinal != 7 || !strings.HasSuffix(string(text), "7") {
+		if !ok || known.Substitutions[0].Ordinal != 7 || !strings.HasSuffix(string(text), "n°7 : jeton GitHub, pas la vraie valeur]") {
 			t.Fatalf("%+v %q", known, text)
 		}
 		other, _, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), `{"known":[{"localFingerprint":"`+strings.Repeat("a", 32)+`","ordinal":7}],"minOrdinal":12}`)
@@ -97,10 +97,17 @@ func TestModuleExpurgate(t *testing.T) {
 			t.Fatalf("%+v %q", full, text)
 		}
 	})
+	t.Run("Substituts en anglais à la demande", func(t *testing.T) {
+		document, text, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), `{"substituteLanguage":"en"}`)
+		want := "TOKEN=" + "ghp_" + "[secret masked by xSOM #1: GitHub token, not the real value]"
+		if !ok || document.Failure != "none" || string(text) != want {
+			t.Fatalf("%+v %q", document, text)
+		}
+	})
 	t.Run("demande hors forme : refus", func(t *testing.T) {
 		for _, request := range []string{
 			`[]`, `{"known":[{"localFingerprint":"AB","ordinal":1}]}`, `{"other":1}`, `{"minOrdinal":1000}`,
-			`{} {}`, `{"known":[{"localFingerprint":"` + strings.Repeat("a", 32) + `","ordinal":0}]}`,
+			`{} {}`, `{"substituteLanguage":"de"}`, `{"known":[{"localFingerprint":"` + strings.Repeat("a", 32) + `","ordinal":0}]}`,
 		} {
 			if _, _, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), request); ok {
 				t.Fatalf("demande admise : %s", request)

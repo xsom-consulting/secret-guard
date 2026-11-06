@@ -48,9 +48,11 @@ type Line struct {
 	ID         string  `json:"id"`
 	LanguageID *string `json:"languageId,omitempty"`
 	MinOrdinal int     `json:"minOrdinal,omitempty"`
-	Input      string  `json:"input"`
-	Native     string  `json:"native"`
-	Text       *string `json:"text,omitempty"`
+	// SubstituteLanguage est la langue des Substituts d'un cas « expurgate » (absente : français).
+	SubstituteLanguage string  `json:"substituteLanguage,omitempty"`
+	Input              string  `json:"input"`
+	Native             string  `json:"native"`
+	Text               *string `json:"text,omitempty"`
 }
 
 // Summary est la première ligne : nombre de cas de chaque sorte.
@@ -79,10 +81,11 @@ func (c corpusCase) bytes() ([]byte, error) {
 }
 
 type expurgateCase struct {
-	ID           string   `json:"id"`
-	Input        []string `json:"input"`
-	LanguageID   string   `json:"languageId"`
-	FirstOrdinal int      `json:"firstOrdinal"`
+	ID                 string   `json:"id"`
+	Input              []string `json:"input"`
+	LanguageID         string   `json:"languageId"`
+	FirstOrdinal       int      `json:"firstOrdinal"`
+	SubstituteLanguage string   `json:"substituteLanguage"`
 }
 
 func main() {
@@ -177,7 +180,7 @@ func run(root string, w io.Writer) error {
 	if err := readJSON(filepath.Join(root, "vectors", "hidden.json"), &hiddenVectors); err != nil {
 		return err
 	}
-	if expurgateVectors.FormatVersion != 1 || len(expurgateVectors.Cases) == 0 || len(hiddenVectors.Cases) == 0 {
+	if expurgateVectors.FormatVersion != 2 || len(expurgateVectors.Cases) == 0 || len(hiddenVectors.Cases) == 0 {
 		return errors.New("vecteurs d'expurgation ou d'instructions cachées de format inconnu")
 	}
 
@@ -187,13 +190,14 @@ func run(root string, w io.Writer) error {
 	if err := encoder.Encode(summary); err != nil {
 		return err
 	}
-	expurgateLine := func(id string, input []byte, languageID *string, minOrdinal int) error {
+	expurgateLine := func(id string, input []byte, languageID *string, minOrdinal int, substituteLanguage string) error {
 		opts, err := options(languageID)
 		if err != nil {
 			return fmt.Errorf("%s : %w", id, err)
 		}
-		document, text := expurgation.Run(input, rules, &key, opts, expurgation.Request{MinOrdinal: minOrdinal})
-		line := Line{Kind: "expurgate", ID: id, LanguageID: languageID, MinOrdinal: minOrdinal,
+		request := expurgation.Request{MinOrdinal: minOrdinal, SubstituteLanguage: detect.SubstituteLanguage(substituteLanguage)}
+		document, text := expurgation.Run(input, rules, &key, opts, request)
+		line := Line{Kind: "expurgate", ID: id, LanguageID: languageID, MinOrdinal: minOrdinal, SubstituteLanguage: substituteLanguage,
 			Input: base64.StdEncoding.EncodeToString(input), Native: string(document)}
 		if text != nil {
 			encoded := base64.StdEncoding.EncodeToString(text)
@@ -215,7 +219,7 @@ func run(root string, w io.Writer) error {
 			Input: base64.StdEncoding.EncodeToString(input), Native: string(document)}); err != nil {
 			return err
 		}
-		if err := expurgateLine(c.ID, input, c.LanguageID, 0); err != nil {
+		if err := expurgateLine(c.ID, input, c.LanguageID, 0, ""); err != nil {
 			return err
 		}
 	}
@@ -228,7 +232,7 @@ func run(root string, w io.Writer) error {
 		if c.LanguageID != "" {
 			languageID = &c.LanguageID
 		}
-		if err := expurgateLine("expurgate/"+c.ID, input, languageID, c.FirstOrdinal); err != nil {
+		if err := expurgateLine("expurgate/"+c.ID, input, languageID, c.FirstOrdinal, c.SubstituteLanguage); err != nil {
 			return err
 		}
 	}

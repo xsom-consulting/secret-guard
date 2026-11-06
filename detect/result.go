@@ -77,6 +77,9 @@ type Options struct {
 	// séquentielle. Sans effet sur le résultat, identique quel que soit Workers ; le moteur ne lit pas le nombre de
 	// processeurs : à l'appelant de le choisir.
 	Workers int
+	// SubstituteLanguage est la langue des Substituts qu'écrit ExpurgateAndRescan (vide : SubstituteFrench) ; sans effet
+	// sur l'analyse. Une autre valeur que SubstituteFrench, SubstituteEnglish ou vide fait échouer l'expurgation.
+	SubstituteLanguage SubstituteLanguage
 }
 
 func (o Options) language() language {

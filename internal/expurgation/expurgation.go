@@ -22,16 +22,18 @@ type Known struct {
 	Ordinal          int    `json:"ordinal"`
 }
 
-// Request est la demande d'expurgation : Substituts connus (une Empreinte locale déjà vue reprend son numéro) et plus
-// petit numéro d'un nouveau Substitut (0 : aucun minimum).
+// Request est la demande d'expurgation : Substituts connus (une Empreinte locale déjà vue reprend son numéro), plus
+// petit numéro d'un nouveau Substitut (0 : aucun minimum) et langue des Substituts (« fr », « en » ; absente : « fr »).
 type Request struct {
-	Known      []Known `json:"known"`
-	MinOrdinal int     `json:"minOrdinal"`
+	Known              []Known                   `json:"known"`
+	MinOrdinal         int                       `json:"minOrdinal"`
+	SubstituteLanguage detect.SubstituteLanguage `json:"substituteLanguage"`
 }
 
 // ParseRequest lit une demande en JSON strict : objet seul, aucun champ inconnu, Empreintes locales de 32 caractères
-// hexadécimaux minuscules, numéros de 1 à 999, ni Empreinte locale ni numéro répétés, minOrdinal de 0 à 999. Une
-// demande vide vaut {} (aucun Substitut connu). Faux pour toute autre forme.
+// hexadécimaux minuscules, numéros de 1 à 999, ni Empreinte locale ni numéro répétés, minOrdinal de 0 à 999,
+// substituteLanguage « fr », « en » ou absente. Une demande vide vaut {} (aucun Substitut connu). Faux pour toute autre
+// forme.
 func ParseRequest(data []byte) (Request, bool) {
 	if len(data) == 0 {
 		return Request{}, true
@@ -50,6 +52,11 @@ func ParseRequest(data []byte) (Request, bool) {
 		return Request{}, false
 	}
 	if request.MinOrdinal < 0 || request.MinOrdinal > detect.MaxSubstituteOrdinal {
+		return Request{}, false
+	}
+	switch request.SubstituteLanguage {
+	case "", detect.SubstituteFrench, detect.SubstituteEnglish:
+	default:
 		return Request{}, false
 	}
 	if _, ok := newNumbering(request); !ok {
@@ -126,6 +133,7 @@ func Run(content []byte, rules *detect.Rules, key *detect.FingerprintKey, option
 		// ParseRequest a déjà refusé cette demande ; défense en profondeur : aucun numéro, l'expurgation échoue.
 		numbers = &numbering{byFingerprint: map[string]int{}, next: detect.MaxSubstituteOrdinal + 1}
 	}
+	options.SubstituteLanguage = request.SubstituteLanguage
 	text, substitutions, result := detect.ExpurgateAndRescan(content, rules, key, options, numbers.ordinal)
 	return report.ExpurgationJSON(result, substitutions), text
 }

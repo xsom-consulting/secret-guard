@@ -18,12 +18,14 @@ const expurgateVectorsFile = "../vectors/expurgate.json"
 var updateExpurgateVectors = flag.Bool("update", false, "réécrit vectors/expurgate.json")
 
 // expurgateVectorInput est un cas des vecteurs : entrée construite à l'exécution (valeurs synthétiques), identifiant
-// de langage, premier numéro (les étendues sont numérotées dans l'ordre où elles sont vues, à partir de lui).
+// de langage, premier numéro (les étendues sont numérotées dans l'ordre où elles sont vues, à partir de lui), langue des
+// Substituts (vide : français).
 type expurgateVectorInput struct {
-	id           string
-	input        string
-	languageID   string
-	firstOrdinal int
+	id                 string
+	input              string
+	languageID         string
+	firstOrdinal       int
+	substituteLanguage SubstituteLanguage
 }
 
 func expurgateVectorInputs() []expurgateVectorInput {
@@ -31,43 +33,48 @@ func expurgateVectorInputs() []expurgateVectorInput {
 	password := syntheticPassword() + "5"
 	opaque := "aZ3kQ9mW2xL7pR4tY8vB1nC6"
 	return []expurgateVectorInput{
-		{"matrice/jeton-github", "export TOKEN=" + token, "", 1},
-		{"matrice/url", "postgres://app:" + password + "@db:5432/x", "", 2},
-		{"matrice/bearer", "Authorization: Bearer " + opaque, "", 1},
-		{"matrice/bearer-jeton-github", "Authorization: Bearer " + token, "", 1},
-		{"matrice/pem", syntheticPEM("\n") + "\n", "", 1},
-		{"matrice/pem-crlf", "clé :\r\n" + syntheticPEM("\r\n") + "\r\n", "", 1},
-		{"matrice/pem-json", `{"key": "` + syntheticPEM(`\n`) + `"}`, "", 1},
-		{"matrice/pem-incomplet", pemHeader("PRIVATE KEY") + "\nMIIEow" + strings.Repeat("q7Lm2Pz9Wr4Tn", 4) + "\n", "", 1},
-		{"matrice/cli-basic-auth", basicAuthCommand() + password + " https://x", "", 1},
-		{"matrice/faux-substitut-fin", "TOKEN=ghp_" + strings.Repeat("X", 34) + "1a", "", 1},
-		{"matrice/faux-substitut-corps", "TOKEN=ghp_" + strings.Repeat("X", 15) + "A" + strings.Repeat("X", 19) + "1", "", 1},
-		{"matrice/numero-999", "export TOKEN=" + token, "", 999},
-		{"matrice/numero-trop-grand", "A=" + token + "\nB_PASSWORD=" + password, "", 999},
-		{"longueur/minimum", "postgres://u:p4ss@db/x", "", 1},
-		{"longueur/points-de-code", "PASSWORD=é" + password + "😀", "", 1},
-		{"utf16/non-ascii", "é😀 clé « " + token + " »\nDB_PASSWORD=" + syntheticPassword() + "\nfin 😀", "", 10},
-		{"utf8/refuse", "TOKEN=" + token + "\n\xff", "", 1},
-		{"matrice/en-tete-curl", `curl -H "Authorization: Bearer ` + opaque + `" https://x`, "", 1},
-		{"matrice/url-jeton-utilisateur", "git clone https://" + token + ":x-oauth-basic@github.com/o/r.git", "", 1},
-		{"matrice/url-cle-utilisateur", "git clone https://" + opaque + ":x-oauth-basic@github.com/o/r.git", "", 1},
-		{"matrice/curl-u-cle-api", curlUser(opaque) + "X https://x", "", 1},
-		{"matrice/prefixe-hors-regle", "PASSWORD=dapi" + strings.Repeat("q7Lm", 4) + "\nDB_PASSWORD=AKIA" + strings.Repeat("q7Lm", 4), "", 1},
-		{"matrice/schema-dans-mot-de-passe", `DB_PASSWORD="Token ` + strings.Repeat("q7Lm", 4) + `"`, "", 1},
-		{"gabarit/json", `{"token": "` + token + `", "password": "` + password + `"}`, "json", 1},
-		{"gabarit/yaml", "auth:\n  token: " + token + "\n  password: " + password + "\n", "yaml", 1},
-		{"gabarit/dotenv", "API_KEY=" + token + "\nDB_PASSWORD=" + password + "\n", "dotenv", 1},
-		{"gabarit/shell", `export TOKEN="` + token + `" && ` + basicAuthCommand() + password + " https://x", "shellscript", 1},
-		{"gabarit/meme-valeur", "A " + token + " B " + token, "", 1},
-		{"residu/affectation-ligne-suivante", "API_KEY=" + token + "\nNEXT=another", "", 1},
-		{"residu/bloc-yaml", "app_secret: |\n  " + strings.Repeat("aZ3k", 6) + "\n  " + strings.Repeat("Lm2P", 6) + "\nnext: 1\n", "yaml", 1},
-		{"ligne/shell-ligne-suivante", "export A=" + token + "\nexport B=x", "shellscript", 1},
-		{"ligne/shell-crlf", "export A=" + token + "\r\nexport B=x", "shellscript", 1},
-		{"ligne/dotenv-meme-jeton", "GITHUB_TOKEN=" + token + "\nOTHER=1\nAGAIN=" + token + "\nZ=2", "dotenv", 1},
-		{"ligne/dotenv-crlf", "GITHUB_TOKEN=" + token + "\r\nOTHER=1\r\n", "dotenv", 1},
-		{"ligne/jeton-coupe", "clé " + token[:24] + "\n" + token[24:] + " suite", "", 1},
-		{"ligne/suite-en-fin-de-texte", "clé " + token + "\n" + strings.Repeat("aB3d", 4), "", 1},
-		{"sans-constat", "rien à signaler", "", 1},
+		{"matrice/jeton-github", "export TOKEN=" + token, "", 1, ""},
+		{"matrice/url", "postgres://app:" + password + "@db:5432/x", "", 2, ""},
+		{"matrice/bearer", "Authorization: Bearer " + opaque, "", 1, ""},
+		{"matrice/bearer-jeton-github", "Authorization: Bearer " + token, "", 1, ""},
+		{"matrice/pem", syntheticPEM("\n") + "\n", "", 1, ""},
+		{"matrice/pem-crlf", "clé :\r\n" + syntheticPEM("\r\n") + "\r\n", "", 1, ""},
+		{"matrice/pem-json", `{"key": "` + syntheticPEM(`\n`) + `"}`, "", 1, ""},
+		{"matrice/pem-incomplet", pemHeader("PRIVATE KEY") + "\nMIIEow" + strings.Repeat("q7Lm2Pz9Wr4Tn", 4) + "\n", "", 1, ""},
+		{"matrice/cli-basic-auth", basicAuthCommand() + password + " https://x", "", 1, ""},
+		{"matrice/faux-substitut-fin", "TOKEN=ghp_" + strings.Repeat("X", 34) + "1a", "", 1, ""},
+		{"matrice/faux-substitut-corps", "TOKEN=ghp_" + strings.Repeat("X", 15) + "A" + strings.Repeat("X", 19) + "1", "", 1, ""},
+		{"matrice/numero-999", "export TOKEN=" + token, "", 999, ""},
+		{"matrice/numero-trop-grand", "A=" + token + "\nB_PASSWORD=" + password, "", 999, ""},
+		{"longueur/minimum", "postgres://u:p4ss@db/x", "", 1, ""},
+		{"longueur/points-de-code", "PASSWORD=é" + password + "😀", "", 1, ""},
+		{"utf16/non-ascii", "é😀 clé « " + token + " »\nDB_PASSWORD=" + syntheticPassword() + "\nfin 😀", "", 10, ""},
+		{"utf8/refuse", "TOKEN=" + token + "\n\xff", "", 1, ""},
+		{"matrice/en-tete-curl", `curl -H "Authorization: Bearer ` + opaque + `" https://x`, "", 1, ""},
+		{"matrice/url-jeton-utilisateur", "git clone https://" + token + ":x-oauth-basic@github.com/o/r.git", "", 1, ""},
+		{"matrice/url-cle-utilisateur", "git clone https://" + opaque + ":x-oauth-basic@github.com/o/r.git", "", 1, ""},
+		{"matrice/curl-u-cle-api", curlUser(opaque) + "X https://x", "", 1, ""},
+		{"matrice/prefixe-hors-regle", "PASSWORD=dapi" + strings.Repeat("q7Lm", 4) + "\nDB_PASSWORD=AKIA" + strings.Repeat("q7Lm", 4), "", 1, ""},
+		{"matrice/schema-dans-mot-de-passe", `DB_PASSWORD="Token ` + strings.Repeat("q7Lm", 4) + `"`, "", 1, ""},
+		{"gabarit/json", `{"token": "` + token + `", "password": "` + password + `"}`, "json", 1, ""},
+		{"gabarit/yaml", "auth:\n  token: " + token + "\n  password: " + password + "\n", "yaml", 1, ""},
+		{"gabarit/dotenv", "API_KEY=" + token + "\nDB_PASSWORD=" + password + "\n", "dotenv", 1, ""},
+		{"gabarit/shell", `export TOKEN="` + token + `" && ` + basicAuthCommand() + password + " https://x", "shellscript", 1, ""},
+		{"gabarit/meme-valeur", "A " + token + " B " + token, "", 1, ""},
+		{"residu/affectation-ligne-suivante", "API_KEY=" + token + "\nNEXT=another", "", 1, ""},
+		{"residu/bloc-yaml", "app_secret: |\n  " + strings.Repeat("aZ3k", 6) + "\n  " + strings.Repeat("Lm2P", 6) + "\nnext: 1\n", "yaml", 1, ""},
+		{"ligne/shell-ligne-suivante", "export A=" + token + "\nexport B=x", "shellscript", 1, ""},
+		{"ligne/shell-crlf", "export A=" + token + "\r\nexport B=x", "shellscript", 1, ""},
+		{"ligne/dotenv-meme-jeton", "GITHUB_TOKEN=" + token + "\nOTHER=1\nAGAIN=" + token + "\nZ=2", "dotenv", 1, ""},
+		{"ligne/dotenv-crlf", "GITHUB_TOKEN=" + token + "\r\nOTHER=1\r\n", "dotenv", 1, ""},
+		{"ligne/jeton-coupe", "clé " + token[:24] + "\n" + token[24:] + " suite", "", 1, ""},
+		{"ligne/suite-en-fin-de-texte", "clé " + token + "\n" + strings.Repeat("aB3d", 4), "", 1, ""},
+		{"sans-constat", "rien à signaler", "", 1, ""},
+		{"exemple/url-au-milieu", "postgres://admin:" + password + "@db.exemple.fr:5432/prod", "", 1, ""},
+		{"langue/anglais-url", "postgres://admin:" + password + "@db.exemple.fr:5432/prod", "", 1, SubstituteEnglish},
+		{"langue/anglais-jeton-github", "export TOKEN=" + token, "", 2, SubstituteEnglish},
+		{"langue/anglais-gabarits", "API_KEY=" + token + "\nDB_PASSWORD=" + password + "\n" + basicAuthCommand() + password + " https://x", "dotenv", 1, SubstituteEnglish},
+		{"langue/francais-explicite", "export TOKEN=" + token, "", 1, SubstituteFrench},
 	}
 }
 
@@ -86,10 +93,11 @@ type expurgateVectorCase struct {
 	ID string `json:"id"`
 	// Entrée en base64, coupée en morceaux de 8 caractères : ni les valeurs synthétiques ni leur base64 ne sont écrites
 	// d'un seul tenant (recherche de secrets du dépôt, qui décode le base64).
-	Input        []string `json:"input"`
-	LanguageID   string   `json:"languageId,omitempty"`
-	FirstOrdinal int      `json:"firstOrdinal"`
-	Expected     struct {
+	Input              []string           `json:"input"`
+	LanguageID         string             `json:"languageId,omitempty"`
+	FirstOrdinal       int                `json:"firstOrdinal"`
+	SubstituteLanguage SubstituteLanguage `json:"substituteLanguage,omitempty"`
+	Expected           struct {
 		Failure SanitizeFailure `json:"failure"`
 		// Texte expurgé, coupé en morceaux d'au plus 16 octets aux limites de caractères (une clé PEM au corps fait
 		// d'un Substitut a la forme d'une clé privée pour la recherche de secrets) ; en base64 coupé comme l'entrée si
@@ -128,17 +136,18 @@ func buildExpurgateVectors(t *testing.T) []byte {
 	t.Helper()
 	rules := loadInitialRules(t)
 	vectors := expurgateVectors{
-		FormatVersion: 1,
+		FormatVersion: 2,
 		Description: "Expurgation (detect.ExpurgateAndRescan, sans clé d'Empreinte locale) : entrée en base64 et texte " +
-			"expurgé, coupés en morceaux à joindre (recherche de secrets du dépôt) ; numéros " +
+			"expurgé, coupés en morceaux à joindre (recherche de secrets du dépôt) ; Substituts dans la langue " +
+			"substituteLanguage (absente : français) ; numéros " +
 			"donnés dans l'ordre où les étendues sont vues à partir de firstOrdinal (même début, même numéro). Extension de " +
 			"ce module, sans origine TypeScript ; écrit par go test ./detect -run '^TestExpurgateVectors$' -update.",
 	}
 	for _, in := range expurgateVectorInputs() {
-		text, subs, result := ExpurgateAndRescan([]byte(in.input), rules, nil, Options{LanguageID: in.languageID}, startOrdinals(in.firstOrdinal))
+		text, subs, result := ExpurgateAndRescan([]byte(in.input), rules, nil, Options{LanguageID: in.languageID, SubstituteLanguage: in.substituteLanguage}, startOrdinals(in.firstOrdinal))
 		c := expurgateVectorCase{
 			ID: in.id, Input: chunks(base64.StdEncoding.EncodeToString([]byte(in.input)), 8), LanguageID: in.languageID,
-			FirstOrdinal: in.firstOrdinal,
+			FirstOrdinal: in.firstOrdinal, SubstituteLanguage: in.substituteLanguage,
 		}
 		c.Expected.Failure = result.Failure
 		c.Expected.Substitutions = []expurgateVectorSubstitution{}

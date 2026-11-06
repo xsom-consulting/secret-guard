@@ -10,7 +10,7 @@ export async function usage(bytes: Uint8Array): Promise<void> {
   const first: Finding | undefined = result.findings[0];
   if (result.complete && first !== undefined) void first.byteEnd;
   guard.setFingerprintKey(new Uint8Array(32));
-  const expurgated: ExpurgateResult = guard.expurgate(new Uint8Array(1), { known: [{ localFingerprint: 'a'.repeat(32), ordinal: 1 }], minOrdinal: 2 });
+  const expurgated: ExpurgateResult = guard.expurgate(new Uint8Array(1), { known: [{ localFingerprint: 'a'.repeat(32), ordinal: 1 }], minOrdinal: 2, substituteLanguage: 'en' });
   const substitutions: readonly Substitution[] = expurgated.substitutions;
   void substitutions;
   if (expurgated.text !== null) void expurgated.text.length;

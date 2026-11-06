@@ -1,6 +1,6 @@
 {
-  "formatVersion": 1,
-  "description": "Expurgation (detect.ExpurgateAndRescan, sans clé d'Empreinte locale) : entrée en base64 et texte expurgé, coupés en morceaux à joindre (recherche de secrets du dépôt) ; numéros donnés dans l'ordre où les étendues sont vues à partir de firstOrdinal (même début, même numéro). Extension de ce module, sans origine TypeScript ; écrit par go test ./detect -run '^TestExpurgateVectors$' -update.",
+  "formatVersion": 2,
+  "description": "Expurgation (detect.ExpurgateAndRescan, sans clé d'Empreinte locale) : entrée en base64 et texte expurgé, coupés en morceaux à joindre (recherche de secrets du dépôt) ; Substituts dans la langue substituteLanguage (absente : français) ; numéros donnés dans l'ordre où les étendues sont vues à partir de firstOrdinal (même début, même numéro). Extension de ce module, sans origine TypeScript ; écrit par go test ./detect -run '^TestExpurgateVectors$' -update.",
   "cases": [
     {
       "id": "matrice/jeton-github",
@@ -20,9 +20,11 @@
         "failure": "none",
         "text": [
           "export TOKEN=ghp",
-          "_XXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXX1"
+          "_[secret masqué",
+          " par xSOM n°1 :",
+          " jeton GitHub, p",
+          "as la vraie vale",
+          "ur]"
         ],
         "substitutions": [
           {
@@ -33,7 +35,7 @@
             "utf16Start": 13,
             "utf16End": 53,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -53,9 +55,13 @@
       "expected": {
         "failure": "none",
         "text": [
-          "postgres://app:X",
-          "XXXXXXXXXXXXXX2@",
-          "db:5432/x"
+          "postgres://app:[",
+          "secret masqué p",
+          "ar xSOM n°2 : m",
+          "ot de passe de b",
+          "ase de données,",
+          " pas la vraie va",
+          "leur]@db:5432/x"
         ],
         "substitutions": [
           {
@@ -66,7 +72,7 @@
             "utf16Start": 15,
             "utf16End": 31,
             "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXX2"
+            "replacement": "[secret masqué par xSOM n°2 : mot de passe de base de données, pas la vraie valeur]"
           }
         ]
       }
@@ -88,8 +94,11 @@
         "failure": "none",
         "text": [
           "Authorization: B",
-          "earer XXXXXXXXXX",
-          "XXXXXXXXXXXXX1"
+          "earer [secret ma",
+          "squé par xSOM n",
+          "°1 : jeton d’",
+          "accès, pas la v",
+          "raie valeur]"
         ],
         "substitutions": [
           {
@@ -100,7 +109,7 @@
             "utf16Start": 22,
             "utf16End": 46,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : jeton d’accès, pas la vraie valeur]"
           }
         ]
       }
@@ -125,9 +134,11 @@
         "failure": "none",
         "text": [
           "Authorization: B",
-          "earer ghp_XXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXX1"
+          "earer ghp_[secre",
+          "t masqué par xS",
+          "OM n°1 : jeton ",
+          "GitHub, pas la v",
+          "raie valeur]"
         ],
         "substitutions": [
           {
@@ -138,7 +149,7 @@
             "utf16Start": 22,
             "utf16End": 62,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -183,16 +194,13 @@
         "text": [
           "-----BEGIN RSA P",
           "RIVATE KEY-----\n",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXX1\n-----END R",
-          "SA PRIVATE KEY--",
-          "---\n"
+          "[secret masqué ",
+          "par xSOM n°1 : ",
+          "clé privée, pa",
+          "s la vraie valeu",
+          "r]\n-----END RSA ",
+          "PRIVATE KEY-----",
+          "\n"
         ],
         "substitutions": [
           {
@@ -203,7 +211,7 @@
             "utf16Start": 32,
             "utf16End": 149,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : clé privée, pas la vraie valeur]"
           }
         ]
       }
@@ -250,16 +258,13 @@
         "text": [
           "clé :\r\n-----BEG",
           "IN RSA PRIVATE K",
-          "EY-----\r\nXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXX1\r",
-          "\n-----END RSA PR",
-          "IVATE KEY-----\r\n"
+          "EY-----\r\n[secret",
+          " masqué par xSO",
+          "M n°1 : clé pr",
+          "ivée, pas la vr",
+          "aie valeur]\r\n---",
+          "--END RSA PRIVAT",
+          "E KEY-----\r\n"
         ],
         "substitutions": [
           {
@@ -270,7 +275,7 @@
             "utf16Start": 40,
             "utf16End": 158,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : clé privée, pas la vraie valeur]"
           }
         ]
       }
@@ -318,17 +323,13 @@
         "text": [
           "{\"key\": \"-----BE",
           "GIN RSA PRIVATE ",
-          "KEY-----\\nXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXX1",
-          "\\n-----END RSA P",
-          "RIVATE KEY-----\"",
-          "}"
+          "KEY-----\\n[secre",
+          "t masqué par xS",
+          "OM n°1 : clé p",
+          "rivée, pas la v",
+          "raie valeur]\\n--",
+          "---END RSA PRIVA",
+          "TE KEY-----\"}"
         ],
         "substitutions": [
           {
@@ -339,7 +340,7 @@
             "utf16Start": 42,
             "utf16End": 160,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : clé privée, pas la vraie valeur]"
           }
         ]
       }
@@ -368,11 +369,11 @@
         "failure": "none",
         "text": [
           "-----BEGIN PRIVA",
-          "TE KEY-----\nXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXX1\n"
+          "TE KEY-----\n[sec",
+          "ret masqué par ",
+          "xSOM n°1 : clé",
+          " privée, pas la",
+          " vraie valeur]\n"
         ],
         "substitutions": [
           {
@@ -383,7 +384,7 @@
             "utf16Start": 28,
             "utf16End": 86,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : clé privée, pas la vraie valeur]"
           }
         ]
       }
@@ -403,9 +404,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "curl -u admin:XX",
-          "XXXXXXXXXXXXX1 h",
-          "ttps://x"
+          "curl -u admin:[s",
+          "ecret masqué pa",
+          "r xSOM n°1 : mo",
+          "t de passe, pas ",
+          "la vraie valeur]",
+          " https://x"
         ],
         "substitutions": [
           {
@@ -416,7 +420,7 @@
             "utf16Start": 14,
             "utf16End": 30,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -437,9 +441,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "TOKEN=ghp_XXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXX1"
+          "TOKEN=ghp_[secre",
+          "t masqué par xS",
+          "OM n°1 : jeton ",
+          "GitHub, pas la v",
+          "raie valeur]"
         ],
         "substitutions": [
           {
@@ -450,7 +456,7 @@
             "utf16Start": 6,
             "utf16End": 46,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -471,9 +477,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "TOKEN=ghp_XXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXX1"
+          "TOKEN=ghp_[secre",
+          "t masqué par xS",
+          "OM n°1 : jeton ",
+          "GitHub, pas la v",
+          "raie valeur]"
         ],
         "substitutions": [
           {
@@ -484,7 +492,7 @@
             "utf16Start": 6,
             "utf16End": 46,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -507,9 +515,11 @@
         "failure": "none",
         "text": [
           "export TOKEN=ghp",
-          "_XXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XX999"
+          "_[secret masqué",
+          " par xSOM n°999",
+          " : jeton GitHub,",
+          " pas la vraie va",
+          "leur]"
         ],
         "substitutions": [
           {
@@ -520,7 +530,7 @@
             "utf16Start": 13,
             "utf16End": 53,
             "ordinal": 999,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX999"
+            "replacement": "ghp_[secret masqué par xSOM n°999 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -560,8 +570,13 @@
       "expected": {
         "failure": "none",
         "text": [
-          "postgres://u:XXX",
-          "X1@db/x"
+          "postgres://u:[se",
+          "cret masqué par",
+          " xSOM n°1 : mot",
+          " de passe de bas",
+          "e de données, p",
+          "as la vraie vale",
+          "ur]@db/x"
         ],
         "substitutions": [
           {
@@ -572,7 +587,7 @@
             "utf16Start": 13,
             "utf16End": 17,
             "ordinal": 1,
-            "replacement": "XXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe de base de données, pas la vraie valeur]"
           }
         ]
       }
@@ -591,8 +606,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "PASSWORD=XXXXXXX",
-          "XXXXXXXXXX1"
+          "PASSWORD=[secret",
+          " masqué par xSO",
+          "M n°1 : mot de ",
+          "passe, pas la vr",
+          "aie valeur]"
         ],
         "substitutions": [
           {
@@ -603,7 +621,7 @@
             "utf16Start": 9,
             "utf16End": 28,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -633,11 +651,17 @@
         "failure": "none",
         "text": [
           "é😀 clé « g",
-          "hp_XXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXX10 »\nDB_PA",
-          "SSWORD=XXXXXXXXX",
-          "XXXX11\nfin 😀"
+          "hp_[secret masqu",
+          "é par xSOM n°1",
+          "0 : jeton GitHub",
+          ", pas la vraie v",
+          "aleur] »\nDB_PAS",
+          "SWORD=[secret ma",
+          "squé par xSOM n",
+          "°11 : mot de pa",
+          "sse, pas la vrai",
+          "e valeur]\nfin ",
+          "😀"
         ],
         "substitutions": [
           {
@@ -648,7 +672,7 @@
             "utf16Start": 10,
             "utf16End": 50,
             "ordinal": 10,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX10"
+            "replacement": "ghp_[secret masqué par xSOM n°10 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "contextual_password",
@@ -658,7 +682,7 @@
             "utf16Start": 65,
             "utf16End": 80,
             "ordinal": 11,
-            "replacement": "XXXXXXXXXXXXX11"
+            "replacement": "[secret masqué par xSOM n°11 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -702,10 +726,12 @@
         "failure": "none",
         "text": [
           "curl -H \"Authori",
-          "zation: Bearer X",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXX1\" https:/",
-          "/x"
+          "zation: Bearer [",
+          "secret masqué p",
+          "ar xSOM n°1 : j",
+          "eton d’accès,",
+          " pas la vraie va",
+          "leur]\" https://x"
         ],
         "substitutions": [
           {
@@ -716,7 +742,7 @@
             "utf16Start": 31,
             "utf16End": 55,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : jeton d’accès, pas la vraie valeur]"
           }
         ]
       }
@@ -745,12 +771,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "git clone XXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXX1"
+          "git clone [secre",
+          "t masqué par xS",
+          "OM n°1 : jeton ",
+          "GitHub, pas la v",
+          "raie valeur]"
         ],
         "substitutions": [
           {
@@ -761,7 +786,7 @@
             "utf16Start": 10,
             "utf16End": 91,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -788,10 +813,12 @@
         "failure": "none",
         "text": [
           "git clone https:",
-          "//XXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXX1@github.",
-          "com/o/r.git"
+          "//[secret masqu",
+          "é par xSOM n°1",
+          " : mot de passe,",
+          " pas la vraie va",
+          "leur]@github.com",
+          "/o/r.git"
         ],
         "substitutions": [
           {
@@ -802,7 +829,7 @@
             "utf16Start": 18,
             "utf16End": 56,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -823,9 +850,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "curl -u XXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "X1 https://x"
+          "curl -u [secret ",
+          "masqué par xSOM",
+          " n°1 : mot de p",
+          "asse, pas la vra",
+          "ie valeur] https",
+          "://x"
         ],
         "substitutions": [
           {
@@ -836,7 +866,7 @@
             "utf16Start": 8,
             "utf16End": 34,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -860,10 +890,16 @@
       "expected": {
         "failure": "none",
         "text": [
-          "PASSWORD=XXXXXXX",
-          "XXXXXXXXXXXX1\nDB",
-          "_PASSWORD=XXXXXX",
-          "XXXXXXXXXXXXX2"
+          "PASSWORD=[secret",
+          " masqué par xSO",
+          "M n°1 : mot de ",
+          "passe, pas la vr",
+          "aie valeur]\nDB_P",
+          "ASSWORD=[secret ",
+          "masqué par xSOM",
+          " n°2 : mot de p",
+          "asse, pas la vra",
+          "ie valeur]"
         ],
         "substitutions": [
           {
@@ -874,7 +910,7 @@
             "utf16Start": 9,
             "utf16End": 29,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           },
           {
             "ruleId": "contextual_password",
@@ -884,7 +920,7 @@
             "utf16Start": 42,
             "utf16End": 62,
             "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXXXXXX2"
+            "replacement": "[secret masqué par xSOM n°2 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -903,9 +939,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "DB_PASSWORD=\"XXX",
-          "XXXXXXXXXXXXXXXX",
-          "XX1\""
+          "DB_PASSWORD=\"[se",
+          "cret masqué par",
+          " xSOM n°1 : mot",
+          " de passe, pas l",
+          "a vraie valeur]\""
         ],
         "substitutions": [
           {
@@ -916,7 +954,7 @@
             "utf16Start": 13,
             "utf16End": 35,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -945,12 +983,17 @@
       "expected": {
         "failure": "none",
         "text": [
-          "{\"token\": \"ghp_X",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XX1\", \"password\"",
-          ": \"XXXXXXXXXXXXX",
-          "XX2\"}"
+          "{\"token\": \"ghp_[",
+          "secret masqué p",
+          "ar xSOM n°1 : j",
+          "eton GitHub, pas",
+          " la vraie valeur",
+          "]\", \"password\": ",
+          "\"[secret masqué",
+          " par xSOM n°2 :",
+          " mot de passe, p",
+          "as la vraie vale",
+          "ur]\"}"
         ],
         "substitutions": [
           {
@@ -961,7 +1004,7 @@
             "utf16Start": 11,
             "utf16End": 51,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "contextual_password",
@@ -971,7 +1014,7 @@
             "utf16Start": 67,
             "utf16End": 83,
             "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXX2"
+            "replacement": "[secret masqué par xSOM n°2 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -1001,11 +1044,16 @@
         "failure": "none",
         "text": [
           "auth:\n  token: g",
-          "hp_XXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXX1\n  passwo",
-          "rd: XXXXXXXXXXXX",
-          "XXX2\n"
+          "hp_[secret masqu",
+          "é par xSOM n°1",
+          " : jeton GitHub,",
+          " pas la vraie va",
+          "leur]\n  password",
+          ": [secret masqu",
+          "é par xSOM n°2",
+          " : mot de passe,",
+          " pas la vraie va",
+          "leur]\n"
         ],
         "substitutions": [
           {
@@ -1016,7 +1064,7 @@
             "utf16Start": 15,
             "utf16End": 55,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "contextual_password",
@@ -1026,7 +1074,7 @@
             "utf16Start": 68,
             "utf16End": 84,
             "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXX2"
+            "replacement": "[secret masqué par xSOM n°2 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -1053,11 +1101,16 @@
       "expected": {
         "failure": "none",
         "text": [
-          "API_KEY=ghp_XXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXX1",
-          "\nDB_PASSWORD=XXX",
-          "XXXXXXXXXXXX2\n"
+          "API_KEY=ghp_[sec",
+          "ret masqué par ",
+          "xSOM n°1 : jeto",
+          "n GitHub, pas la",
+          " vraie valeur]\nD",
+          "B_PASSWORD=[secr",
+          "et masqué par x",
+          "SOM n°2 : mot d",
+          "e passe, pas la ",
+          "vraie valeur]\n"
         ],
         "substitutions": [
           {
@@ -1068,7 +1121,7 @@
             "utf16Start": 8,
             "utf16End": 48,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "contextual_password",
@@ -1078,7 +1131,7 @@
             "utf16Start": 61,
             "utf16End": 77,
             "ordinal": 2,
-            "replacement": "XXXXXXXXXXXXXXX2"
+            "replacement": "[secret masqué par xSOM n°2 : mot de passe, pas la vraie valeur]"
           }
         ]
       }
@@ -1109,13 +1162,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "export TOKEN=XXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XX1"
+          "export TOKEN=[se",
+          "cret masqué par",
+          " xSOM n°1 : jet",
+          "on GitHub, pas l",
+          "a vraie valeur]"
         ],
         "substitutions": [
           {
@@ -1126,7 +1177,7 @@
             "utf16Start": 13,
             "utf16End": 99,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1154,12 +1205,16 @@
       "expected": {
         "failure": "none",
         "text": [
-          "A ghp_XXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXX1 B ghp",
-          "_XXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXX2"
+          "A ghp_[secret ma",
+          "squé par xSOM n",
+          "°1 : jeton GitH",
+          "ub, pas la vraie",
+          " valeur] B ghp_[",
+          "secret masqué p",
+          "ar xSOM n°2 : j",
+          "eton GitHub, pas",
+          " la vraie valeur",
+          "]"
         ],
         "substitutions": [
           {
@@ -1170,7 +1225,7 @@
             "utf16Start": 2,
             "utf16End": 42,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "github_token",
@@ -1180,7 +1235,7 @@
             "utf16Start": 45,
             "utf16End": 85,
             "ordinal": 2,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+            "replacement": "ghp_[secret masqué par xSOM n°2 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1204,10 +1259,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "API_KEY=ghp_XXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXX1",
-          "\nNEXT=another"
+          "API_KEY=ghp_[sec",
+          "ret masqué par ",
+          "xSOM n°1 : jeto",
+          "n GitHub, pas la",
+          " vraie valeur]\nN",
+          "EXT=another"
         ],
         "substitutions": [
           {
@@ -1218,7 +1275,7 @@
             "utf16Start": 8,
             "utf16End": 48,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1245,11 +1302,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "app_secret: XXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXX1\n"
+          "app_secret: [sec",
+          "ret masqué par ",
+          "xSOM n°1 : secr",
+          "et, pas la vraie",
+          " valeur]\n"
         ],
         "substitutions": [
           {
@@ -1260,7 +1317,7 @@
             "utf16Start": 12,
             "utf16End": 75,
             "ordinal": 1,
-            "replacement": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "[secret masqué par xSOM n°1 : secret, pas la vraie valeur]"
           }
         ]
       }
@@ -1284,10 +1341,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "export A=ghp_XXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "1\nexport B=x"
+          "export A=ghp_[se",
+          "cret masqué par",
+          " xSOM n°1 : jet",
+          "on GitHub, pas l",
+          "a vraie valeur]\n",
+          "export B=x"
         ],
         "substitutions": [
           {
@@ -1298,7 +1357,7 @@
             "utf16Start": 9,
             "utf16End": 49,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1323,10 +1382,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "export A=ghp_XXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "1\r\nexport B=x"
+          "export A=ghp_[se",
+          "cret masqué par",
+          " xSOM n°1 : jet",
+          "on GitHub, pas l",
+          "a vraie valeur]\r",
+          "\nexport B=x"
         ],
         "substitutions": [
           {
@@ -1337,7 +1398,7 @@
             "utf16Start": 9,
             "utf16End": 49,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1371,12 +1432,16 @@
         "failure": "none",
         "text": [
           "GITHUB_TOKEN=ghp",
-          "_XXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXX1\nOTHER=1\nAG",
-          "AIN=ghp_XXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXX2\nZ=2"
+          "_[secret masqué",
+          " par xSOM n°1 :",
+          " jeton GitHub, p",
+          "as la vraie vale",
+          "ur]\nOTHER=1\nAGAI",
+          "N=ghp_[secret ma",
+          "squé par xSOM n",
+          "°2 : jeton GitH",
+          "ub, pas la vraie",
+          " valeur]\nZ=2"
         ],
         "substitutions": [
           {
@@ -1387,7 +1452,7 @@
             "utf16Start": 13,
             "utf16End": 53,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           },
           {
             "ruleId": "github_token",
@@ -1397,7 +1462,7 @@
             "utf16Start": 68,
             "utf16End": 108,
             "ordinal": 2,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX2"
+            "replacement": "ghp_[secret masqué par xSOM n°2 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1423,9 +1488,11 @@
         "failure": "none",
         "text": [
           "GITHUB_TOKEN=ghp",
-          "_XXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXX1\r\nOTHER=1\r\n"
+          "_[secret masqué",
+          " par xSOM n°1 :",
+          " jeton GitHub, p",
+          "as la vraie vale",
+          "ur]\r\nOTHER=1\r\n"
         ],
         "substitutions": [
           {
@@ -1436,7 +1503,7 @@
             "utf16Start": 13,
             "utf16End": 53,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1458,10 +1525,12 @@
       "expected": {
         "failure": "none",
         "text": [
-          "clé ghp_XXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXX1 s",
-          "uite"
+          "clé ghp_[secret",
+          " masqué par xSO",
+          "M n°1 : jeton G",
+          "itHub, pas la vr",
+          "aie valeur] suit",
+          "e"
         ],
         "substitutions": [
           {
@@ -1472,7 +1541,7 @@
             "utf16Start": 4,
             "utf16End": 45,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1496,10 +1565,11 @@
       "expected": {
         "failure": "none",
         "text": [
-          "clé ghp_XXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXXXXX",
-          "XXXXXXXXXXXXX1"
+          "clé ghp_[secret",
+          " masqué par xSO",
+          "M n°1 : jeton G",
+          "itHub, pas la vr",
+          "aie valeur]"
         ],
         "substitutions": [
           {
@@ -1510,7 +1580,7 @@
             "utf16Start": 4,
             "utf16End": 61,
             "ordinal": 1,
-            "replacement": "ghp_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX1"
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
           }
         ]
       }
@@ -1529,6 +1599,244 @@
           "rien à signaler"
         ],
         "substitutions": []
+      }
+    },
+    {
+      "id": "exemple/url-au-milieu",
+      "input": [
+        "cG9zdGdy",
+        "ZXM6Ly9h",
+        "ZG1pbjpY",
+        "cTdMbTJQ",
+        "ejkhV3I0",
+        "VG41QGRi",
+        "LmV4ZW1w",
+        "bGUuZnI6",
+        "NTQzMi9w",
+        "cm9k"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "postgres://admin",
+          ":[secret masqué",
+          " par xSOM n°1 :",
+          " mot de passe de",
+          " base de donnée",
+          "s, pas la vraie ",
+          "valeur]@db.exemp",
+          "le.fr:5432/prod"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "database_url_credentials",
+            "secretType": "database_credentials",
+            "byteStart": 17,
+            "byteEnd": 33,
+            "utf16Start": 17,
+            "utf16End": 33,
+            "ordinal": 1,
+            "replacement": "[secret masqué par xSOM n°1 : mot de passe de base de données, pas la vraie valeur]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "langue/anglais-url",
+      "input": [
+        "cG9zdGdy",
+        "ZXM6Ly9h",
+        "ZG1pbjpY",
+        "cTdMbTJQ",
+        "ejkhV3I0",
+        "VG41QGRi",
+        "LmV4ZW1w",
+        "bGUuZnI6",
+        "NTQzMi9w",
+        "cm9k"
+      ],
+      "firstOrdinal": 1,
+      "substituteLanguage": "en",
+      "expected": {
+        "failure": "none",
+        "text": [
+          "postgres://admin",
+          ":[secret masked ",
+          "by xSOM #1: data",
+          "base password, n",
+          "ot the real valu",
+          "e]@db.exemple.fr",
+          ":5432/prod"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "database_url_credentials",
+            "secretType": "database_credentials",
+            "byteStart": 17,
+            "byteEnd": 33,
+            "utf16Start": 17,
+            "utf16End": 33,
+            "ordinal": 1,
+            "replacement": "[secret masked by xSOM #1: database password, not the real value]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "langue/anglais-jeton-github",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Q="
+      ],
+      "firstOrdinal": 2,
+      "substituteLanguage": "en",
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=ghp",
+          "_[secret masked ",
+          "by xSOM #2: GitH",
+          "ub token, not th",
+          "e real value]"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 2,
+            "replacement": "ghp_[secret masked by xSOM #2: GitHub token, not the real value]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "langue/anglais-gabarits",
+      "input": [
+        "QVBJX0tF",
+        "WT1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "CkRCX1BB",
+        "U1NXT1JE",
+        "PVhxN0xt",
+        "MlB6OSFX",
+        "cjRUbjUK",
+        "Y3VybCAt",
+        "dSBhZG1p",
+        "bjpYcTdM",
+        "bTJQejkh",
+        "V3I0VG41",
+        "IGh0dHBz",
+        "Oi8veA=="
+      ],
+      "languageId": "dotenv",
+      "firstOrdinal": 1,
+      "substituteLanguage": "en",
+      "expected": {
+        "failure": "none",
+        "text": [
+          "API_KEY=ghp_[sec",
+          "ret masked by xS",
+          "OM #1: GitHub to",
+          "ken, not the rea",
+          "l value]\nDB_PASS",
+          "WORD=[secret mas",
+          "ked by xSOM #2: ",
+          "password, not th",
+          "e real value]\ncu",
+          "rl -u admin:[sec",
+          "ret masked by xS",
+          "OM #3: password,",
+          " not the real va",
+          "lue] https://x"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 8,
+            "byteEnd": 48,
+            "utf16Start": 8,
+            "utf16End": 48,
+            "ordinal": 1,
+            "replacement": "ghp_[secret masked by xSOM #1: GitHub token, not the real value]"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 61,
+            "byteEnd": 77,
+            "utf16Start": 61,
+            "utf16End": 77,
+            "ordinal": 2,
+            "replacement": "[secret masked by xSOM #2: password, not the real value]"
+          },
+          {
+            "ruleId": "cli_basic_auth",
+            "secretType": "password",
+            "byteStart": 92,
+            "byteEnd": 108,
+            "utf16Start": 92,
+            "utf16End": 108,
+            "ordinal": 3,
+            "replacement": "[secret masked by xSOM #3: password, not the real value]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "langue/francais-explicite",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Q="
+      ],
+      "firstOrdinal": 1,
+      "substituteLanguage": "fr",
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=ghp",
+          "_[secret masqué",
+          " par xSOM n°1 :",
+          " jeton GitHub, p",
+          "as la vraie vale",
+          "ur]"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 1,
+            "replacement": "ghp_[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
+          }
+        ]
       }
     }
   ]

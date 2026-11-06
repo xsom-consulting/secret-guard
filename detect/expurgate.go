@@ -3,8 +3,9 @@
 //
 // Extension propre à ce module, sans origine dans Secret Guard (avis dans UPSTREAM.md). Contrairement au masquage
 // (Redact, libellés <REDACTED_règle>), l'expurgation ne remplace que la partie secrète d'un constat (mot de passe d'une
-// URL, corps d'une clé PEM, valeur après « Bearer »…) et garde la longueur de la valeur : le texte reste lisible et sa
-// syntaxe intacte (shell, JSON, YAML). Un Substitut est reconnu par le moteur comme une valeur fictive : la nouvelle
+// URL, corps d'une clé PEM, valeur après « Bearer »…) par un texte qui dit ce qu'il remplace (« [secret masqué par xSOM
+// n°1 : mot de passe, pas la vraie valeur] ») : le texte reste lisible, sans rien de la valeur (ni sa longueur, ni un de
+// ses caractères, hors préfixe public). Un Substitut est reconnu par le moteur comme une valeur fictive : la nouvelle
 // analyse ne s'y arrête pas. Elle sert à un programme qui réécrit un texte avant son envoi (un mod de Claude Code, par
 // exemple) ; un hook, qui ne réécrit pas, ne peut qu'autoriser ou bloquer.
 
@@ -38,7 +39,7 @@ var (
 // de l'étendue fusionnée), étendue remplacée [ByteStart, ByteEnd) en octets du texte d'origine et [UTF16Start,
 // UTF16End) en unités UTF-16 de ce texte (un octet hors UTF-8 compte pour une unité, comme U+FFFD), Empreinte locale
 // du constat représentatif (vide sans clé), numéro donné par l'appelant et Substitut écrit (Replacement : préfixe
-// public de la table fermée, des X et le numéro). Elle ne porte jamais la valeur : l'appelant, qui détient le texte
+// public de la table fermée ou aucun, puis, entre crochets, le numéro et le type de secret dans la langue demandée). Elle ne porte jamais la valeur : l'appelant, qui détient le texte
 // d'origine, la lit lui-même à ces positions.
 type Substitution struct {
 	RuleID           string
@@ -72,6 +73,8 @@ type expurgatedSpan struct {
 // du texte remplacé, et que l'appelant prendrait pour numéroter. Un constat sans Empreinte locale donne une Substitution
 // sans Empreinte locale. ExpurgateAndRescan, qui a la clé, donne à chaque Substitut l'Empreinte locale de ses octets.
 //
+// Expurgate écrit ses Substituts en français (SubstituteFrench) ; ExpurgateAndRescan suit Options.SubstituteLanguage.
+//
 // Expurgate ne prouve pas que le résultat est sûr ; ExpurgateAndRescan l'analyse de nouveau.
 //
 // Refus, sans texte : numéro absent (ordinal nil, ou qui rend faux) ou hors de 1 à 999 (ErrExpurgateOrdinal) ;
@@ -85,7 +88,7 @@ func Expurgate(content []byte, result Result, ordinal func(Finding) (int, bool))
 	if !result.Complete || result.Failure != FailureNone {
 		return nil, nil, ErrExpurgateIncomplete
 	}
-	text, substitutions, _, err := expurgate(content, result.Findings, nil, nil, nil, ordinal)
+	text, substitutions, _, err := expurgate(content, result.Findings, nil, nil, nil, ordinal, SubstituteFrench)
 	return text, substitutions, err
 }
 
@@ -96,7 +99,8 @@ var expurgateScan = scan
 var widenings = []func(content []byte, start, end int) (int, int){widenToToken, widenToLine}
 
 // ExpurgateAndRescan analyse content (avec l'Empreinte locale de chaque constat si key n'est pas nil), l'expurge
-// (Expurgate), puis analyse le texte expurgé avec les mêmes règles, clé et options. S'il reste un constat (résidu), son
+// (Expurgate, Substituts dans la langue options.SubstituteLanguage : vide ou SubstituteFrench, français ;
+// SubstituteEnglish, anglais ; toute autre valeur fait échouer l'expurgation, SanitizeIncomplete), puis analyse le texte expurgé avec les mêmes règles, clé et options. S'il reste un constat (résidu), son
 // étendue, ramenée au texte d'origine, est élargie au jeton qui la contient (suite de caractères sans espace), puis, au
 // tour suivant, à sa ligne, et remplacée en entier ; un résidu après l'élargissement à la ligne fait échouer
 // l'expurgation (SanitizeResidual).
@@ -126,6 +130,10 @@ func ExpurgateAndRescan(content []byte, rules *Rules, key *FingerprintKey, optio
 		}
 		return expurgateScan(text, rules, options, key)
 	}
+	if _, ok := substituteFormOf(options.SubstituteLanguage); !ok {
+		failed := incomplete(FailureScanError)
+		return nil, nil, SanitizeResult{Failure: SanitizeIncomplete, Initial: failed, Final: failed}
+	}
 	initial := analyze(content)
 	if !initial.Complete || initial.Failure != FailureNone {
 		return nil, nil, SanitizeResult{Failure: SanitizeIncomplete, Initial: initial, Final: initial}
@@ -139,7 +147,7 @@ func ExpurgateAndRescan(content []byte, rules *Rules, key *FingerprintKey, optio
 	}
 	var widened []Finding
 	for step := 0; ; step++ {
-		text, substitutions, spans, err := expurgate(content, initial.Findings, widened, rules, key, ordinal)
+		text, substitutions, spans, err := expurgate(content, initial.Findings, widened, rules, key, ordinal, options.SubstituteLanguage)
 		if err != nil {
 			failure := SanitizeIncomplete
 			if errors.Is(err, ErrExpurgateOrdinal) {
@@ -173,7 +181,7 @@ func ExpurgateAndRescan(content []byte, rules *Rules, key *FingerprintKey, optio
 // rules, à leur première ligne quand elle est à elle seule un secret de leur règle : firstLineSecretEnd), étendues
 // élargies (widened) gardées entières, fusion, Empreintes locales (substitutionFingerprint), numéros, puis texte écrit
 // dans un seul tableau à sa taille exacte.
-func expurgate(content []byte, findings, widened []Finding, rules *Rules, key *FingerprintKey, ordinal func(Finding) (int, bool)) ([]byte, []Substitution, []expurgatedSpan, error) {
+func expurgate(content []byte, findings, widened []Finding, rules *Rules, key *FingerprintKey, ordinal func(Finding) (int, bool), language SubstituteLanguage) ([]byte, []Substitution, []expurgatedSpan, error) {
 	if !utf8.Valid(content) {
 		return nil, nil, nil, ErrExpurgateEncoding
 	}
@@ -219,7 +227,7 @@ func expurgate(content []byte, findings, widened []Finding, rules *Rules, key *F
 		if !ok {
 			return nil, nil, nil, ErrExpurgateOrdinal
 		}
-		replacement, err := substituteFor(content[rep.ByteStart:rep.ByteEnd], rep.RuleID, number)
+		replacement, err := substituteFor(content[rep.ByteStart:rep.ByteEnd], rep.RuleID, number, language)
 		if err != nil {
 			return nil, nil, nil, err
 		}

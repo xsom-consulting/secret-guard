@@ -301,7 +301,7 @@ var allowedExported = map[string][]string{
 	"Level":       nil,
 	"Finding":     {"RuleID", "SecretType", "Encoding", "Score", "Level", "ByteStart", "ByteEnd", "LocalFingerprint"},
 	"Result":      {"Complete", "Failure", "Findings"},
-	"Options":     {"LanguageID", "Custom", "Workers"},
+	"Options":     {"LanguageID", "Custom", "Workers", "SubstituteLanguage"},
 	"Rules":       {},
 	"PackRefusal": nil,
 	"PackError":   {"RuleID", "Reason"},
@@ -313,8 +313,14 @@ var allowedExported = map[string][]string{
 	"SanitizeFailure": nil,
 	"SanitizeResult":  {"Failure", "Initial", "Final"},
 	// Expurgation : étendue remplacée dans le texte d'origine, numéro et Substitut écrit (préfixe public de la table
-	// fermée, des X, le numéro), jamais la valeur, que l'appelant lit lui-même dans son texte.
+	// fermée, puis numéro et type de secret entre crochets), jamais la valeur, que l'appelant lit lui-même dans son texte.
 	"Substitution": {"RuleID", "SecretType", "ByteStart", "ByteEnd", "UTF16Start", "UTF16End", "LocalFingerprint", "Ordinal", "Replacement"},
+	// Langue des Substituts (« fr », « en ») et table fermée des types de secret par règle : textes publics, aucune
+	// valeur.
+	"SubstituteLanguage": nil,
+	"SubstituteLabel":    {"RuleID", "French", "English"},
+	// Étendue et numéro d'un Substitut trouvé dans un texte (FindSubstitutes), aucune valeur.
+	"SubstituteSpan": {"ByteStart", "ByteEnd", "Ordinal"},
 }
 
 // allowedCustomFields sont les seuls champs pointeurs des structures exportées : le Pack de règles du client d'une
@@ -383,7 +389,7 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		// compilateur et par les types ci-dessous).
 		slices.Sort(values)
 		if want := []string{
-			"ErrExpurgateEncoding", "ErrExpurgateIncomplete", "ErrExpurgateOrdinal", "ErrExpurgateSpan", "ErrFingerprintKeyInvalid", "ErrPackUnusable",
+			"ErrExpurgateEncoding", "ErrExpurgateIncomplete", "ErrExpurgateLanguage", "ErrExpurgateOrdinal", "ErrExpurgateSpan", "ErrFingerprintKeyInvalid", "ErrPackUnusable",
 			"ErrRedactIncomplete", "ErrRedactSpan",
 		}; !slices.Equal(values, want) {
 			t.Errorf("variables exportées %v, attendu %v", values, want)
@@ -393,9 +399,10 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 			// méthode Has : Rules.Has, rend un booléen, jamais une valeur. Redact et RedactAndRescan rendent le texte
 			// de l'appelant sans les valeurs détectées (TestNoExportedFunctionReturnsValue, TestRedactLeavesNoValue) ;
 			// Expurgate et ExpurgateAndRescan, le texte où chaque partie secrète est remplacée par un Substitut, et des
-			// Substitutions sans valeur (TestExpurgateCorpus) ; SubstitutePrefixes, la table fermée des préfixes publics.
-			"DecisionForLevel", "Expurgate", "ExpurgateAndRescan", "LoadRules", "NewFingerprintKey", "Redact", "RedactAndRescan",
-			"Scan", "ScanWithFingerprint", "SubstitutePrefixes",
+			// Substitutions sans valeur (TestExpurgateCorpus) ; SubstitutePrefixes et SubstituteLabels, les tables fermées
+			// des préfixes publics et des types de secret.
+			"DecisionForLevel", "Expurgate", "ExpurgateAndRescan", "FindSubstitutes", "LoadRules", "NewFingerprintKey", "Redact",
+			"RedactAndRescan", "Scan", "ScanWithFingerprint", "SubstituteLabels", "SubstitutePrefixes",
 			"méthode Error", "méthode GoString", "méthode Has", "méthode String", "méthode Unwrap", "méthode Wipe",
 		}; !slices.Equal(funcs, want) {
 			t.Errorf("fonctions exportées %v, attendu %v", funcs, want)
@@ -407,7 +414,8 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 			reflect.TypeFor[Result](), reflect.TypeFor[Options](), reflect.TypeFor[Rules](), reflect.TypeFor[PackRefusal](),
 			reflect.TypeFor[PackError](), reflect.TypeFor[FingerprintKey](), reflect.TypeFor[Decision](),
 			reflect.TypeFor[RedactOptions](), reflect.TypeFor[SanitizeFailure](), reflect.TypeFor[SanitizeResult](),
-			reflect.TypeFor[Substitution](),
+			reflect.TypeFor[Substitution](), reflect.TypeFor[SubstituteLanguage](), reflect.TypeFor[SubstituteLabel](),
+			reflect.TypeFor[SubstituteSpan](),
 		} {
 			if !found[typ.Name()] {
 				t.Errorf("type %s absent du relevé", typ.Name())
