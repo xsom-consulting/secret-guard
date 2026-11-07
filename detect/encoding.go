@@ -286,7 +286,7 @@ type sourceRange struct{ start, end int }
 func forEachBase64Candidate(v *view, budget *decodeBudget, seen map[sourceRange]struct{}, visit func(start, end int, decoded string) error) error {
 	return base64Candidates(v.text, func(viewStart, viewEnd int) error {
 		value := string(v.text[viewStart:viewEnd])
-		if !isPlausibleBase64Payload(value) {
+		if !isPlausibleBase64Payload(value) || (isNameCandidate(value) && !isRedactLabelAt(v.text, viewStart)) {
 			return nil
 		}
 		start, end := v.mapRange(viewStart, viewEnd)
