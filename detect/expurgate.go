@@ -360,7 +360,10 @@ func secretPart(content []byte, f Finding) (int, int) {
 //     scanJWT sur cette seule partie : motif, valeur fictive, bornes, validateur) ;
 //   - l'étendue s'arrête, dans content, devant un séparateur d'affectation ou de commande (« = », « : », espace,
 //     tabulation) : ce qu'elle prend sur la ligne suivante est un mot de cette ligne (« export », nom d'une variable
-//     d'un fichier .env), et non la suite d'un jeton coupé.
+//     d'un fichier .env), et non la suite d'un jeton coupé ; ou bien ce qu'elle prend après la fin de ligne (fins de
+//     ligne et indentation de la vue jointe retirées) n'est fait que de caractères de jeton et n'a pas la forme d'une
+//     suite de jeton (looksLikeWrappedTail) : mot seul sur sa ligne, comme « fi », « done », « EOF » ou « end », que
+//     l'expurgation retirait avec le jeton (v0.5.2).
 //
 // L'étendue vient alors d'une vue jointe (lineWrappedFixedViews) qui a recollé à un jeton complet le premier mot de la
 // ligne suivante : seule la première ligne est remplacée, la fin de ligne et la ligne suivante sont gardées. Sinon
@@ -372,8 +375,15 @@ func firstLineSecretEnd(content []byte, rules *Rules, f Finding) (int, bool) {
 	}
 	span := content[f.ByteStart:f.ByteEnd]
 	lineEnd := bytes.IndexAny(span, "\r\n")
-	if lineEnd <= 0 || f.ByteEnd >= len(content) || strings.IndexByte("=: \t", content[f.ByteEnd]) < 0 {
+	if lineEnd <= 0 {
 		return 0, false
+	}
+	stopsAtSeparator := f.ByteEnd < len(content) && strings.IndexByte("=: \t", content[f.ByteEnd]) >= 0
+	if !stopsAtSeparator {
+		continuation, ok := joinedContinuation(span[lineEnd:])
+		if !ok || looksLikeWrappedTail(continuation) {
+			return 0, false
+		}
 	}
 	var fixed *rule
 	for _, r := range rules.fixed {
@@ -401,6 +411,54 @@ func firstLineSecretEnd(content []byte, rules *Rules, f Finding) (int, bool) {
 	}
 	return 0, false
 }
+
+// joinedContinuation rend ce qu'une étendue prend après sa première fin de ligne, sans les fins de ligne ni
+// l'indentation (au plus maxJoinedIndentation espaces ou tabulations après chaque fin de ligne) que retire la vue
+// jointe. Faux si un autre caractère qu'un caractère de jeton (isFixedTokenCharacter) y figure : l'étendue n'est pas
+// alors un jeton recollé à la suite de la ligne suivante.
+func joinedContinuation(rest []byte) ([]byte, bool) {
+	var out []byte
+	for i := 0; i < len(rest); {
+		if rest[i] == '\r' || rest[i] == '\n' {
+			i = skipLineWrap(rest, i)
+			continue
+		}
+		if !isFixedTokenCharacter(rest[i]) {
+			return nil, false
+		}
+		out = append(out, rest[i])
+		i++
+	}
+	return out, len(out) > 0
+}
+
+// looksLikeWrappedTail dit si une suite recollée à un jeton complet a la forme de la fin d'un jeton coupé plutôt que
+// d'un mot de la ligne suivante : un chiffre, « + » ou « / » (base64), au moins trois changements de casse (sans
+// compter celui d'une majuscule initiale : « aZqK » en a trois, un mot en casse de chameau deux par bosse jusqu'à la
+// suivante, « camelCase » deux), ou 24 caractères ou plus. Un mot court en
+// lettres d'une seule casse ou en majuscule initiale (« fi », « done », « EOF », « End ») n'a pas cette forme. Une
+// suite de jeton qui ne l'a pas (quelques lettres) reste en clair : prix accepté pour ne pas retirer une ligne de code.
+func looksLikeWrappedTail(tail []byte) bool {
+	if len(tail) >= 24 {
+		return true
+	}
+	changes := 0
+	for i, c := range tail {
+		switch {
+		case '0' <= c && c <= '9', c == '+', c == '/':
+			return true
+		}
+		if i >= 1 && isASCIILetter(c) && isASCIILetter(tail[i-1]) && isUpperASCII(c) != isUpperASCII(tail[i-1]) &&
+			(i > 1 || !isUpperASCII(tail[0])) {
+			changes++
+		}
+	}
+	return changes >= 3
+}
+
+func isASCIILetter(c byte) bool { return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' }
+
+func isUpperASCII(c byte) bool { return 'A' <= c && c <= 'Z' }
 
 // urlPasswordRange rend l'étendue du mot de passe d'une URL à identifiants, si span est exactement un candidat de
 // scanCredentialURLs (schéma, « :// », caractères de queue, sans ponctuation finale) dont le mot de passe est non vide.
