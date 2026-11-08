@@ -26,8 +26,8 @@ avant la fusion de sa première demande : écrire dans la description de la dema
 in docs/CLA.md (version 1.0) ». Une contribution faite pour un employeur demande l'accord de celui-ci.
 
 L'accord est aujourd'hui un projet de texte : **aucune contribution extérieure n'est fusionnée avant sa version
-définitive**. Son acceptation sera alors vérifiée sur chaque demande de fusion, par un outil que le mainteneur installe
-sur le dépôt ; une demande sans acceptation vérifiée n'est pas fusionnée.
+définitive**. Le contrôle « Accord de contribution » (`.github/workflows/cla.yml`) vérifie la phrase sur chaque
+demande de fusion d'une personne extérieure au dépôt ; une demande dont ce contrôle échoue n'est pas fusionnée.
 
 ### Règles du code
 
@@ -62,8 +62,9 @@ reviewed by the team in `.github/CODEOWNERS`.
   Business 1.0.0 for `expurgation/`). Before your first pull request is merged, accept the
   [contributor license agreement](docs/CLA.md) by writing in the pull request description: "I agree to the contributor
   license agreement in docs/CLA.md (version 1.0)". A contribution made for an employer needs the employer's agreement.
-  The agreement is still a draft: **no external contribution is merged before its final version**. Acceptance will
-  then be checked on every pull request by a tool the maintainer installs on the repository.
+  The agreement is still a draft: **no external contribution is merged before its final version**. The "Accord de
+  contribution" check (`.github/workflows/cla.yml`) verifies the sentence on every pull request from outside the
+  repository; a pull request whose check fails is not merged.
 - Code: `gofmt` and `golangci-lint run` clean in both modules; the engine and expurgation stay pure (no I/O, network,
   clock, randomness or logging); no detected value, excerpt or unsalted hash in any output; each source file starts
   with the SPDX identifier of its module (`go run ./tools/spdxcheck`); the root module never imports `expurgation/`;

@@ -160,4 +160,5 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TARBALL: ${{ needs.build.outputs.tarball }}
-        run: npm publish "release/$TARBALL" --provenance --access public --ignore-scripts
+        # « ./ » : sans lui, npm lit « release/<archive> » comme un dépôt GitHub « propriétaire/nom » (échec de la v0.5.0).
+        run: npm publish "./release/$TARBALL" --provenance --access public --ignore-scripts

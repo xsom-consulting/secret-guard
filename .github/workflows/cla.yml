@@ -1,0 +1,51 @@
+# Accord de contribution (CONTRIBUTING.md, « Accord de contribution ») : chaque demande de fusion d'une personne
+# extérieure au dépôt porte, dans sa description, la phrase d'acceptation de docs/CLA.md à sa version en vigueur.
+# Les membres et collaborateurs du dépôt et les robots en sont dispensés.
+#
+# Aucune action tierce, aucun accès au code de la demande (pas de checkout), aucun droit : le contrôle échoue ou réussit,
+# et la description de la demande garde la trace de l'acceptation (historique des modifications de GitHub).
+name: Accord de contribution
+
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: cla-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  cla:
+    name: Accord de contribution accepté
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Phrase d'acceptation dans la description
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+          ASSOCIATION: ${{ github.event.pull_request.author_association }}
+          AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+        run: |
+          case "$ASSOCIATION" in
+            OWNER|MEMBER|COLLABORATOR)
+              echo "Auteur $ASSOCIATION du dépôt : accord non requis."
+              exit 0
+              ;;
+          esac
+          if [ "$AUTHOR_TYPE" = "Bot" ]; then
+            echo "Robot : accord non requis."
+            exit 0
+          fi
+          version="1.0"
+          fr="J'accepte l'accord de contribution de docs/CLA.md (version ${version})"
+          en="I agree to the contributor license agreement in docs/CLA.md (version ${version})"
+          # Apostrophe typographique admise comme l'apostrophe droite.
+          body="$(printf '%s' "$BODY" | sed "s/’/'/g")"
+          if printf '%s' "$body" | grep -qF -e "$fr" -e "$en"; then
+            echo "Accord de contribution accepté (version ${version})."
+            exit 0
+          fi
+          echo "::error::Accord de contribution non accepté. Écrire dans la description de la demande de fusion : « ${fr} ». / Contributor license agreement not accepted. Write in the pull request description: \"${en}\". Voir / see CONTRIBUTING.md."
+          exit 1
