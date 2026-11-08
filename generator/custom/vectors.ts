@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Vecteurs de parité du Pack de règles du client (`vectors/custom/`) : forme des cas, résultat attendu calculé par
  * le moteur d'origine (positions UTF-16 → octets), écriture déterministe (un cas par ligne). Lus tels quels par les

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `hidden.ts` et `mentionedPaths` d'origine pour les vecteurs de parité des instructions cachées et des mentions.
  *

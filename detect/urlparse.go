@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Analyse d'URL du moteur de détection : ce que scanCredentialUrls de Secret Guard lit
 // du constructeur URL de JavaScript (norme URL du WHATWG) — l'analyse échoue-t-elle, et quel est le mot de passe —,
 // puis decodeURIComponent.

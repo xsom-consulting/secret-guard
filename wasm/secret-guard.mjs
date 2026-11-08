@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Chargeur JavaScript du module WebAssembly de Secret Guard (dist/secret-guard.wasm, WASI preview 1, mode
 // bibliothèque). Sans dépendance, sans réseau ni fichier : l'hôte donne les octets du module et les fonctions WASI
 // (node:wasi sous Node, la couche minimale wasi.mjs dans un navigateur ou une extension). Les points d'entrée

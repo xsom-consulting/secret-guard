@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Termes confidentiels du Pack de règles du client (docs/custom-pack.md, §4).
 //
 // Portage en Go de secret-guard/packages/core/src/custom/terms.ts (Apache-2.0, origine, avis et modifications dans

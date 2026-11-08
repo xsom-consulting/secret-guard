@@ -1,5 +1,7 @@
 # golangci-lint v2 (CI : 2.14). Outil de vérification, absent du programme livré.
 # La preuve que chaque import interdit est refusé : go run ./tools/depguardcheck.
+# Module racine seulement : le module expurgation (dossier expurgation/, autre licence) a son propre fichier,
+# expurgation/.golangci.yml, lancé depuis ce dossier.
 version: "2"
 
 formatters:
@@ -60,7 +62,8 @@ linters:
               desc: "le programme livré ne charge aucun code"
 
         # Le moteur (detect), le Pack (pack), le Pack de règles du client (custom), les instructions cachées (hidden),
-        # les mentions (mentions) et les limites (internal/limits) sont purs. Ni E/S, ni réseau, ni appel système, ni
+        # les mentions (mentions), les limites (internal/limits) et la sémantique des chaînes de JavaScript
+        # (internal/jstext, partagée avec l'expurgation) sont purs. Ni E/S, ni réseau, ni appel système, ni
         # horloge, ni hasard, ni journal : les bornes sont des budgets de travail, pas des délais. Les tests en sont
         # exclus (« !$test ») : ils lisent les vecteurs de parité.
         engine-pure:
@@ -74,6 +77,7 @@ linters:
             - "**/hidden/**"
             - "**/mentions/**"
             - "**/internal/limits/**"
+            - "**/internal/jstext/**"
             - "!$test"
           allow:
             - "bytes"
@@ -93,6 +97,7 @@ linters:
             # Pack initial embarqué dans le binaire (aucune lecture de fichier à l'exécution).
             - "embed"
             - "github.com/xsom-consulting/secret-guard/internal/limits"
+            - "github.com/xsom-consulting/secret-guard/internal/jstext"
             - "github.com/xsom-consulting/secret-guard/pack"
             # Pack de règles du client, exécuté par detect (Options.Custom).
             - "github.com/xsom-consulting/secret-guard/custom"

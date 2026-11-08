@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Pont Unicode Node ↔ Go des vues de texte : le fichier commité est ce que calcule le Node qui a produit le corpus de
  * parité ; le test Go `TestUnicodeParity` le compare aux tables du moteur.

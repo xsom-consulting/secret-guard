@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect
 
 import (
@@ -17,6 +19,7 @@ import (
 	"go/token"
 	"net/url"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -123,6 +126,9 @@ func TestLocalFingerprintVectors(t *testing.T) {
 			}
 			if got := localFingerprint(syntheticKey(t, c.KeyFrom), value); got != c.Fingerprint {
 				t.Errorf("%s : %s, attendu %s", c.Name, got, c.Fingerprint)
+			}
+			if got, ok := Fingerprint(syntheticKey(t, c.KeyFrom), value); !ok || got != c.Fingerprint {
+				t.Errorf("%s : Fingerprint %s (%t), attendu %s", c.Name, got, ok, c.Fingerprint)
 			}
 		}
 	})
@@ -533,24 +539,73 @@ func TestLocalFingerprintFailClosed(t *testing.T) {
 	})
 }
 
+// TestFingerprint : Fingerprint calcule l'Empreinte locale d'un constat de ScanWithFingerprint, et rien sans clé
+// utilisable.
+func TestFingerprint(t *testing.T) {
+	rules := loadInitialRules(t)
+	key := randomKey(t)
+	token := randomGitHubToken(t)
+	content := []byte("TOKEN=" + token)
+	f := onlyFinding(t, rules, content, key, "github_token")
+	if got, ok := Fingerprint(key, content[f.ByteStart:f.ByteEnd]); !ok || got != f.LocalFingerprint {
+		t.Fatal("Fingerprint diffère de l'Empreinte locale du constat")
+	}
+	if got, ok := Fingerprint(key, []byte(token)); !ok || !localFingerprintForm.MatchString(got) || strings.Contains(got, token) {
+		t.Fatal("Empreinte locale hors forme")
+	}
+	if got, ok := Fingerprint(FingerprintKey{}, []byte(token)); ok || got != "" {
+		t.Fatal("clé zéro : Empreinte locale rendue")
+	}
+	wiped := randomKey(t)
+	wiped.Wipe()
+	if got, ok := Fingerprint(wiped, []byte(token)); ok || got != "" || wiped.Usable() || !key.Usable() {
+		t.Fatal("clé effacée : Empreinte locale rendue")
+	}
+}
+
+// TestScanWith : sans clé, ScanWith est Scan ; avec une clé, ScanWithFingerprint (et les options) ; avec une clé
+// inutilisable, une analyse incomplète, sans constat.
+func TestScanWith(t *testing.T) {
+	rules := loadInitialRules(t)
+	key := randomKey(t)
+	content := []byte("TOKEN=" + randomGitHubToken(t))
+	if got, want := ScanWith(content, rules, Options{Workers: 1}, nil), Scan(content, rules, Options{}); !reflect.DeepEqual(got, want) {
+		t.Fatal("ScanWith sans clé diffère de Scan")
+	}
+	if got, want := ScanWith(content, rules, Options{}, &key), ScanWithFingerprint(content, rules, key); !reflect.DeepEqual(got, want) {
+		t.Fatal("ScanWith avec clé diffère de ScanWithFingerprint")
+	}
+	dotenv := []byte("PASSWORD=" + "Xq7" + "Lm2Pz9" + "!Wr4Tn")
+	if got, want := ScanWith(dotenv, rules, Options{LanguageID: "dotenv"}, &key), Scan(dotenv, rules, Options{LanguageID: "dotenv"}); len(got.Findings) != len(want.Findings) {
+		t.Fatal("ScanWith ignore les options")
+	}
+	var zero FingerprintKey
+	if got := ScanWith(content, rules, Options{}, &zero); got.Complete || got.Failure != FailureScanError || len(got.Findings) != 0 {
+		t.Fatalf("clé zéro : %+v", got)
+	}
+	big := make([]byte, MaxInputBytes+1)
+	if got := ScanWith(big, rules, Options{}, &zero); got.Complete || got.Failure != FailureScanLimit {
+		t.Fatalf("clé zéro, entrée trop grande : %+v", got)
+	}
+}
+
 func TestNoExportedFunctionReturnsValue(t *testing.T) {
 	t.Run("aucune fonction exportée ne rend les octets de la valeur", func(t *testing.T) {
 		entries, err := os.ReadDir(".")
 		if err != nil {
 			t.Fatal(err)
 		}
-		// Seules fonctions exportées qui rendent du texte : messages d'erreur et clé masquée.
-		textAllowed := map[string]bool{"Error": true, "String": true, "GoString": true}
+		// Seules fonctions exportées qui rendent du texte : messages d'erreur, clé masquée, Empreinte locale (HMAC sous la
+		// clé de l'appelant, jamais un condensat non salé : TestFingerprint) et Substitut (préfixe public de la table,
+		// numéro et type, rien d'autre de la valeur : TestSubstituteText).
+		textAllowed := map[string]bool{"Error": true, "String": true, "GoString": true, "Fingerprint": true, "SubstituteText": true}
 		// Seules fonctions exportées qui rendent des octets : le texte de l'appelant sans les valeurs détectées, chaque
-		// étendue remplacée par un libellé (TestRedactLeavesNoValue) ou chaque partie secrète par un Substitut
-		// (TestExpurgateCorpus).
-		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true, "Expurgate": true, "ExpurgateAndRescan": true}
-		// Seules fonctions exportées qui rendent une autre tranche : les Substitutions d'une expurgation (positions,
-		// règle, numéro, Substitut, jamais la valeur), et les tables fermées des préfixes publics et des types de secret
-		// des Substituts, qui ne dépendent d'aucune valeur.
+		// étendue remplacée par un libellé (TestRedactLeavesNoValue).
+		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true}
+		// Seules fonctions exportées qui rendent une autre tranche : les tables fermées des préfixes publics et des types
+		// de secret des Substituts, qui ne dépendent d'aucune valeur, et les étendues des Substituts d'un texte.
 		slicesAllowed := map[string]string{
-			"Expurgate": "Substitution", "ExpurgateAndRescan": "Substitution", "SubstitutePrefixes": "string",
-			"SubstituteLabels": "SubstituteLabel", "FindSubstitutes": "SubstituteSpan",
+			"SubstitutePrefixes": "string", "SubstituteLabels": "SubstituteLabel", "FindSubstitutes": "SubstituteSpan",
 		}
 		checked := 0
 		for _, entry := range entries {

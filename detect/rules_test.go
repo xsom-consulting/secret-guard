@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Apache-2.0 : les scores, raisons et pénalités attendus sont ceux de secret-guard/packages/core/src/rules.ts ; origine,
 // avis et modifications dans UPSTREAM.md.
 

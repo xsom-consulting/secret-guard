@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package report écrit le résultat d'une analyse dans la forme JSON commune à la ligne de commande et au module
 // WebAssembly : issue, puis constats (règle, type de secret, vue, score, niveau, étendue en octets, Empreinte locale
 // si elle a été calculée). Rien d'autre : ni valeur, ni extrait, ni masque, ni condensat non salé.

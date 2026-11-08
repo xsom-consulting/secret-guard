@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Usage typé des points d'entrée du paquet : vérifié par tsc (wasm/tsconfig.json), jamais exécuté.
 import { createSecretGuard as createBrowser, createMinimalWasi, WASI_FUNCTIONS, type MinimalWasiOptions } from './browser.mjs';
 import { createSecretGuard as createNode, wasmUrl } from './node.mjs';

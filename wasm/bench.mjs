@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Mesures du module WebAssembly sous Node : node wasm/bench.mjs [chemin du .wasm]
 // Taille (brute, gzip -9, brotli), démarrage (compilation, instanciation et _initialize, qui charge le Pack initial),
 // première analyse, puis analyse d'une entrée de 64 Kio : la même que BenchmarkScan64KiB (detect/scan_test.go).

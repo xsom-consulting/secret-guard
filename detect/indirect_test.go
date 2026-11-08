@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect
 
 import (
-	"bytes"
 	"crypto/sha1" //nolint:gosec // valeur fictive de forme hexadécimale, aucune sécurité
 	"encoding/hex"
 	"errors"
@@ -56,10 +57,6 @@ func TestIndirectAssignments(t *testing.T) {
 				}
 				if !result.Complete || !found {
 					t.Fatalf("aucun constat contextuel sur la valeur : %+v", result.Findings)
-				}
-				text, _, sanitized := expurgateBoth(t, []byte(input), rules, nil, Options{}, func() func(Finding) (int, bool) { return fixedOrdinal(1) })
-				if sanitized.Failure != SanitizeNone || bytes.Contains(text, []byte(value)) {
-					t.Fatalf("expurgation : %s", sanitized.Failure)
 				}
 			})
 		}

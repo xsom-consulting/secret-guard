@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Règles du moteur de détection, chargées depuis un Pack de règles (package pack).
 //
 // Portage en Go de secret-guard/packages/core/src/rules.ts (Apache-2.0, origine, avis et modifications dans

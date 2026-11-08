@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Écriture déterministe des fichiers du corpus : un cas par ligne, champs dans un ordre fixe, fin de
  * ligne `\n`. Les chaînes gardent les caractères visibles tels quels ; les caractères de contrôle, de format

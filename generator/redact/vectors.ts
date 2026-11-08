@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Résultats attendus du masquage, à partir du moteur d'origine (fonctions injectées) : `redact` et `redactAndRescan`
  * de Secret Guard travaillent sur une chaîne UTF-16, le moteur Go sur des octets. Le générateur reconstruit chaque

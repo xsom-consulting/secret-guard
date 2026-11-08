@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Affectations indirectes (écart d'analyse ajouté en v0.5.2, absent de Secret Guard) : le nom sensible et sa valeur
 // ne sont pas reliés par « = » ou « : » derrière une espace, mais par une paire d'arguments ou une ligne de diff.
 //

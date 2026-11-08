@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Corpus de parité de détection : contrôles du corpus commité, sans le checkout de Secret Guard (le résultat attendu
  * vient du moteur d'origine ; la régénération et sa comparaison octet pour octet se font par

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Cas synthétiques du corpus de parité. Fonction pure et déterministe : chaque valeur de
  * secret est tirée de SHA-256 sur une étiquette fixe (`synth`), jamais copiée d'un vrai secret ; les seules valeurs

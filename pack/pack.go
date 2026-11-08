@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package pack est le Pack de règles lu par le moteur de détection : mêmes champs et mêmes noms JSON que le schéma
 // RulePack (schema/RulePack.json, spécification docs/rule-pack.md), décodage strict par Decode, et Pack initial
 // embarqué (Initial, InitialJSON), traduit du catalogue de règles de Secret Guard.

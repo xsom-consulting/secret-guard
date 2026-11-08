@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Vues de texte du moteur de détection.
 //
 // Portage en Go de secret-guard/packages/core/src/mapping.ts et des parties de scanner.ts qui construisent des vues

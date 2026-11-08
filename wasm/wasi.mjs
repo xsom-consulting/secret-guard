@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Couche WASI preview 1 minimale pour le module de Secret Guard, hors de Node (navigateur, extension de navigateur,
 // extension VS Code pour le web). Elle ne donne au module que ce que demande le runtime Go : aucun argument, aucune
 // variable d'environnement, aucun répertoire ouvert (fd_prestat_get rend EBADF), aucun fichier, aucun réseau. Les

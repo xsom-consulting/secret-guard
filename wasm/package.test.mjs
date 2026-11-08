@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Paquet npm : node --test wasm/package.test.mjs (module construit requis). Prépare le paquet (stage.mjs) dans un
 // dossier temporaire, vérifie son contenu (liste fermée « files », chaque cible de « exports » présente, types de chaque
 // point d'entrée), puis charge le module par le point d'entrée Node du paquet préparé.
@@ -16,12 +17,16 @@ const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
 
 test('paquet : nom, licence, contenu en liste fermée', () => {
   assert.equal(manifest.name, '@xsom-consulting/secret-guard-wasm');
-  assert.equal(manifest.license, 'Apache-2.0');
+  assert.equal(manifest.license, '(Apache-2.0 AND PolyForm-Small-Business-1.0.0)');
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.dependencies, undefined, 'aucune dépendance');
   assert.equal(manifest.scripts, undefined, 'aucun script (ni postinstall)');
   assert.deepEqual(readdirSync(dir).sort(), ['package.json', ...manifest.files].sort());
   assert.ok(readFileSync(join(dir, 'LICENSE'), 'utf8').includes('Apache License'));
+  // Le module embarque l'expurgation : texte de PolyForm Small Business 1.0.0 et ligne Required Notice de xSOM.
+  const polyform = readFileSync(join(dir, 'LICENSE-PolyForm-Small-Business-1.0.0'), 'utf8');
+  assert.ok(polyform.startsWith('# PolyForm Small Business License 1.0.0\n'));
+  assert.ok(polyform.endsWith('\nRequired Notice: Copyright (c) 2026 XSOM CONSULTING (https://xsom.fr)\n'));
 });
 
 test('chaque cible de « exports » existe, chaque point d’entrée JavaScript a ses types', () => {

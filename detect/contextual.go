@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Affectations contextuelles du moteur de détection : nom de variable sensible suivi d'une
 // valeur littérale (affectations, environnement, arguments de commande, .npmrc, en-têtes Cookie, « -u
 // utilisateur:mot de passe », clé auth de Docker), avec les blocs YAML, heredoc, préfixes de chaînes des langages et

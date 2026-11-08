@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect_test
 
 // Parité de l'analyse avec un Pack de règles du client (Options.Custom) : vecteurs vectors/custom/scan.json, produits

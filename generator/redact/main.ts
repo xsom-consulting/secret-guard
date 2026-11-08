@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `npm run vectors:redact -- --upstream <checkout>` (dans `generator/`) : écrit `vectors/redact.json` (masquage) et
  * `vectors/decision.json` (niveaux et décisions) avec le moteur TypeScript de Secret Guard (`redact`,

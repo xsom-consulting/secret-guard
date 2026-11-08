@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Ce que le générateur utilise du moteur d'origine transpilé pour les règles du client, typé et lu sans lui faire
  * confiance (toute forme inattendue arrête le générateur).

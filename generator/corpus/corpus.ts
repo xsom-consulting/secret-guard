@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Assemblage du corpus de parité : résultat attendu d'un cas à partir du moteur d'origine (positions
  * UTF-16 → octets, tri), et contrôles de couverture qui font échouer le générateur. Pur, à moteur injecté.

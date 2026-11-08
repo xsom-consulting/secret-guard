@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Vecteurs du masquage et des décisions : contrôles des fichiers commités, sans le checkout de Secret Guard (le
  * résultat attendu vient du moteur d'origine ; la régénération et sa comparaison octet pour octet se font par

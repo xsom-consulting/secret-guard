@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Point d'entrée pour un navigateur, une extension de navigateur ou un service worker : le module de Secret Guard sous
 // la couche WASI minimale (wasi.mjs). Ce chargeur ne télécharge rien et ne lit aucun fichier : l'appelant donne les
 // octets du module, qu'il a lui-même lus (fetch d'une ressource de son extension, par exemple) et, de préférence,

@@ -1,0 +1,15 @@
+# Relecture des demandes de fusion de Secret Guard : tout le dépôt passe par la relecture de xSOM Consulting.
+# Motifs à la manière de .gitignore.
+*                                            @jt33120
+
+# Licences, avis, règles de contribution et de sécurité, intégration et publication.
+/LICENSE                                     @jt33120
+/NOTICE                                      @jt33120
+/COMMERCIAL.md                               @jt33120
+/CONTRIBUTING.md                             @jt33120
+/SECURITY.md                                 @jt33120
+/docs/CLA.md                                 @jt33120
+/expurgation/LICENSE                         @jt33120
+/.github/                                    @jt33120
+/.gitleaks.toml                              @jt33120
+/wasm/package.json                           @jt33120

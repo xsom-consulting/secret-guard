@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package custom
 
 // Pires cas : analyses de 1 Mio bornées en temps, achevées ou arrêtées par le budget (ErrWorkBudget) ou la limite de

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Corpus de parité de détection : forme d'un cas et listes fermées. Le corpus est lu tel
  * quel par le test de parité Go ; tout champ ajouté ici change ce test.

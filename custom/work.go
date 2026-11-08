@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Budget de travail du Pack de règles du client (docs/custom-pack.md, §5).
 //
 // Portage en Go de secret-guard/packages/core/src/custom/work.ts (Apache-2.0, origine, avis et modifications dans

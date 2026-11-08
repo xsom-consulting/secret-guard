@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Aide des essais : charge le module construit (dist/secret-guard.wasm) par chacun des deux points d'entrée du paquet.
 import { readFileSync } from 'node:fs';
 import { createSecretGuard as createBrowser } from './browser.mjs';

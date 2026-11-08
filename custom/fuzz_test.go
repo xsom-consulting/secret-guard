@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package custom
 
 // Cibles de fuzz. Oracle des correspondances : portage dans les tests seulement de l'automate à retour arrière de

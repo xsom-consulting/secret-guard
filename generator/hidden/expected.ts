@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Résultats attendus des vecteurs de parité, calculés par les fonctions d'origine (`findHidden`, `stripHidden`,
  * `mentionedPaths`), puis convertis pour le portage Go : positions UTF-16 → octets, sortie lue sans lui faire

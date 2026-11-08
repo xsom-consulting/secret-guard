@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package hidden trouve les instructions cachées d'un texte : des caractères qu'une personne ne voit pas mais qu'un
 // modèle de langage lit. Portage en Go de hidden.ts de Secret Guard (origine, avis et modifications dans UPSTREAM.md).
 //

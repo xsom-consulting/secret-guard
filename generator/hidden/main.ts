@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `npm run vectors:hidden -- --upstream <checkout>` (dans `generator/`) : écrit `vectors/hidden.json` et
  * `vectors/mentions.json`, vecteurs de parité des paquets Go `hidden` et `mentions`, avec `hidden.ts` et

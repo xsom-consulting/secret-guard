@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Décodages bornés du moteur de détection.
 //
 // Portage en Go de secret-guard/packages/core/src/encoding.ts et des candidats base64 de scanner.ts

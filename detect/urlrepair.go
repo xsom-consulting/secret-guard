@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // URL à identifiants abîmée : « postgres://admin:< motdepasse@hôte » (chevron, espace ou guillemet collés entre le
 // « : » de l'information utilisateur et le mot de passe, en général par un copier-coller ou un gabarit mal rempli).
 //

@@ -1,4 +1,6 @@
-// Substituts : textes typés qui remplacent la partie secrète d'un constat (Expurgate, expurgate.go).
+// SPDX-License-Identifier: Apache-2.0
+
+// Substituts : textes typés qui remplacent la partie secrète d'un constat (SecretRange, secretrange.go).
 //
 // Extension propre à ce module, sans origine dans Secret Guard (avis dans UPSTREAM.md). Un Substitut dit lui-même au
 // lecteur (un modèle de langage) ce qu'il remplace : préfixe public facultatif, puis, entre crochets, le numéro et le
@@ -15,6 +17,10 @@
 // ni un de ses caractères. Le moteur reconnaît un Substitut comme une valeur fictive (safeLiteral, scanPrivateKeys,
 // safeContextualValue, argument de curl -u) : un texte expurgé, analysé de nouveau, ne bloque pas sur ses Substituts.
 // Un texte qui ne suit pas exactement la grammaire reste analysé comme tout autre texte.
+//
+// Ce fichier tient la grammaire (le moteur doit reconnaître un Substitut) et son écrivain (SubstituteText) ; il reste
+// sous Apache-2.0. L'expurgation qui pose les Substituts dans un texte est le module
+// github.com/xsom-consulting/secret-guard/expurgation (README, « Licences »).
 //
 // Depuis la v0.5.0, l'ancienne forme (« préfixe, X majuscules, numéro ») n'est plus reconnue : c'est un texte ordinaire,
 // détecté s'il a la forme d'un secret.
@@ -162,6 +168,12 @@ func substituteLabelOf(ruleID string, language SubstituteLanguage) string {
 	}
 }
 
+// Valid dit si la langue est SubstituteFrench, SubstituteEnglish ou vide (français).
+func (l SubstituteLanguage) Valid() bool {
+	_, ok := substituteFormOf(l)
+	return ok
+}
+
 // substituteFormOf rend la forme de la langue (vide : français) ; faux pour une autre langue.
 func substituteFormOf(language SubstituteLanguage) (substituteForm, bool) {
 	if language == "" {
@@ -238,12 +250,11 @@ var substitutePrefixSet = func() map[string]bool {
 // motif d'une règle « motif seul » du Pack initial ; aucun ne dépend d'une valeur détectée.
 func SubstitutePrefixes() []string { return append([]string(nil), substitutePrefixes...) }
 
-// ErrExpurgateOrdinal refuse un numéro de Substitut hors de [MinSubstituteOrdinal, MaxSubstituteOrdinal], ou que
-// l'appelant ne donne pas.
-var ErrExpurgateOrdinal = errors.New("expurgation refusée : numéro de Substitut absent ou hors de 1 à 999")
+// ErrSubstituteOrdinal refuse un numéro de Substitut hors de [MinSubstituteOrdinal, MaxSubstituteOrdinal].
+var ErrSubstituteOrdinal = errors.New("substitut refusé : numéro hors de 1 à 999")
 
-// ErrExpurgateLanguage refuse une langue de Substitut autre que SubstituteFrench, SubstituteEnglish ou vide.
-var ErrExpurgateLanguage = errors.New("expurgation refusée : langue de Substitut inconnue")
+// ErrSubstituteLanguage refuse une langue de Substitut autre que SubstituteFrench, SubstituteEnglish ou vide.
+var ErrSubstituteLanguage = errors.New("substitut refusé : langue inconnue")
 
 // substituteBodyLength rend la longueur du corps de Substitut (crochets compris, sans préfixe) qui commence text, ou 0
 // si text ne commence pas par un corps exact de la grammaire.
@@ -391,17 +402,18 @@ func substitutePrefixOf(value []byte, ruleID string) string {
 	return ""
 }
 
-// substituteFor construit le Substitut de value, trouvée par la règle ruleID, au numéro ordinal, dans la langue
-// language (vide : français) : préfixe le plus long de cette règle par lequel commence value (ou aucun), puis le corps
-// avec le numéro et le type de la règle. Rien d'autre de la valeur : ni sa longueur, ni un de ses caractères. Numéro
-// hors de 1 à 999 : ErrExpurgateOrdinal ; langue inconnue : ErrExpurgateLanguage.
-func substituteFor(value []byte, ruleID string, ordinal int, language SubstituteLanguage) (string, error) {
+// SubstituteText écrit le Substitut de value, trouvée par la règle ruleID, au numéro ordinal, dans la langue language
+// (vide : français) : préfixe le plus long de cette règle par lequel commence value (ou aucun, table fermée), puis le
+// corps avec le numéro et le type de la règle. Rien d'autre de la valeur : ni sa longueur, ni un de ses caractères.
+// Numéro hors de 1 à 999 : ErrSubstituteOrdinal ; langue inconnue : ErrSubstituteLanguage ; aucun texte dans les deux
+// cas. Le texte rendu suit exactement la grammaire : le moteur le reconnaît comme une valeur fictive.
+func SubstituteText(value []byte, ruleID string, ordinal int, language SubstituteLanguage) (string, error) {
 	if ordinal < MinSubstituteOrdinal || ordinal > MaxSubstituteOrdinal {
-		return "", ErrExpurgateOrdinal
+		return "", ErrSubstituteOrdinal
 	}
 	form, ok := substituteFormOf(language)
 	if !ok {
-		return "", ErrExpurgateLanguage
+		return "", ErrSubstituteLanguage
 	}
 	return substitutePrefixOf(value, ruleID) + form.open + strconv.Itoa(ordinal) + form.mid +
 		substituteLabelOf(ruleID, form.language) + form.end, nil

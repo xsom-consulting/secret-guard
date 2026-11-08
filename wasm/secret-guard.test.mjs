@@ -1,5 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
 // Essai réel du module WebAssembly sous Node, par les deux points d'entrée du paquet : node --test wasm/
-// Le module doit avoir été construit : GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm
+// Le module doit avoir été construit : cd expurgation && GOOS=wasip1 GOARCH=wasm go build -buildmode=c-shared -o ../dist/secret-guard.wasm ./cmd/secret-guard-wasm
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';

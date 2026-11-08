@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Types du chargeur du module WebAssembly de Secret Guard (secret-guard.mjs).
 
 /** Taille d'entrée la plus grande analysée, en octets ; au-delà, l'analyse rend scan_limit. */

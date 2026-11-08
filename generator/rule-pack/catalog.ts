@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Pack de règles initial : extraction déterministe du catalogue Secret Guard depuis sa copie figée
  * (`pack/initial/upstream/rules.ts.txt`, commit `UPSTREAM_COMMIT`), puis traduction en RE2.

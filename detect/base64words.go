@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Candidats base64 qui sont des noms : identifiants et chemins, jamais décodés.
 //
 // Écart avec Secret Guard (UPSTREAM.md) : la suite de caractères de BASE64_CANDIDATE prend tout mot de 20 caractères

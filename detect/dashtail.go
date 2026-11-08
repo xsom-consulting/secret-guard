@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Jeton fini par un tiret (écart d'analyse ajouté en v0.5.2, absent de Secret Guard).
 //
 // Les motifs à format fixe finissent par « \b ». Quand leur dernière classe admet « - » (GitLab, Google, OpenAI,

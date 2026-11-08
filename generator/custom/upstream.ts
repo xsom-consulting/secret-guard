@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Moteur TypeScript d'origine pour les vecteurs du Pack de règles du client. Même principe que le corpus de parité
  * (`corpus/upstream.ts`) : checkout au commit de `UPSTREAM.md`, SHA-256 de chaque fichier lu vérifié, transpilation

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Point d'entrée pour Node : le module de Secret Guard sous node:wasi, sans argument, sans variable d'environnement et
 // sans aucun répertoire ouvert (un arrêt du runtime lève une erreur, jamais process.exit). Ce chargeur ne lit aucun fichier et n'ouvre aucune connexion : l'appelant donne les
 // octets du module (par exemple readFile(wasmUrl)).

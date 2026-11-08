@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Masquage des constats d'une analyse, puis nouvelle analyse du texte masqué.
 //
 // Portage en Go de redact, placeholderName et redactAndRescan de secret-guard/packages/core/src/scanner.ts, et de la

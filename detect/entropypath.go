@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Chemins et noms en tirets écartés de l'entropie : faux positifs relevés sur un Poste réel (xSOM Fleet, novembre
 // 2026), qui bloquaient des commandes de développeur ordinaires.
 //

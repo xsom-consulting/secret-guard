@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
 	"bytes"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -54,11 +57,36 @@ func TestUsage(t *testing.T) {
 	profile := filepath.Join("testdata", "low-domain.out")
 	for _, args := range [][]string{
 		{}, {"a.out", "b.out"}, {"-inconnu"},
-		{"-min", "NaN", profile}, {"-min", "-1", profile}, {"-min", "100.1", profile}, {"-min", "Inf", profile},
+		{"-module", "autre", profile}, {"-min", "NaN", profile}, {"-min", "-1", profile}, {"-min", "100.1", profile}, {"-min", "Inf", profile},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := run(args, &stdout, &stderr); code != 2 {
 			t.Fatalf("args %q : code = %d, attendu 2", args, code)
 		}
+	}
+}
+
+// TestExpurgationModule : -module expurgation mesure le paquet expurgation seul (« $ » : sans cmd/ ni tools/) et
+// expurgation/internal ; le module racine n'y est pas compté.
+func TestExpurgationModule(t *testing.T) {
+	file, err := os.Open(filepath.Join("testdata", "expurgation.out"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	results, err := Check(file, ExpurgationPackages)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 2 || results[0].Covered != 9 || results[0].Total != 10 || results[1].Covered != 4 || results[1].Total != 4 {
+		t.Fatalf("%+v", results)
+	}
+	var stdout, stderr bytes.Buffer
+	if code := run([]string{"-module", "expurgation", filepath.Join("testdata", "expurgation.out")}, &stdout, &stderr); code != 0 ||
+		!strings.Contains(stdout.String(), module+"/expurgation\t90.0 %") || strings.Contains(stdout.String(), "$") {
+		t.Fatalf("code %d : %s%s", code, stdout.String(), stderr.String())
+	}
+	if code := run([]string{"-module", "expurgation", "-min", "95", filepath.Join("testdata", "expurgation.out")}, &stdout, &stderr); code != 1 {
+		t.Fatalf("seuil de 95 %% : code %d", code)
 	}
 }
