@@ -1,6 +1,6 @@
 {
-  "name": "@xsom-consulting/secret-guard-wasm",
-  "version": "0.6.0",
+  "name": "@xsom/secret-guard-wasm",
+  "version": "0.6.1",
   "description": "Secret Guard secret detection engine as a WebAssembly (WASI preview 1) module, with loaders for Node and browsers. Local only: no network, no file access, never returns a detected value.",
   "license": "(Apache-2.0 AND PolyForm-Small-Business-1.0.0)",
   "author": "xSOM Consulting",

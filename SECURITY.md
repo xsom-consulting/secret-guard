@@ -20,7 +20,7 @@ synthétiques.
 - Le moteur de détection et le masquage (module racine `github.com/xsom-consulting/secret-guard`, Apache-2.0) ;
 - l'expurgation et le module WebAssembly (module `github.com/xsom-consulting/secret-guard/expurgation`, PolyForm
   Small Business 1.0.0) ;
-- le paquet npm `@xsom-consulting/secret-guard-wasm` et les fichiers des Releases GitHub.
+- le paquet npm `@xsom/secret-guard-wasm` et les fichiers des Releases GitHub.
 
 Entrent dans ce périmètre, par exemple : une valeur détectée qui sort du moteur (constat, journal, message, texte
 expurgé), une analyse incomplète rendue comme complète, une entrée qui fait dépasser les budgets de travail ou
@@ -49,7 +49,7 @@ real secret: a synthetic value of the same shape is enough, and the repository o
 
 The detection engine and redaction (root module, Apache-2.0), expurgation and the WebAssembly module (module
 `github.com/xsom-consulting/secret-guard/expurgation`, PolyForm Small Business 1.0.0), the npm package
-`@xsom-consulting/secret-guard-wasm` and the GitHub Release files. Examples: a detected value leaving the engine, an
+`@xsom/secret-guard-wasm` and the GitHub Release files. Examples: a detected value leaving the engine, an
 incomplete scan reported as complete, an input that exceeds the work budgets or stops the process, a substitute that
 reveals part of the value, a bypass of Pack verification. A secret that the rules do not describe is a known limit of
 detection: report it as an ordinary issue, without any real value.
