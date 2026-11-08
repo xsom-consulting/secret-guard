@@ -89,6 +89,7 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 		return findings, nil
 	}
 	capture := r.pattern.NumSubexp() >= 1
+	from := len(findings)
 	for _, m := range r.pattern.FindAllSubmatchIndex(text, -1) {
 		start, end := m[0], m[1]
 		if capture && m[2] >= 0 {
@@ -110,6 +111,9 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			}
 		}
 		findings = append(findings, newFinding(v, r, start, end, r.score-encodingPenalty(v.encoding), encodingReasons(v.encoding)))
+	}
+	if r.dashTail != nil {
+		return scanDashTail(v, r, budget, findings, from)
 	}
 	return findings, nil
 }
