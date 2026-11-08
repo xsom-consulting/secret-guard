@@ -1,4 +1,4 @@
-# Release du module WebAssembly et du paquet npm @xsom-consulting/secret-guard-wasm, sur poussée d'une étiquette vX.Y.Z.
+# Release du module WebAssembly et du paquet npm @xsom/secret-guard-wasm, sur poussée d'une étiquette vX.Y.Z.
 #
 # 1. build : vérifie l'étiquette (= version de wasm/package.json), construit le module (-trimpath, Go de go.mod), le
 #    vérifie (construction reproductible : -trimpath -buildvcs=false ; essais Go du module, essais sous Node, parité avec le moteur Go natif sur tout le corpus, paquet), prépare
@@ -122,7 +122,7 @@ jobs:
           TARBALL: ${{ steps.pack.outputs.tarball }}
         run: |
           {
-            echo "Module WebAssembly (WASI preview 1) et paquet npm \`@xsom-consulting/secret-guard-wasm@${TAG#v}\`."
+            echo "Module WebAssembly (WASI preview 1) et paquet npm \`@xsom/secret-guard-wasm@${TAG#v}\`."
             echo
             echo "SHA-256 :"
             echo

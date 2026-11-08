@@ -16,7 +16,7 @@ execFileSync(process.execPath, [fileURLToPath(new URL('./stage.mjs', import.meta
 const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
 
 test('paquet : nom, licence, contenu en liste fermée', () => {
-  assert.equal(manifest.name, '@xsom-consulting/secret-guard-wasm');
+  assert.equal(manifest.name, '@xsom/secret-guard-wasm');
   assert.equal(manifest.license, '(Apache-2.0 AND PolyForm-Small-Business-1.0.0)');
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.dependencies, undefined, 'aucune dépendance');

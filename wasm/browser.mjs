@@ -4,7 +4,7 @@
 // octets du module, qu'il a lui-même lus (fetch d'une ressource de son extension, par exemple) et, de préférence,
 // vérifiés contre leur empreinte SHA-256 publiée.
 //
-//   import { createSecretGuard } from '@xsom-consulting/secret-guard-wasm/browser';
+//   import { createSecretGuard } from '@xsom/secret-guard-wasm/browser';
 //   const guard = await createSecretGuard(wasmBytes);
 //
 // Une page d'extension Manifest V3 doit déclarer 'wasm-unsafe-eval' dans sa politique de sécurité du contenu.

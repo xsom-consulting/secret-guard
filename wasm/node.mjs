@@ -4,7 +4,7 @@
 // octets du module (par exemple readFile(wasmUrl)).
 //
 //   import { readFile } from 'node:fs/promises';
-//   import { createSecretGuard, wasmUrl } from '@xsom-consulting/secret-guard-wasm/node';
+//   import { createSecretGuard, wasmUrl } from '@xsom/secret-guard-wasm/node';
 //   const guard = await createSecretGuard(await readFile(wasmUrl));
 import { WASI } from 'node:wasi';
 import { SecretGuard } from './secret-guard.mjs';

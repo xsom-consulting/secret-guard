@@ -1,4 +1,4 @@
-# @xsom-consulting/secret-guard-wasm
+# @xsom/secret-guard-wasm
 
 [English](#english) · [Français](#français)
 
@@ -21,11 +21,11 @@ dependency-free loaders for Node and for browsers or browser extensions.
 ```js
 // Node
 import { readFile } from 'node:fs/promises';
-import { createSecretGuard, wasmUrl } from '@xsom-consulting/secret-guard-wasm/node';
+import { createSecretGuard, wasmUrl } from '@xsom/secret-guard-wasm/node';
 const guard = await createSecretGuard(await readFile(wasmUrl));
 
 // Browser, extension page or service worker (Manifest V3: declare 'wasm-unsafe-eval' in the extension CSP)
-import { createSecretGuard } from '@xsom-consulting/secret-guard-wasm/browser';
+import { createSecretGuard } from '@xsom/secret-guard-wasm/browser';
 const bytes = new Uint8Array(await (await fetch(moduleUrlOfYourOwnBundle)).arrayBuffer());
 // Check bytes against the SHA-256 published with the GitHub Release before instantiating.
 const guard = await createSecretGuard(bytes);
