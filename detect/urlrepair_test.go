@@ -1,7 +1,8 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect
 
 import (
-	"bytes"
 	"crypto/rand"
 	"strings"
 	"testing"
@@ -51,23 +52,9 @@ func TestBrokenCredentialURL(t *testing.T) {
 			if found == nil {
 				t.Fatalf("règle %s non trouvée", c.rule)
 			}
-			start, end := secretPart(content, *found)
+			start, end := SecretRange(content, *found)
 			if string(content[start:end]) != pw {
 				t.Fatalf("partie secrète %d..%d différente du mot de passe", start, end)
-			}
-			text, subs, sanitized := ExpurgateAndRescan(content, rules, nil, Options{}, fixedOrdinal(1))
-			if sanitized.Failure != SanitizeNone {
-				t.Fatalf("expurgation en échec : %v", sanitized.Failure)
-			}
-			if bytes.Contains(text, []byte(pw)) {
-				t.Fatal("mot de passe encore présent après expurgation")
-			}
-			if len(subs) != 1 {
-				t.Fatalf("%d Substituts, un attendu", len(subs))
-			}
-			want := c.before + subs[0].Replacement + c.after
-			if string(text) != want {
-				t.Fatalf("texte expurgé inattendu : seul le mot de passe doit être remplacé")
 			}
 		})
 	}

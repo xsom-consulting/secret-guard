@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package custom
 
 // Parité avec le moteur TypeScript d'origine : vecteurs vectors/custom/ (generator/custom/), produits par l'origine

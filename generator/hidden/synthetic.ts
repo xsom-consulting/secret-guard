@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Cas synthétiques des vecteurs de parité des instructions cachées et des mentions : chaque porteur, chaque usage
  * légitime que `hidden.ts` laisse passer, leurs mélanges, les positions, les bornes, les octets hors UTF-8 ; chaque

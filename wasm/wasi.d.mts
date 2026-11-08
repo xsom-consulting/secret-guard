@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Types de la couche WASI preview 1 minimale (wasi.mjs).
 import type { WasiImport } from './secret-guard.mjs';
 

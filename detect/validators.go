@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Validateurs nommés et filtres de valeurs du moteur de détection.
 //
 // Portage en Go de isPlaceholder, isExactPublicExample et safeLiteral de secret-guard/packages/core/src/rules.ts

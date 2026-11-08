@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Commande secret-guard : analyse un fichier ou l'entrée standard avec le moteur de détection, localement, sans
 // réseau, et écrit les constats en JSON, jamais la valeur détectée ; relève aussi les instructions cachées d'un texte
 // et les fichiers cités par « @ » dans un prompt ; calcule, chez le client, les condensats de termes confidentiels d'un

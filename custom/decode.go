@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Lecture stricte d'un Pack de règles du client : schéma schema/CustomPack.json (docs/custom-pack.md, §2 étape 1).
 //
 // Portage en Go de secret-guard/packages/core/src/custom/schema.ts (Apache-2.0, origine, avis et modifications dans

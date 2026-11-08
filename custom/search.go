@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Recherche d'un motif traduit en RE2 et coût compté de cette recherche.
 //
 // L'origine essaie son automate à retour arrière à chaque début possible et compte chaque pas. Ici, les débuts

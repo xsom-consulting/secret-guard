@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Décodage strict d'un Pack de règles : schéma RulePack appliqué en entier, sans tolérance.
 
 package pack

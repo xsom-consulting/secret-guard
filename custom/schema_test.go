@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package custom
 
 // La copie du schéma (schema/CustomPack.json) et le décodage strict de ce paquet disent la même chose : mêmes

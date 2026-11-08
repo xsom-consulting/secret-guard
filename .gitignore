@@ -1,3 +1,10 @@
 node_modules/
 /dist/
 coverage.out
+
+# Outillage local des agents et de la méthode (BMad) : gardé sur le disque, jamais publié.
+/_bmad/
+/.claude/
+/.agents/
+/AGENTS.md
+/CLAUDE.md

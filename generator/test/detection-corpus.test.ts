@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Corpus de parité de détection : contrôles du corpus commité, sans le checkout de Secret Guard (le résultat attendu
  * vient du moteur d'origine ; la régénération et sa comparaison octet pour octet se font par
@@ -256,23 +257,23 @@ describe('recherche de secrets', () => {
     expect(exempted.some((path) => !path.startsWith('vectors/detection/') && path !== REDACT_VECTORS)).toBe(false);
   });
 
-  it('la seule exception BMad reconnaît exactement le SHA-256 du modèle, dans son manifeste et pour une seule règle', () => {
+  // _bmad/ n'est plus suivi depuis la v0.6.0 : l'exception ne sert plus qu'à l'analyse de l'historique publié, où son
+  // manifeste reste. Elle vise un seul fichier, une seule règle et une seule empreinte SHA-256 entière.
+  it('la seule exception BMad reconnaît une seule empreinte, dans son manifeste et pour une seule règle', () => {
     const scoped = allowlists.filter((allowlist) => allowlist['targetRules'] !== undefined);
     expect(scoped).toHaveLength(1);
-    const { description, ...criteria } = scoped[0]!;
+    const { description, regexes, ...criteria } = scoped[0]!;
     expect(typeof description).toBe('string');
-    const checksum = createHash('sha256')
-      .update(readFileSync(new URL('.agents/skills/bmad-ux/assets/key-screens.md', REPOSITORY)))
-      .digest('hex');
     expect(criteria).toEqual({
       targetRules: ['generic-api-key'],
       condition: 'AND',
       paths: ['^_bmad/_config/files-manifest\\.csv$'],
       regexTarget: 'match',
-      regexes: [`^key-screens\\.md","${checksum}"$`],
     });
-    const manifest = read(new URL('_bmad/_config/files-manifest.csv', REPOSITORY));
-    expect(manifest).toContain(`bmad-ux/assets/key-screens.md","${checksum}"`);
+    expect(Array.isArray(regexes) && regexes.length === 1).toBe(true);
+    expect((regexes as string[])[0]).toMatch(/^\^key-screens\\\.md","[0-9a-f]{64}"\$$/);
+    const tracked = execFileSync('git', ['ls-files', '-z', '--', '_bmad'], { cwd: REPOSITORY, encoding: 'utf8' });
+    expect(tracked).toBe('');
   });
 
   it('aucun fichier .gitleaksignore : pas d’empreinte ignorée hors des exceptions de chemin', () => {

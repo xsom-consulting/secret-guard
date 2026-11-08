@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package custom
 
 // API publique du paquet en liste fermée : aucun type, champ ni fonction exportés ne rend un texte détecté, un terme

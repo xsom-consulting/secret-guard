@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Décision par défaut associée au niveau d'un constat.
 //
 // Portage en Go de decisionForLevel de secret-guard/packages/core/src/risk.ts (Apache-2.0, origine, avis et

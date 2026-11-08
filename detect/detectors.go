@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Exécution des familles de règles d'une vue, en parallèle quand elles ne consomment aucun budget partagé.
 //
 // Les familles sans budget (clés privées, règles « motif seul » sans validateur, URL à identifiants, motifs

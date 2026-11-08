@@ -1,0 +1,6 @@
+mode: set
+github.com/xsom-consulting/secret-guard/expurgation/expurgate.go:10.1,12.2 9 1
+github.com/xsom-consulting/secret-guard/expurgation/expurgate.go:13.1,14.2 1 0
+github.com/xsom-consulting/secret-guard/expurgation/internal/request/request.go:5.1,6.2 4 1
+github.com/xsom-consulting/secret-guard/expurgation/cmd/secret-guard-wasm/main_other.go:3.1,4.2 50 0
+github.com/xsom-consulting/secret-guard/expurgation/tools/wasmparity/main.go:3.1,4.2 50 0

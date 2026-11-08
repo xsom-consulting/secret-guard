@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Écriture déterministe de `vectors/hidden.json` et `vectors/mentions.json` : en-tête, puis un cas par ligne, champs
  * dans un ordre fixe, fin de ligne `\n`. Les chaînes passent par `jsonString` du corpus : aucun caractère invisible

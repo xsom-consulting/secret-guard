@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Détections d'un Pack de règles du client (Options.Custom), ajoutées aux constats des règles intégrées.
 //
 // Portage en Go de collectCustomFindings, customFinding et successfulResult de secret-guard/packages/core/src/scanner.ts

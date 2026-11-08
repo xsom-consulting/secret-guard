@@ -1,0 +1,89 @@
+# golangci-lint v2 (CI : 2.14) du module github.com/xsom-consulting/secret-guard/expurgation (PolyForm Small Business
+# 1.0.0), lancé depuis ce dossier : cd expurgation && golangci-lint run. Mêmes règles que le module racine
+# (../.golangci.yml) pour le programme livré (module WebAssembly) ; l'expurgation (paquet de ce dossier) est pure comme le
+# moteur. La preuve que chaque import interdit est refusé : go run ./tools/depguardcheck, à la racine du dépôt.
+version: "2"
+
+formatters:
+  enable:
+    - gofmt
+
+linters:
+  default: standard
+  enable:
+    - depguard
+    - forbidigo
+  settings:
+    forbidigo:
+      forbid:
+        - pattern: '^print(ln)?$'
+          msg: "print/println écrivent sur la sortie d'erreur ; aucune valeur ne doit en sortir"
+    depguard:
+      rules:
+        regexp-backtracking:
+          list-mode: lax
+          files:
+            - "$all"
+          deny:
+            - pkg: "github.com/dlclark/regexp2"
+              desc: "moteur à retour arrière : regexp (RE2) seul"
+            - pkg: "github.com/gijsbers/go-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "github.com/GRbit/go-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "github.com/glenn-brown/golang-pkg-pcre"
+              desc: "liaison PCRE (retour arrière) : regexp (RE2) seul"
+            - pkg: "go.arsenm.dev/pcre"
+              desc: "portage de PCRE (retour arrière) : regexp (RE2) seul"
+
+        # Le programme livré (module WebAssembly, demande d'expurgation) ne parle à aucun réseau et ne lance aucun autre
+        # programme. Les outils de vérification (tools/) et les tests en sont exclus.
+        offline:
+          list-mode: lax
+          files:
+            - "$all"
+            - "!**/tools/**"
+            - "!$test"
+          deny:
+            - pkg: "net"
+              desc: "aucun appel réseau : l'expurgation est locale"
+            - pkg: "crypto/tls"
+              desc: "aucun appel réseau : l'expurgation est locale"
+            - pkg: "os/exec"
+              desc: "le programme livré ne lance aucun autre programme"
+            - pkg: "plugin"
+              desc: "le programme livré ne charge aucun code"
+
+        # L'expurgation (fichiers de ce dossier, hors sous-dossiers et tests) est pure : ni E/S, ni réseau, ni appel
+        # système, ni horloge, ni hasard, ni journal. Elle n'appelle que l'API publique du moteur (detect) et la partie
+        # internal/ du module racine qui lui est partagée (internal/jstext).
+        expurgation-pure:
+          list-mode: strict
+          files:
+            - "**/expurgation/*.go"
+            - "!$test"
+          allow:
+            - "errors"
+            - "sort"
+            - "unicode/utf8"
+            - "github.com/xsom-consulting/secret-guard/detect$"
+            - "github.com/xsom-consulting/secret-guard/internal/jstext$"
+          deny:
+            - pkg: "os"
+              desc: "l'expurgation est pure : aucune E/S"
+            - pkg: "io/fs"
+              desc: "l'expurgation est pure : aucune E/S"
+            - pkg: "net"
+              desc: "l'expurgation ne fait aucun appel réseau"
+            - pkg: "syscall"
+              desc: "l'expurgation est pure : aucun appel système"
+            - pkg: "time"
+              desc: "l'expurgation n'a pas d'horloge"
+            - pkg: "math/rand"
+              desc: "l'expurgation est déterministe : aucun hasard"
+            - pkg: "crypto/rand"
+              desc: "l'expurgation est déterministe : aucun hasard"
+            - pkg: "log"
+              desc: "l'expurgation ne journalise rien : aucune valeur détectée dans un journal"
+            - pkg: "unsafe"
+              desc: "l'expurgation n'utilise pas unsafe"

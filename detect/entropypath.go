@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Chemins et noms en tirets écartés de l'entropie : faux positifs relevés sur un Poste réel (xSOM Fleet, novembre
 // 2026), qui bloquaient des commandes de développeur ordinaires.
 //
@@ -47,9 +49,13 @@ func isPathContinuation(v *view, start int, value []byte) bool {
 
 // isNameWord dit si word est un mot de nom de dossier : 12 caractères au plus, en minuscules (« frontend »), avec une
 // majuscule initiale (« Documents »), ou en majuscules (« DEV ») ; chiffres admis. Une suite aléatoire de jeton mêle
-// majuscules et minuscules au hasard et n'a presque jamais cette forme.
+// majuscules et minuscules au hasard et n'a presque jamais cette forme. Un mot plus long n'est admis que fait de
+// lettres seules (isLongNameWord).
 func isNameWord(word []byte) bool {
-	if len(word) == 0 || len(word) > shortWordMax {
+	if len(word) > shortWordMax {
+		return isLongNameWord(word)
+	}
+	if len(word) == 0 {
 		return false
 	}
 	var upperAfterFirst, lower bool
@@ -70,11 +76,46 @@ func isNameWord(word []byte) bool {
 // shortWordMax : longueur la plus grande d'un mot d'un segment de chemin (« native-binary », « darwin-arm64 »).
 const shortWordMax = 12
 
+// longWordMax : longueur la plus grande d'un mot long de nom de dossier (« brainstorming », « autoprotection »,
+// « telechargements »).
+const longWordMax = 24
+
+// isLongNameWord dit si word, de 13 à 24 caractères, est un mot de nom de dossier fait de lettres seules : en
+// minuscules, avec une majuscule initiale, ou en majuscules. Faux positifs relevés sur un Poste réel (xSOM Fleet,
+// novembre 2026) : un seul mot de plus de 12 lettres (« brainstorming », « implementation ») faisait de tout le chemin
+// un candidat d'entropie. Une suite aléatoire en base64 n'a cette forme qu'avec une probabilité de l'ordre de 10⁻⁵ par
+// mot (chaque caractère une lettre de la même casse), et chaque mot du chemin doit l'avoir.
+func isLongNameWord(word []byte) bool {
+	if len(word) <= shortWordMax || len(word) > longWordMax {
+		return false
+	}
+	var upper, lower int
+	for i, c := range word {
+		switch {
+		case c >= 'A' && c <= 'Z':
+			if i > 0 {
+				upper++
+			}
+		case c >= 'a' && c <= 'z':
+			lower++
+		default:
+			return false
+		}
+	}
+	return upper == 0 || lower == 0
+}
+
 // isShortWords dit si segment n'est fait que de mots courts séparés par « - » ou « _ » : un nom de dossier
 // (« 318-darwin-arm64 », « -Users-nom-Documents-… »), jamais un jeton, dont les suites aléatoires sont plus longues.
 func isShortWords(segment []byte) bool {
 	for _, word := range bytes.FieldsFunc(segment, func(r rune) bool { return r == '-' || r == '_' }) {
-		if len(word) > shortWordMax || isMixedToken(word) {
+		if len(word) > shortWordMax {
+			if !isLongNameWord(word) {
+				return false
+			}
+			continue
+		}
+		if isMixedToken(word) {
 			return false
 		}
 	}

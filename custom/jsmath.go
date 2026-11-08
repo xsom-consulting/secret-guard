@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Math.log2 de JavaScript, au bit près.
 //
 // Copie de jsLog2 de detect/jsstring.go (portage de __ieee754_log2 de FreeBSD, implémentation de Math.log2 du moteur

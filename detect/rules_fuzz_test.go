@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Apache-2.0 : les oracles sont les motifs de secret-guard/packages/core/src/rules.ts, traduits ; origine, avis et
 // modifications dans UPSTREAM.md.
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Types du point d'entrée pour un navigateur ou une extension (browser.mjs).
 import type { SecretGuard } from './secret-guard.mjs';
 import type { MinimalWasiOptions } from './wasi.mjs';

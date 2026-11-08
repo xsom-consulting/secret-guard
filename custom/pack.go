@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Validité (docs/custom-pack.md, §2) et compilation d'un Pack de règles du client.
 //
 // Portage en Go de secret-guard/packages/core/src/custom/pack.ts (Apache-2.0, origine, avis et modifications dans

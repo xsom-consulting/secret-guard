@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Parité du module WebAssembly avec le moteur Go : node --test wasm/parity.test.mjs (Go et le module construit requis).
 // tools/wasmparity exécute en Go natif, sur tout le corpus du module (vectors/detection/, 823 cas ; vectors/expurgate.json ;
 // vectors/hidden.json), l'analyse, l'expurgation et les instructions cachées ; chaque chargeur du paquet exécute les
@@ -5,13 +6,15 @@
 // expurgé). Un écart n'affiche que l'identifiant du cas, jamais son entrée.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { loaders } from './loaders.test-helpers.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
+// L'outil de parité est dans le module expurgation (expurgation/tools/wasmparity), comme le module WebAssembly.
 const output = execFileSync('go', ['run', './tools/wasmparity', '-root', root], {
-  cwd: root, encoding: 'utf8', maxBuffer: 256 << 20, stdio: ['ignore', 'pipe', 'inherit'],
+  cwd: join(root, 'expurgation'), encoding: 'utf8', maxBuffer: 256 << 20, stdio: ['ignore', 'pipe', 'inherit'],
 });
 const [summary, ...lines] = output.trimEnd().split('\n').map((line) => JSON.parse(line));
 const key = Uint8Array.from({ length: 32 }, (_, i) => i + 1); // FingerprintKey de tools/wasmparity
@@ -44,7 +47,11 @@ for (const { name, load } of loaders) {
           got = guard.scan(input, line.languageId ?? '');
           break;
         case 'expurgate': {
-          const { text: expurgated, ...document } = guard.expurgate(input, { languageId: line.languageId ?? '', minOrdinal: line.minOrdinal ?? 0 });
+          const { text: expurgated, ...document } = guard.expurgate(input, {
+            languageId: line.languageId ?? '',
+            minOrdinal: line.minOrdinal ?? 0,
+            ...(line.substituteLanguage === undefined ? {} : { substituteLanguage: line.substituteLanguage }),
+          });
           got = document;
           text = expurgated;
           break;

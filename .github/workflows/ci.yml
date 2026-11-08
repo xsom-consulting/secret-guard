@@ -1,4 +1,5 @@
-# Vérification de Secret Guard à chaque poussée et à chaque demande de fusion.
+# Vérification de Secret Guard à chaque poussée et à chaque demande de fusion : module racine (Apache-2.0) et module
+# expurgation (dossier expurgation/, PolyForm Small Business 1.0.0).
 name: CI
 
 on:
@@ -33,12 +34,34 @@ jobs:
         run: go vet ./...
       - name: go vet (GOOS=windows)
         run: GOOS=windows go vet ./...
+      - name: go vet, module expurgation
+        working-directory: expurgation
+        run: go vet ./... && GOOS=windows go vet ./...
+      - name: Identifiant SPDX de chaque fichier source (Apache-2.0 ; PolyForm sous expurgation/)
+        run: go run ./tools/spdxcheck
+      - name: Le moteur ne dépend pas de l'expurgation
+        run: |
+          if go list -deps -test ./... | grep -q '^github.com/xsom-consulting/secret-guard/expurgation'; then
+            echo "::error::un paquet du module racine importe le module expurgation"
+            exit 1
+          fi
       - name: golangci-lint (depguard compris)
         uses: golangci/golangci-lint-action@v9
         with:
           version: v2.14.0
+      - name: golangci-lint, module expurgation
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.14.0
+          working-directory: expurgation
       - name: go test (couverture)
         run: go test -count=1 -coverprofile=coverage.out ./...
+      - name: go test (couverture), module expurgation
+        working-directory: expurgation
+        run: go test -count=1 -coverprofile=coverage.out ./...
+      - name: "Expurgation : vecteurs, corpus et résidus du masquage (vectors/expurgate.json)"
+        working-directory: expurgation
+        run: go test -count=1 -v -run '^(TestExpurgateVectors|TestExpurgateCorpus|TestExpurgateRedactResiduals|TestLicense)$' .
       # Déjà exécutée par go test : cette étape la nomme et l'affiche dans le journal (nombre de cas, identifiants en
       # écart, jamais une entrée).
       - name: "Parité à 100 % avec Secret Guard (vectors/detection/, 823 cas)"
@@ -51,14 +74,18 @@ jobs:
         run: go test -count=1 -v -run '^(TestCustomPackParity|TestCustomPatternParity|TestCustomDetectionParity|TestCustomTermsParity|TestCustomUnicodeParity|TestCustomScanParity|TestCustomRedactParity)$' ./custom ./detect
       - name: Couverture du moteur (detect, pack, custom, hidden, mentions, internal ≥ 80 %)
         run: go run ./tools/covercheck coverage.out
-      - name: depguardcheck (chaque import interdit est refusé)
+      - name: Couverture de l'expurgation (expurgation, internal ≥ 80 %)
+        run: go run ./tools/covercheck -module expurgation expurgation/coverage.out
+      - name: depguardcheck (chaque import interdit est refusé, deux modules)
         if: runner.os == 'Linux'
         run: |
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
           go run ./tools/depguardcheck
       - name: govulncheck
         if: runner.os == 'Linux'
-        run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: |
+          go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+          (cd expurgation && go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...)
 
   wasm:
     name: WebAssembly (wasip1) et essai sous Node
@@ -73,9 +100,10 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: go vet (GOOS=wasip1)
-        run: GOOS=wasip1 GOARCH=wasm go vet ./...
-      - name: Construire le module WebAssembly
-        run: GOOS=wasip1 GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -buildmode=c-shared -o dist/secret-guard.wasm ./cmd/secret-guard-wasm
+        run: GOOS=wasip1 GOARCH=wasm go vet ./... && (cd expurgation && GOOS=wasip1 GOARCH=wasm go vet ./...)
+      - name: Construire le module WebAssembly (module expurgation, qui l'embarque)
+        working-directory: expurgation
+        run: GOOS=wasip1 GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -buildmode=c-shared -o ../dist/secret-guard.wasm ./cmd/secret-guard-wasm
       - name: Construire la ligne de commande pour WASI
         run: GOOS=wasip1 GOARCH=wasm go build -trimpath -o dist/secret-guard-cli.wasm ./cmd/secret-guard
       - name: Essais sous Node (node:wasi et couche WASI minimale ; importations en liste fermée)

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect_test
 
 // Test externe : l'API publique seule (pack.Decode, detect.LoadRules, detect.Scan, detect.ScanWithFingerprint)

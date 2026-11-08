@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Affectations contextuelles du moteur de détection : nom de variable sensible suivi d'une
 // valeur littérale (affectations, environnement, arguments de commande, .npmrc, en-têtes Cookie, « -u
 // utilisateur:mot de passe », clé auth de Docker), avec les blocs YAML, heredoc, préfixes de chaînes des langages et
@@ -58,6 +60,10 @@ type assignmentPattern struct {
 	plain bool
 	// keyUnits : borne en unités UTF-16 du nom (« {1,80} » sur une classe qui admet tout point de code), 0 sinon.
 	keyUnits int
+	// valueShape : affectation indirecte (indirect.go) dont la valeur doit avoir la forme d'un secret.
+	valueShape bool
+	// windowed : motif cherché seulement près des mots des noms sensibles (indirect.go, findIndirect).
+	windowed bool
 }
 
 func isAssignmentBoundary(r rune) bool {
@@ -71,7 +77,8 @@ func isLineBreak(r rune) bool { return isJSLineTerminator(r) }
 func isDockerBoundary(r rune) bool { return isJSWhitespace(r) || r == ',' || r == '{' }
 
 // assignmentPatterns : ASSIGNMENT, INDEXED_ENV_ASSIGNMENT, POWERSHELL_ENV_ASSIGNMENT, CLI_ARGUMENT_ASSIGNMENT,
-// FUNCTION_ENV_ASSIGNMENT, NPM_AUTH_TOKEN_ASSIGNMENT, dans l'ordre de Secret Guard.
+// FUNCTION_ENV_ASSIGNMENT, NPM_AUTH_TOKEN_ASSIGNMENT, dans l'ordre de Secret Guard, puis les affectations indirectes
+// de indirect.go (écart v0.5.2), ajoutées à la fin par son init.
 var assignmentPatterns = []assignmentPattern{
 	{re: regexp.MustCompile(reAssignment), start: lineStartOr(isAssignmentBoundary), plain: true},
 	{re: regexp.MustCompile(reIndexedEnvAssignment), start: lineStartOr(isIndexedBoundary), keyUnits: 80},
@@ -135,7 +142,12 @@ type assignmentMatch struct {
 func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmentPattern, lang language, findings []finding) []finding {
 	text := v.text
 	for lastIndex := 0; lastIndex <= len(text); {
-		m := execFrom(p.re, text, lastIndex, p.start)
+		var m []int
+		if p.windowed {
+			m = ctx.findIndirect(p, lastIndex)
+		} else {
+			m = execFrom(p.re, text, lastIndex, p.start)
+		}
 		if m == nil {
 			break
 		}
@@ -180,6 +192,9 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 			continue
 		}
 		value := text[parsed.start:parsed.valueEnd]
+		if p.valueShape && !indirectValueShape(v, parsed) {
+			continue
+		}
 		if ctx.safeContextualValue(&match, parsed, lang) ||
 			isJSONSchemaTypeDescriptor(parsed, value, lang) ||
 			ctx.isSymbolicEnumValue(&match, key, parsed, value) ||
@@ -642,6 +657,9 @@ func (ctx *contextualText) safeContextualValue(m *assignmentMatch, p *parsedValu
 	if (safeLiteral(value) || isAuthSchemeSubstitute(value) || isSubstitutePEM(value)) && !hasExpressionTail(text, p) {
 		return true
 	}
+	if isUnquotedSubstitute(text, p) {
+		return true
+	}
 	if ctx.isBareEnvironmentAssignment(m, lang) {
 		return false
 	}
@@ -666,6 +684,21 @@ func (ctx *contextualText) safeContextualValue(m *assignmentMatch, p *parsedValu
 			ctx.codeDeclaration(lineStart, m.end)
 	}
 	return eligible && isSafeReference(value)
+}
+
+// isUnquotedSubstitute dit si une valeur sans guillemets est un Substitut coupé par la lecture de la valeur, qui
+// s'arrête à sa virgule (« , pas la vraie valeur ») ou à son dièse (« #1 ») : la valeur commence par un Substitut
+// complet, au plus précédé d'un schéma d'authentification (« Bearer »), et ce Substitut finit proprement
+// (isSubstituteFragment). Extension de ce module, comme safeLiteral.
+func isUnquotedSubstitute(text []byte, p *parsedValue) bool {
+	if p.kind != kindUnquoted {
+		return false
+	}
+	start := p.start
+	if end, ok := authSchemeEnd(text[p.start:p.valueEnd]); ok {
+		start += end
+	}
+	return isSubstituteFragment(text, start, p.valueEnd)
 }
 
 // isBareEnvironmentAssignment suit isBareEnvironmentAssignment de Secret Guard.
@@ -857,7 +890,7 @@ func (r *Rules) scanCookieCredentials(v *view, findings []finding) []finding {
 		lineStart, line := header[2], text[header[2]:header[3]]
 		for _, c := range cookieSecretPattern.FindAllSubmatchIndex(line, -1) {
 			value := line[c[4]:c[5]]
-			if len(value) == 0 || safeLiteral(value) {
+			if len(value) == 0 || safeLiteral(value) || isSubstituteFragment(line, c[4], c[5]) {
 				continue
 			}
 			findings = append(findings, contextualFinding(v, cookie, lineStart+c[4], lineStart+c[5], "credential_cookie_header"))
@@ -916,7 +949,8 @@ func (r *Rules) scanBasicAuthArguments(v *view, findings []finding) []finding {
 		} else {
 			lastIndex = m[1]
 		}
-		if safeLiteral(text[passwordStart:passwordEnd]) {
+		// Un Substitut écrit sans guillemets est coupé à sa première espace : le morceau lu en est le début.
+		if safeLiteral(text[passwordStart:passwordEnd]) || isSubstituteFragment(text, passwordStart, passwordEnd) {
 			continue
 		}
 		findings = append(findings, contextualFinding(v, basic, userStart, passwordEnd, "basic_auth_command_argument"))
@@ -969,9 +1003,12 @@ func (r *Rules) scanDockerAuth(v *view, ctx *contextualText, budget *decodeBudge
 // début de ligne, dernières positions cherchées. Chaque requête est en temps constant ou logarithmique, ou reprend une
 // recherche là où la précédente s'est arrêtée (requêtes croissantes d'un même parcours).
 type contextualText struct {
-	text     []byte
-	newlines []int
-	scanned  bool
+	text []byte
+	// indirect : fenêtres des affectations indirectes (indirect.go), calculées à la première demande.
+	indirect      [][2]int
+	indirectReady bool
+	newlines      []int
+	scanned       bool
 	// indexOf : dernière recherche par aiguille (début, résultat).
 	searches  map[string]*lastSearch
 	lineBreak lastSearch

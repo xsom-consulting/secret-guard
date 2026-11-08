@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Motifs sûrs du Pack de règles du client (docs/custom-pack.md, §3).
 //
 // Portage en Go de secret-guard/packages/core/src/custom/pattern.ts (Apache-2.0, origine, avis et modifications dans

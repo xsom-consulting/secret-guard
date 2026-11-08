@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Analyse du moteur de détection : point d'entrée unique Scan.
 //
 // Portage en Go de scan, collectFindings, scanDetectors, scanDecodedText, scanBase64Candidates et dedupeOverlaps de
@@ -43,7 +45,22 @@ func Scan(content []byte, rules *Rules, options Options) Result {
 	return scan(content, rules, options, nil)
 }
 
-// scan est l'analyse de Scan et de ScanWithFingerprint : avec key, chaque constat reçoit son Empreinte locale,
+// ScanWith analyse content comme Scan, avec options, et, si key n'est pas nil, donne à chaque constat son Empreinte
+// locale sous *key, comme ScanWithFingerprint (qui n'a pas d'options). Une clé non nil inutilisable (valeur zéro,
+// effacée) rend l'analyse incomplète (FailureScanLimit pour une entrée de plus de MaxInputBytes octets, sinon
+// FailureScanError) : jamais de constat sans Empreinte locale quand une clé est donnée. Point d'entrée de l'expurgation
+// (module expurgation), qui analyse, puis analyse de nouveau, avec les mêmes options et la même clé.
+func ScanWith(content []byte, rules *Rules, options Options, key *FingerprintKey) Result {
+	if key != nil && !key.Usable() {
+		if len(content) > MaxInputBytes {
+			return incomplete(FailureScanLimit)
+		}
+		return incomplete(FailureScanError)
+	}
+	return scan(content, rules, options, key)
+}
+
+// scan est l'analyse de Scan, de ScanWith et de ScanWithFingerprint : avec key, chaque constat reçoit son Empreinte locale,
 // calculée sur sa valeur avant l'effacement des tampons de l'analyse. Les tampons de texte relevés par le budget de
 // vues (vues dérivées, textes décodés) sont effacés avant le retour, quelle que soit l'issue (panique comprise).
 func scan(content []byte, rules *Rules, options Options, key *FingerprintKey) (result Result) {

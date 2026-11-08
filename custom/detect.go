@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Sémantique de détection du Pack de règles du client (docs/custom-pack.md, §4), avec le préfiltre littéral et le
 // budget de travail du §5.
 //

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Pont Unicode des termes confidentiels : ce que calcule Node 26 (ICU 78, Unicode 17.0.0), figé par blocs de 4 096
  * points de code dans `vectors/custom/unicode.json`, recalculé par le test Go `TestCustomUnicodeParity` :

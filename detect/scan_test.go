@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package detect
 
 import (
@@ -312,9 +314,12 @@ var allowedExported = map[string][]string{
 	"RedactOptions":   {"Custom", "NeutralCustomNames"},
 	"SanitizeFailure": nil,
 	"SanitizeResult":  {"Failure", "Initial", "Final"},
-	// Expurgation : étendue remplacée dans le texte d'origine, numéro et Substitut écrit (préfixe public de la table
-	// fermée, des X, le numéro), jamais la valeur, que l'appelant lit lui-même dans son texte.
-	"Substitution": {"RuleID", "SecretType", "ByteStart", "ByteEnd", "UTF16Start", "UTF16End", "LocalFingerprint", "Ordinal", "Replacement"},
+	// Langue des Substituts (« fr », « en ») et table fermée des types de secret par règle : textes publics, aucune
+	// valeur.
+	"SubstituteLanguage": nil,
+	"SubstituteLabel":    {"RuleID", "French", "English"},
+	// Étendue et numéro d'un Substitut trouvé dans un texte (FindSubstitutes), aucune valeur.
+	"SubstituteSpan": {"ByteStart", "ByteEnd", "Ordinal"},
 }
 
 // allowedCustomFields sont les seuls champs pointeurs des structures exportées : le Pack de règles du client d'une
@@ -322,9 +327,9 @@ var allowedExported = map[string][]string{
 var allowedCustomFields = map[string]bool{"Options.Custom": true, "RedactOptions.Custom": true}
 
 // allowedFingerprintFields sont les seuls champs dont le nom évoque un condensat : l'Empreinte locale, HMAC sous la clé
-// de l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash), d'un constat et du constat
-// représentatif d'un Substitut (recopiée du constat, ou calculée sous la même clé sur l'étendue élargie).
-var allowedFingerprintFields = map[string]bool{"Finding.LocalFingerprint": true, "Substitution.LocalFingerprint": true}
+// de l'appelant, jamais un condensat non salé (TestLocalFingerprintNeverUnsaltedHash), d'un constat. La Substitution
+// de l'expurgation, qui en porte une aussi, est contrôlée dans le module expurgation.
+var allowedFingerprintFields = map[string]bool{"Finding.LocalFingerprint": true}
 
 var forbiddenFieldWords = regexp.MustCompile(`(?i)value|excerpt|snippet|mask|redact|hash|digest|sha\d|fingerprint|preview|match|text|content|^secret$|^raw|data$`)
 
@@ -383,8 +388,8 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		// compilateur et par les types ci-dessous).
 		slices.Sort(values)
 		if want := []string{
-			"ErrExpurgateEncoding", "ErrExpurgateIncomplete", "ErrExpurgateOrdinal", "ErrExpurgateSpan", "ErrFingerprintKeyInvalid", "ErrPackUnusable",
-			"ErrRedactIncomplete", "ErrRedactSpan",
+			"ErrFingerprintKeyInvalid", "ErrPackUnusable", "ErrRedactIncomplete", "ErrRedactSpan", "ErrSubstituteLanguage",
+			"ErrSubstituteOrdinal",
 		}; !slices.Equal(values, want) {
 			t.Errorf("variables exportées %v, attendu %v", values, want)
 		}
@@ -392,11 +397,16 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		if want := []string{
 			// méthode Has : Rules.Has, rend un booléen, jamais une valeur. Redact et RedactAndRescan rendent le texte
 			// de l'appelant sans les valeurs détectées (TestNoExportedFunctionReturnsValue, TestRedactLeavesNoValue) ;
-			// Expurgate et ExpurgateAndRescan, le texte où chaque partie secrète est remplacée par un Substitut, et des
-			// Substitutions sans valeur (TestExpurgateCorpus) ; SubstitutePrefixes, la table fermée des préfixes publics.
-			"DecisionForLevel", "Expurgate", "ExpurgateAndRescan", "LoadRules", "NewFingerprintKey", "Redact", "RedactAndRescan",
-			"Scan", "ScanWithFingerprint", "SubstitutePrefixes",
-			"méthode Error", "méthode GoString", "méthode Has", "méthode String", "méthode Unwrap", "méthode Wipe",
+			// SubstitutePrefixes et SubstituteLabels, les tables fermées des préfixes publics et des types de secret.
+			// Primitives de l'expurgation (module expurgation, v0.6.0) : SecretRange et méthode FirstLineSecretEnd, des
+			// positions ; SubstituteText, un Substitut (préfixe public de la table, numéro, type : TestSubstituteText) ;
+			// Fingerprint, une Empreinte locale (HMAC sous la clé de l'appelant : TestFingerprint) ; ScanWith, un
+			// résultat d'analyse ; méthodes Usable et Valid, des booléens.
+			"DecisionForLevel", "FindSubstitutes", "Fingerprint", "LoadRules", "NewFingerprintKey", "Redact",
+			"RedactAndRescan", "Scan", "ScanWith", "ScanWithFingerprint", "SecretRange", "SubstituteLabels",
+			"SubstitutePrefixes", "SubstituteText",
+			"méthode Error", "méthode FirstLineSecretEnd", "méthode GoString", "méthode Has", "méthode String",
+			"méthode Unwrap", "méthode Usable", "méthode Valid", "méthode Wipe",
 		}; !slices.Equal(funcs, want) {
 			t.Errorf("fonctions exportées %v, attendu %v", funcs, want)
 		}
@@ -407,7 +417,8 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 			reflect.TypeFor[Result](), reflect.TypeFor[Options](), reflect.TypeFor[Rules](), reflect.TypeFor[PackRefusal](),
 			reflect.TypeFor[PackError](), reflect.TypeFor[FingerprintKey](), reflect.TypeFor[Decision](),
 			reflect.TypeFor[RedactOptions](), reflect.TypeFor[SanitizeFailure](), reflect.TypeFor[SanitizeResult](),
-			reflect.TypeFor[Substitution](),
+			reflect.TypeFor[SubstituteLanguage](), reflect.TypeFor[SubstituteLabel](),
+			reflect.TypeFor[SubstituteSpan](),
 		} {
 			if !found[typ.Name()] {
 				t.Errorf("type %s absent du relevé", typ.Name())

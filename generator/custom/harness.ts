@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Reprise des tests des règles du client : chaque fichier de test repris est exécuté sur le moteur transpilé avec le
  * `expect` de Vitest (une assertion d'origine qui échoue arrête le générateur), et chaque entrée passée au moteur est

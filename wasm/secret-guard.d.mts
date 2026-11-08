@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // Types du chargeur du module WebAssembly de Secret Guard (secret-guard.mjs).
 
 /** Taille d'entrée la plus grande analysée, en octets ; au-delà, l'analyse rend scan_limit. */
@@ -65,6 +66,8 @@ export interface ExpurgateOptions {
   /** Plus petit numéro d'un nouveau Substitut (0 à 999). */
   readonly minOrdinal?: number;
   readonly languageId?: string;
+  /** Langue des Substituts : 'fr' (par défaut) ou 'en'. Une autre valeur fait refuser la demande. */
+  readonly substituteLanguage?: 'fr' | 'en';
 }
 
 export interface ExpurgateResult {

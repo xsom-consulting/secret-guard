@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `npm run vectors:detection -- --upstream <checkout>` (dans `generator/`) : écrit le corpus de parité de détection
  * (`vectors/detection/*.json` et `manifest.json`) avec le moteur TypeScript de Secret Guard. `--check` régénère en

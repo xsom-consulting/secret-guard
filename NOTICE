@@ -13,6 +13,16 @@ formerly jt33120/poc-AI_guard; commit c177a447b8cdf8ce07e0c3160ea45dace99b6dc9,
 path secret-guard/packages/core), licensed under the Apache License, Version 2.0.
 Origin, hashes of the copied files and modifications: UPSTREAM.md.
 
+Licences de ce dépôt / licenses of this repository:
+- Module racine github.com/xsom-consulting/secret-guard : Apache-2.0 (LICENSE).
+  Root module github.com/xsom-consulting/secret-guard: Apache-2.0 (LICENSE).
+- Module github.com/xsom-consulting/secret-guard/expurgation (dossier expurgation/,
+  module WebAssembly compris) : PolyForm Small Business 1.0.0 (expurgation/LICENSE),
+  sans code de l'œuvre d'origine. Les versions v0.1.0 à v0.5.1 restent sous Apache-2.0.
+  Module github.com/xsom-consulting/secret-guard/expurgation (folder expurgation/,
+  including the WebAssembly module): PolyForm Small Business 1.0.0 (expurgation/LICENSE),
+  with no code from the original work. Versions v0.1.0 to v0.5.1 remain Apache-2.0.
+
 Composants tiers / third-party components:
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.

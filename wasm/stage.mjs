@@ -1,6 +1,7 @@
+// SPDX-License-Identifier: Apache-2.0
 // Prépare le paquet npm dans un dossier à part : node wasm/stage.mjs [--out dist/npm] [--version x.y.z]
 // Copie les fichiers de « files » (package.json) : chargeurs et types de wasm/, module construit dist/secret-guard.wasm,
-// LICENSE et NOTICE de la racine. Avec --version (étiquette de la Release sans « v »), refuse un package.json d'une
+// LICENSE et NOTICE de la racine, et la licence du module expurgation (expurgation/LICENSE, que le module embarque). Avec --version (étiquette de la Release sans « v »), refuse un package.json d'une
 // autre version. Aucun réseau.
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -19,6 +20,7 @@ if (values.version !== undefined && values.version !== manifest.version) {
 const sources = {
   'secret-guard.wasm': join(root, 'dist', 'secret-guard.wasm'),
   LICENSE: join(root, 'LICENSE'),
+  'LICENSE-PolyForm-Small-Business-1.0.0': join(root, 'expurgation', 'LICENSE'),
   NOTICE: join(root, 'NOTICE'),
 };
 const out = resolve(values.out);

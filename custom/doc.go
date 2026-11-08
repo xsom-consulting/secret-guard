@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package custom exécute un Pack de règles du client : détecteurs propres à un client (identifiants internes,
 // noms de code de projets, formats maison…), calibrés et signés par celui qui distribue le Pack, ajoutés aux règles
 // intégrées du moteur (docs/custom-pack.md, schéma schema/CustomPack.json).

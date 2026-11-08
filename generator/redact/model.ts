@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Vecteurs du masquage (`vectors/redact.json`) et des niveaux et décisions (`vectors/decision.json`) : forme et
  * listes fermées. Lus tels quels par les tests Go `TestRedactParity` et `TestDecisionParity` (`detect/`) ; tout champ

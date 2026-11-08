@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Traduction d'un motif JavaScript du catalogue Secret Guard en syntaxe RE2 (`regexp` de Go).
  * Fonctions pures ; règles détaillées dans `docs/rule-pack.md` :

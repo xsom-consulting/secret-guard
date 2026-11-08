@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `npm run vectors:custom -- --upstream <checkout>` (dans `generator/`) : écrit les vecteurs de parité du Pack de
  * règles du client (`vectors/custom/*.json` et `manifest.json`) avec le moteur TypeScript de Secret Guard : vecteurs

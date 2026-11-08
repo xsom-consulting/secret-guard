@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Sémantique des chaînes et des expressions régulières de JavaScript utilisée par les règles. Apache-2.0 : portage de secret-guard/packages/core/src/rules.ts, origine et avis dans UPSTREAM.md.
 //
 // Secret Guard manipule des chaînes JavaScript (unités UTF-16) ; les règles portées lisent les octets d'une vue. Ces
@@ -13,16 +15,13 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/xsom-consulting/secret-guard/internal/jstext"
 )
 
-// isJSWhitespace dit si r est un espace de \s et de trim() en JavaScript (WhiteSpace et LineTerminator).
-func isJSWhitespace(r rune) bool {
-	switch r {
-	case '\t', '\n', '\v', '\f', '\r', ' ', 0x00A0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF:
-		return true
-	}
-	return 0x2000 <= r && r <= 0x200A
-}
+// isJSWhitespace dit si r est un espace de \s et de trim() en JavaScript (WhiteSpace et LineTerminator) : définition
+// de internal/jstext, partagée avec l'expurgation.
+func isJSWhitespace(r rune) bool { return jstext.IsWhitespace(r) }
 
 // isJSLineTerminator dit si r termine une ligne pour ^ et $ du drapeau m de JavaScript.
 func isJSLineTerminator(r rune) bool { return r == '\n' || r == '\r' || r == 0x2028 || r == 0x2029 }
@@ -61,20 +60,9 @@ func isJSBlank(value []byte) bool {
 	return true
 }
 
-// utf16Units est la longueur de text en unités UTF-16 (String.prototype.length).
-func utf16Units(text []byte) int {
-	units := 0
-	for i := 0; i < len(text); {
-		r, width := utf8.DecodeRune(text[i:])
-		if r > 0xFFFF {
-			units += 2
-		} else {
-			units++
-		}
-		i += width
-	}
-	return units
-}
+// utf16Units est la longueur de text en unités UTF-16 (String.prototype.length) : définition de internal/jstext,
+// partagée avec l'expurgation.
+func utf16Units(text []byte) int { return jstext.UTF16Units(text) }
 
 // prefixOfUnits rend le nombre d'octets du plus long préfixe de text qui tient en limit unités UTF-16 sans couper
 // un point de code (JavaScript couperait une paire de substitution : écart hors du plan multilingue de base).

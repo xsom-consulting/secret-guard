@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Empreinte locale d'un constat.
 //
 // L'Empreinte locale est l'hexadécimal minuscule des 16 premiers octets de HMAC-SHA256(clé, valeur
@@ -69,8 +71,9 @@ func (k FingerprintKey) Wipe() {
 	}
 }
 
-// usable dit si la clé a été construite par NewFingerprintKey et n'a pas été effacée.
-func (k FingerprintKey) usable() bool {
+// Usable dit si la clé a été construite par NewFingerprintKey et n'a pas été effacée. Une clé inutilisable rend toute
+// analyse avec elle incomplète, et Fingerprint faux.
+func (k FingerprintKey) Usable() bool {
 	if k.secret == nil {
 		return false
 	}
@@ -99,13 +102,25 @@ func localFingerprint(key FingerprintKey, value []byte) string {
 	return hex.EncodeToString(sum[:fingerprintBytes])
 }
 
+// Fingerprint rend l'Empreinte locale de value sous key (même calcul que celle d'un constat de ScanWithFingerprint :
+// hexadécimal minuscule des 16 premiers octets de HMAC-SHA256(clé, value)), et faux, sans calcul, si key n'est pas
+// utilisable (valeur zéro, effacée). Sert à l'appelant qui remplace un texte (module expurgation) : deux textes égaux
+// ont la même Empreinte locale sous une même clé, sans que rien ne relie l'Empreinte locale à la valeur sans la clé.
+// Elle ne rend jamais value, ni un condensat non salé.
+func Fingerprint(key FingerprintKey, value []byte) (string, bool) {
+	if !key.Usable() {
+		return "", false
+	}
+	return localFingerprint(key, value), true
+}
+
 // ScanWithFingerprint analyse content comme Scan (sans identifiant de langage) et donne à chaque constat son
 // Empreinte locale, calculée sous key sur la valeur du constat : l'appelant peut ainsi reconnaître qu'une valeur
 // revient sans la garder. Une clé absente (valeur zéro) ou effacée rend l'analyse incomplète (FailureScanError, aucun
 // constat) : jamais de constat sans Empreinte locale. Les copies de la valeur faites pour le calcul sont effacées
 // avant le retour, quelle que soit l'issue.
 func ScanWithFingerprint(content []byte, rules *Rules, key FingerprintKey) Result {
-	if !key.usable() {
+	if !key.Usable() {
 		if len(content) > MaxInputBytes {
 			return incomplete(FailureScanLimit)
 		}

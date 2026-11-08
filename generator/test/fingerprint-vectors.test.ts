@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { readFileSync } from 'node:fs';
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';

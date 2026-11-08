@@ -1,10 +1,14 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Commande covercheck : lit un profil de couverture Go (go test -coverprofile) et échoue
 // si le moteur de détection est couvert à moins du seuil.
 //
-// Usage : go run ./tools/covercheck [-min 80] coverage.out
+// Usage : go run ./tools/covercheck [-min 80] [-module racine|expurgation] coverage.out
 //
-// Les paquets mesurés sont detect, pack, custom, hidden, mentions et internal, sous-paquets compris, chacun
-// séparément.
+// Module racine (par défaut) : les paquets mesurés sont detect, pack, custom, hidden, mentions et internal,
+// sous-paquets compris, chacun séparément. Module expurgation (profil de cd expurgation && go test
+// -coverprofile=coverage.out ./...) : le paquet expurgation seul (sans ses sous-dossiers) et expurgation/internal,
+// sous-paquets compris. Un chemin terminé par « $ » désigne le paquet seul.
 // Un paquet sans aucune instruction est accepté (vacuité) ; dès qu'il en contient, elles
 // figurent au profil, testées ou non, et comptent dans la mesure.
 package main
@@ -32,6 +36,13 @@ var DefaultPackages = []string{
 	module + "/hidden",
 	module + "/mentions",
 	module + "/internal",
+}
+
+// ExpurgationPackages sont les paquets du module expurgation soumis au seuil : l'expurgation et sa partie interne
+// (demande et document du module WebAssembly).
+var ExpurgationPackages = []string{
+	module + "/expurgation$",
+	module + "/expurgation/internal",
 }
 
 // DefaultMin est le seuil de couverture des instructions, en pourcentage.
@@ -101,7 +112,8 @@ func Check(profile io.Reader, packages []string) ([]Result, error) {
 		file := key[:strings.LastIndex(key, ".go:")+len(".go")]
 		dir := path.Dir(file)
 		for i, pkg := range packages {
-			if dir == pkg || strings.HasPrefix(dir, pkg+"/") {
+			exact, only := strings.CutSuffix(pkg, "$")
+			if dir == exact || (!only && strings.HasPrefix(dir, pkg+"/")) {
 				results[i].Total += b.statements
 				if b.covered {
 					results[i].Covered += b.statements
@@ -116,11 +128,13 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags := flag.NewFlagSet("covercheck", flag.ContinueOnError)
 	flags.SetOutput(stderr)
 	minPercent := flags.Float64("min", DefaultMin, "seuil de couverture des instructions, en pourcentage")
+	moduleName := flags.String("module", "racine", "module mesuré : racine ou expurgation")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
-	if flags.NArg() != 1 || math.IsNaN(*minPercent) || *minPercent < 0 || *minPercent > 100 {
-		_, _ = fmt.Fprintln(stderr, "Usage : covercheck [-min 80] <profil de couverture> (seuil entre 0 et 100)")
+	packages := map[string][]string{"racine": DefaultPackages, "expurgation": ExpurgationPackages}[*moduleName]
+	if flags.NArg() != 1 || math.IsNaN(*minPercent) || *minPercent < 0 || *minPercent > 100 || packages == nil {
+		_, _ = fmt.Fprintln(stderr, "Usage : covercheck [-min 80] [-module racine|expurgation] <profil de couverture> (seuil entre 0 et 100)")
 		return 2
 	}
 	file, err := os.Open(flags.Arg(0))
@@ -130,7 +144,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	defer func() { _ = file.Close() }()
 
-	results, err := Check(file, DefaultPackages)
+	results, err := Check(file, packages)
 	if err != nil {
 		_, _ = fmt.Fprintf(stderr, "covercheck : %v\n", err)
 		return 1
@@ -143,7 +157,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 			code = 1
 		}
 		_, _ = fmt.Fprintf(stdout, "%s\t%.1f %% (%d/%d instructions, seuil %.0f %%)\t%s\n",
-			r.Package, r.Percent(), r.Covered, r.Total, *minPercent, status)
+			strings.TrimSuffix(r.Package, "$"), r.Percent(), r.Covered, r.Total, *minPercent, status)
 	}
 	return code
 }

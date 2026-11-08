@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Familles de règles du moteur de détection : règles « motif seul » et jwt, clés privées,
 // URL à identifiants, entropie. Les affectations contextuelles sont dans contextual.go.
 //
@@ -68,7 +70,7 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 			viewEnd, bodyEnd = lastIndex+found+len(endMarker), lastIndex+found
 			matched, reason = complete, "complete_private_key_block"
 		}
-		// Corps fait d'un Substitut (expurgate.go), entre l'en-tête et la marque de fin (ou la fin du texte) : valeur
+		// Corps fait d'un Substitut (substitute.go), entre l'en-tête et la marque de fin (ou la fin du texte) : valeur
 		// fictive, extension de ce module.
 		if matched != nil && !isSubstitutePEMBody(text, m[1], bodyEnd) {
 			reasons := append(encodingReasons(v.encoding), reason)
@@ -89,6 +91,7 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 		return findings, nil
 	}
 	capture := r.pattern.NumSubexp() >= 1
+	from := len(findings)
 	for _, m := range r.pattern.FindAllSubmatchIndex(text, -1) {
 		start, end := m[0], m[1]
 		if capture && m[2] >= 0 {
@@ -110,6 +113,9 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			}
 		}
 		findings = append(findings, newFinding(v, r, start, end, r.score-encodingPenalty(v.encoding), encodingReasons(v.encoding)))
+	}
+	if r.dashTail != nil {
+		return scanDashTail(v, r, budget, findings, from)
 	}
 	return findings, nil
 }

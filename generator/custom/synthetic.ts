@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Cas synthétiques des vecteurs du Pack de règles du client : chaque code d'erreur de validité et de motif, chaque
  * construction de motif admise et refusée, comparaison différentielle aléatoire des motifs (graine fixe), termes et

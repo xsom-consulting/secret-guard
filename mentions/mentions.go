@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package mentions relève les fichiers cités par « @ » dans un prompt d'assistant de code : « @chemin »,
 // « @"chemin avec espaces" » et « @chemin#L10-20 ». Portage en Go de mentionedPaths de Secret Guard (file-guard.ts ;
 // origine, avis et modifications dans UPSTREAM.md), sans lecture de fichier ni résolution de chemin : l'appelant

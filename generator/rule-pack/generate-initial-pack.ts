@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * `npm run pack:initial` (dans `generator/`) : écrit `pack/initial/pack.json` et les motifs du moteur Go
  * (`detect/engine_patterns.go`) depuis la copie figée du catalogue Secret Guard (`pack/initial/upstream/rules.ts.txt`).

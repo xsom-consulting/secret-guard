@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MENTION_CWD, MENTION_REGEXES, HIDDEN_KINDS, type HiddenExpected, type MentionsExpected } from '../hidden/expected.ts';

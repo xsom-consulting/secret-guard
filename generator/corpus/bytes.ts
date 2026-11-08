@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Octets ↔ texte du corpus de parité. Le moteur Go analyse des octets, Secret Guard une chaîne UTF-16 :
  * le générateur décode chaque entrée comme Go la parcourt, puis convertit les positions UTF-16 du moteur

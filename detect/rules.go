@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Règles du moteur de détection, chargées depuis un Pack de règles (package pack).
 //
 // Portage en Go de secret-guard/packages/core/src/rules.ts (Apache-2.0, origine, avis et modifications dans
@@ -126,6 +128,8 @@ type rule struct {
 	// gate : porte littérale du motif (prefilter.go), nil sans porte (la règle s'exécute toujours).
 	gate                 *literalGate
 	minLength, maxLength int
+	// dashTail : motif sans son « \b » final, pour les jetons finis par un tiret (dashtail.go), nil sinon.
+	dashTail *regexp.Regexp
 }
 
 // Rules est un Pack de règles chargé : règles « motif seul » dans l'ordre du Pack (jwt compris), règles dont le
@@ -286,9 +290,13 @@ func loadRule(spec ruleSpec, expected map[string]engineRule) (*rule, error) {
 	} else if spec.Family != familyFixedPattern {
 		return nil, refuse(spec.RuleID, RefusalUnknownEngineRule)
 	}
+	var dashTail *regexp.Regexp
+	if spec.Family == familyFixedPattern && pattern != nil && spec.RuleID != ruleJWT {
+		dashTail = dashTailPattern(spec.Pattern)
+	}
 	return &rule{
 		id: spec.RuleID, family: spec.Family, secretType: spec.SecretType, score: spec.Score, validator: check,
-		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength,
+		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength, dashTail: dashTail,
 	}, nil
 }
 

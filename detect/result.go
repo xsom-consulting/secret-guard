@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Résultat de l'analyse du moteur de détection.
 //
 // Forme portée de ScanResult et Finding de secret-guard/packages/core/src/types.ts (Apache-2.0, origine, avis et

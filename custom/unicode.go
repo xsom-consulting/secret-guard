@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Sémantique Unicode de JavaScript utilisée par les termes confidentiels : classes de mots \p{L}\p{N}\p{M},
 // String.prototype.toLowerCase (règle Final_Sigma comprise) et propriété Default_Ignorable_Code_Point du texte
 // visible. Les tables de la bibliothèque standard de Go 1.27 et de golang.org/x/text sont en Unicode 17.0.0, comme

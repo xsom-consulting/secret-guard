@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /**
  * Moteur TypeScript de Secret Guard pour le corpus de parité. Le générateur lit un checkout du
  * dépôt d'origine au commit de `UPSTREAM.md`, vérifie le SHA-256 de chaque fichier lu,

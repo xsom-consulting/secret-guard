@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package limits porte les limites du moteur de détection et du Pack de règles : seule source, lue par detect
 // (taille d'entrée, constats) et par pack (bornes du schéma RulePack). Une valeur ne se change ici qu'avec le
 // schéma (schema/RulePack.json, test de pack) et le corpus de parité.

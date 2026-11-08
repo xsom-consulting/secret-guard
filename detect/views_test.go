@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Tests portés de secret-guard/packages/core (Apache-2.0) : origine, avis et modifications dans UPSTREAM.md.
 
 package detect

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Porte littérale exacte des règles à motif.
 //
 // À la compilation d'une règle (LoadRules), l'arbre regexp/syntax de son motif donne, quand on sait le prouver, un

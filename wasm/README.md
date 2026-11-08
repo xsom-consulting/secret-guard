@@ -35,8 +35,8 @@ const result = guard.scan(new TextEncoder().encode(text));
 
 guard.setFingerprintKey(crypto.getRandomValues(new Uint8Array(32)));
 const { failure, substitutions, text: expurgated } = guard.expurgate(new TextEncoder().encode(text), { known: [] });
-// failure 'none': each secret is replaced by a typed Substitute (ghp_XXX…1) of the same length; same value, same
-// number (pass the previous substitutions back as `known`). Otherwise expurgated is null: send nothing.
+// failure 'none': each secret is replaced by a typed Substitute ('[secret masqué par xSOM n°1 : jeton GitHub, pas la
+// vraie valeur]', after the public prefix; { substituteLanguage: 'en' } for English); same value, same number (pass the previous substitutions back as `known`). Otherwise expurgated is null: send nothing.
 
 const hidden = guard.findHidden(new TextEncoder().encode(text)); // hidden instructions (tag characters, bidi…)
 ```
@@ -49,7 +49,7 @@ instance unusable (`guard.broken`): every later call throws.
 carries a signed build provenance attestation: `gh attestation verify secret-guard.wasm -R xsom-consulting/secret-guard`.
 The npm package is published with npm provenance.
 
-The engine only finds what its rules describe: it lowers the risk, it does not remove it. License: Apache-2.0.
+The engine only finds what its rules describe: it lowers the risk, it does not remove it. License: `(Apache-2.0 AND PolyForm-Small-Business-1.0.0)`. The JavaScript loaders and the detection engine are Apache-2.0 (`LICENSE`, `NOTICE`); the module also embeds expurgation (`expurgate`), under PolyForm Small Business 1.0.0 (`LICENSE-PolyForm-Small-Business-1.0.0`), source-available: free for a company with fewer than 100 people and less than 1,000,000 USD revenue, including the organizations that control it, that it controls or under common control with it; beyond that, including for an evaluation, a written license from xSOM Consulting (https://github.com/xsom-consulting/secret-guard/blob/main/COMMERCIAL.md).
 
 ## Français
 
@@ -67,11 +67,11 @@ navigateur ou une extension de navigateur.
 - **Mêmes résultats que le moteur Go.** Chaque Release exécute le module et le moteur Go natif sur tout le corpus du
   dépôt (823 cas de détection, vecteurs de l'expurgation et des instructions cachées) et exige des documents identiques.
 
-`expurgate` remplace chaque secret par un Substitut typé (`ghp_XXX…1`) à la longueur de la valeur ; une même valeur
+`expurgate` remplace chaque secret par un Substitut typé (`[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]`, après le préfixe public ; en anglais avec `substituteLanguage: 'en'`), sans rien de la valeur ; une même valeur
 reprend son numéro si l'appelant redonne les Substituts déjà posés (`known`). Exige `setFingerprintKey`.
 
 **Intégrité.** Chaque Release GitHub publie les SHA-256 de `secret-guard.wasm` et de l'archive npm (`SHA256SUMS`) et
 porte une attestation de provenance signée : `gh attestation verify secret-guard.wasm -R xsom-consulting/secret-guard`.
 Le paquet npm est publié avec la provenance npm.
 
-Le moteur ne trouve que ce que ses règles décrivent : il réduit le risque, il ne le supprime pas. Licence : Apache-2.0.
+Le moteur ne trouve que ce que ses règles décrivent : il réduit le risque, il ne le supprime pas. Licence : `(Apache-2.0 AND PolyForm-Small-Business-1.0.0)`. Les chargeurs JavaScript et le moteur de détection sont sous Apache-2.0 (`LICENSE`, `NOTICE`) ; le module embarque aussi l'expurgation (`expurgate`), sous PolyForm Small Business 1.0.0 (`LICENSE-PolyForm-Small-Business-1.0.0`), source disponible : gratuite pour une entreprise de moins de 100 personnes et de moins de 1 000 000 USD de chiffre d’affaires, sociétés qu’elle contrôle, qui la contrôlent ou sous contrôle commun avec elle comprises ; au-delà, y compris pour une évaluation, une licence écrite de xSOM Consulting (https://github.com/xsom-consulting/secret-guard/blob/main/COMMERCIAL.md).
