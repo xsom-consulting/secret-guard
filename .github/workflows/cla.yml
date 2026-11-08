@@ -1,13 +1,16 @@
 # Accord de contribution (CONTRIBUTING.md, « Accord de contribution ») : chaque demande de fusion d'une personne
 # extérieure au dépôt porte, dans sa description, la phrase d'acceptation de docs/CLA.md à sa version en vigueur.
-# Les membres et collaborateurs du dépôt et les robots en sont dispensés.
+# Les mainteneurs (liste MAINTAINERS ci-dessous, membres et collaborateurs du dépôt) et les robots en sont dispensés.
 #
-# Aucune action tierce, aucun accès au code de la demande (pas de checkout), aucun droit : le contrôle échoue ou réussit,
-# et la description de la demande garde la trace de l'acceptation (historique des modifications de GitHub).
+# pull_request_target : la définition du contrôle est celle de la branche par défaut, jamais celle de la demande, qui ne
+# peut donc pas le modifier pour le faire passer. Aucune action tierce, aucun accès au code de la demande (pas de
+# checkout), aucun droit ni secret : le contrôle échoue ou réussit, et la description de la demande garde la trace de
+# l'acceptation (historique des modifications de GitHub). Une appartenance à l'organisation non publique est vue par
+# GitHub comme CONTRIBUTOR : d'où la liste explicite des mainteneurs.
 name: Accord de contribution
 
 on:
-  pull_request:
+  pull_request_target:
     types: [opened, edited, reopened, synchronize]
 
 permissions: {}
@@ -27,7 +30,15 @@ jobs:
           BODY: ${{ github.event.pull_request.body }}
           ASSOCIATION: ${{ github.event.pull_request.author_association }}
           AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+          MAINTAINERS: jt33120
         run: |
+          for maintainer in $MAINTAINERS; do
+            if [ "$PR_USER" = "$maintainer" ]; then
+              echo "Mainteneur : accord non requis."
+              exit 0
+            fi
+          done
           case "$ASSOCIATION" in
             OWNER|MEMBER|COLLABORATOR)
               echo "Auteur $ASSOCIATION du dépôt : accord non requis."
