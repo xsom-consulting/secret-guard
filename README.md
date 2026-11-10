@@ -113,7 +113,7 @@ clean := hidden.Strip(text)   // retire exactement ce que Find signale ; rend to
 
 Un octet hors UTF-8 se lit comme U+FFFD (un par octet) : jamais signalé, il compte comme un caractère. `Strip` l'écrit U+FFFD : garder l'octet pourrait, une fois retiré un caractère voisin, former avec d'autres octets un caractère qui n'était pas là (U+202E par exemple). Comme à l'origine, `Strip` fait une seule passe : deux caractères invisibles que le retrait rapproche peuvent être signalés par un nouvel appel de `Find`. Parité : 152 cas produits par le `hidden.ts` d'origine (`vectors/hidden.json`, `TestHiddenParity`).
 
-### Consignes adressées à l'agent (`injection`)
+### Consignes adressées à l’agent (`injection`, v0.8.0)
 
 Une page lue, un résultat d'outil ou un fichier cité peut porter, en texte visible, des phrases écrites pour l'agent et non pour la personne : « ignore les instructions précédentes », un changement de rôle, la demande d'envoyer des clés à une adresse, l'ordre de ne rien dire à l'utilisateur, des balises de tours de parole de modèles. Le paquet `injection` les relève, en français et en anglais, sous cinq règles : `injection_instruction_override`, `injection_role_switch`, `injection_exfiltration`, `injection_concealment` et `injection_message_markers`.
 
