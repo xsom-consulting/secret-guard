@@ -141,3 +141,33 @@ func TestIsLongNameWord(t *testing.T) {
 		}
 	}
 }
+
+func TestEntropyIgnoresClaudeResourceLinks(t *testing.T) {
+	rules := loadInitialRules(t)
+	for i := 0; i < 20; i++ {
+		id := randomToken(t, 22)
+		for name, content := range map[string]string{
+			"Artifact":                "https://claude.ai/artifact/" + id,
+			"Artifact de Claude Code": "Lien : https://claude.ai/code/artifact/" + id + " (privé)",
+			"conversation":            "https://claude.ai/chat/" + id,
+			"projet":                  "voir https://claude.ai/project/" + id + ".",
+		} {
+			if n := entropyFindings(t, rules, content); n != 0 {
+				t.Fatalf("%s : %d constat(s) d'entropie sur un lien de ressource de claude.ai", name, n)
+			}
+		}
+		// Suite plus longue que l'identifiant d'un Artifact : détectée sans dépendre du tirage.
+		long := randomToken(t, 40)
+		for name, content := range map[string]string{
+			"lien de partage public":     "https://claude.ai/share/" + long,
+			"autre hôte, même chemin":    "https://claude.ai.exemple.fr/artifact/" + long,
+			"identifiant de connexion":   "https://user@claude.ai/artifact/" + long,
+			"HTTP sans chiffrement":      "http://claude.ai/artifact/" + long,
+			"jeton dans un chemin d'API": "https://api.exemple.fr/artifact/" + long,
+		} {
+			if n := entropyFindings(t, rules, content); n == 0 {
+				t.Fatalf("%s : jeton aléatoire non détecté", name)
+			}
+		}
+	}
+}
