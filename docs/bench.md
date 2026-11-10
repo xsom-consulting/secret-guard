@@ -67,7 +67,7 @@ l'entrée de 64 Kio de `wasm/bench.mjs` le même jour, contre 300 à 360 ms mesu
   montent jusqu'à 12 ms à 64 Kio (×5,6). Les familles les plus longues partent les premières pour réduire cet écart.
 - Sur un poste chargé (compilation, analyse antivirus), le temps dépend des cœurs libres.
 
-## v0.7.0 (non publiée) : règles de données personnelles
+## v0.7.0 : règles de données personnelles
 
 Mesure du 10 novembre 2026, même machine, mêmes conditions et même commande (`-benchtime 20x`, une passe), avant et après
 l'ajout des cinq règles `iban`, `fr_nir`, `fr_siret`, `fr_siren`, `payment_card` (aucune n'a de porte littérale : leurs
