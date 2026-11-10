@@ -22,9 +22,9 @@ Règle :
 |---|---|
 | `ruleId` | identifiant de la règle du catalogue (`^[a-z][a-z0-9_]*$`, 64 caractères au plus), unique dans le Pack |
 | `family` | `fixed_pattern` (motif seul), `private_key` (clé privée), `credential_url` (URL à identifiants), `contextual_assignment` (affectation contextuelle), `entropy` (entropie) |
-| `secretType` | type de secret de Secret Guard (`private_key`, `provider_token`, `access_token`, `jwt`, `database_credentials`, `cloud_credential`, `password`, `api_key`, `generic_secret`, `high_entropy`) |
+| `secretType` | type de secret de Secret Guard (`private_key`, `provider_token`, `access_token`, `jwt`, `database_credentials`, `cloud_credential`, `password`, `api_key`, `generic_secret`, `high_entropy`) ou, depuis la v0.7.0, type de donnée personnelle (`iban`, `fr_social_security_number`, `fr_siret`, `fr_siren`, `payment_card_number`) |
 | `score` | entier de 0 à 100, score de base de la règle (avant pénalité d'encodage, logique du moteur) |
-| `validator` | validateur nommé de la liste fermée `RULE_VALIDATORS` (`generator/src/rule-pack.ts`) : `jwt_structure` (`isStructurallyValidJwt`), ou chaîne vide sans validateur ; tout autre nom est refusé |
+| `validator` | validateur nommé de la liste fermée `RULE_VALIDATORS` (`generator/src/rule-pack.ts`) : `jwt_structure` (`isStructurallyValidJwt`) ; depuis la v0.7.0 `iban_mod97`, `fr_nir_key`, `fr_siret_luhn`, `fr_siren_luhn`, `payment_card_luhn` (section « Règles de données personnelles ») ; ou chaîne vide sans validateur ; tout autre nom est refusé |
 | `pattern` | motif en syntaxe RE2 ; obligatoire (non vide) pour les familles `fixed_pattern`, `private_key`, `credential_url` et `entropy` (`RULE_FAMILIES_WITH_PATTERN`) ; vide admis seulement pour `contextual_assignment`, quand la règle combine plusieurs motifs de `rules.ts` (logique du moteur) |
 | `minLength`, `maxLength` | bornes de longueur, en caractères, de la valeur détectée, reportées des répétitions de plus de 1 000 du motif d'origine et contrôlées en code ; voir « Bornes de longueur » |
 
@@ -35,6 +35,28 @@ Règle appliquée par le moteur Go (`LoadRules`, refus `invalid_bounds`) :
 - `0` = borne absente, pour chacune **indépendamment de l'autre** : `{minLength: 5, maxLength: 0}` (minimum seul) et `{minLength: 0, maxLength: 5}` (maximum seul) sont admis ;
 - si les deux sont non nulles, `minLength ≤ maxLength` : `{minLength: 10, maxLength: 5}` est refusé ;
 - une règle sans motif (`pattern` vide) n'a aucune borne (`0` et `0`).
+
+### Règles de données personnelles (v0.7.0)
+
+Cinq règles « motif seul » (`fixed_pattern`) s'ajoutent après les 35 du catalogue d'origine. Elles n'ont aucune origine dans Secret Guard : leur motif est écrit directement en RE2 dans `generator/rule-pack/personal-data.ts` (jamais à la main dans `pack.json`), et leur validateur est du code du moteur (`detect/personaldata.go`). Un moteur qui ne connaît pas leur type de secret ou leur validateur refuse le Pack en entier (`unknown_secret_type`, `unknown_validator`).
+
+| `ruleId` | `secretType` | `validator` | Score | Motif (résumé) | Bornes |
+|---|---|---|---:|---|---|
+| `iban` | `iban` | `iban_mod97` | 45 | deux lettres, deux chiffres, 2 à 7 groupes de quatre caractères (espace facultative devant chacun), reste de 1 à 3 caractères ; lettres des deux casses | 15 à 42 |
+| `fr_nir` | `fr_social_security_number` | `fr_nir_key` | 60 | sexe `[1-478]`, année, mois `01`–`12` ou `20`–`99`, département ou `2A`/`2B`, commune, ordre, clé ; espace facultative entre éléments | 15 à 21 |
+| `fr_siret` | `fr_siret` | `fr_siret_luhn` | 35 | 14 chiffres, groupes 3-3-3-5 ou 9-5 ou d'un bloc | 14 à 17 |
+| `fr_siren` | `fr_siren` | `fr_siren_luhn` | 35 | le mot « SIREN » (toute casse), guillemet, séparateurs `:` `=` `#` `n°` `no` facultatifs, puis 9 chiffres en un groupe capturant (la valeur) | 9 à 11 |
+| `payment_card` | `payment_card_number` | `payment_card_luhn` | 70 | 13 à 19 chiffres d'un bloc, 4-4-4-4 ou 4-6-4/5, séparés d'une espace ou d'un tiret | 13 à 19 |
+
+Les motifs délimitent un candidat ; le validateur le juge. Il reçoit la valeur détectée telle qu'écrite (séparateurs compris) et ne garde rien :
+
+- `iban_mod97` : chiffres de contrôle 02 à 98 ; longueur imposée du pays quand il est dans `ibanLengths` (52 pays d'Europe et du pourtour, registre ISO 13616), 15 à 34 caractères sinon ; reste modulo 97 égal à 1 (quatre premiers caractères passés à la fin, lettres remplacées par 10 à 35). **Raccourcissement** : le motif étant générique, il peut absorber le mot de quatre caractères qui suit l'IBAN. Pour cette règle seule (`trimmers`), le moteur retient, avant les bornes et le validateur, la plus longue fin de groupe de la correspondance (fin d'un mot, ou multiple de quatre caractères alphanumériques) dont le préfixe est un IBAN valide ; le constat s'arrête là, et le reste de la correspondance n'est pas un constat. Aucun préfixe valide : pas de constat.
+- `fr_nir_key` : 13 caractères et une clé de 2 chiffres égale à 97 − (nombre mod 97) ; `2A` compte pour 19 et `2B` pour 18 ; département, commune et numéro d'ordre jamais nuls.
+- `fr_siret_luhn` : 14 chiffres, Luhn ; si les 9 premiers sont `356000000` (La Poste), la somme des chiffres est un multiple de 5 à la place ; jamais un nombre de chiffres tous égaux, ni un nombre qui se lit AAAAMMJJHHMMSS (années 1900 à 2099).
+- `fr_siren_luhn` : 9 chiffres, Luhn, pas de chiffre répété.
+- `payment_card_luhn` : 13 à 19 chiffres, un seul séparateur (espace ou tiret), Luhn, pas de chiffre répété, préfixe et longueur d'un réseau : Visa (`4`, 16 ou 19), Mastercard (`51`–`55`, `2221`–`2720`, 16), American Express (`34`, `37`, 15), Discover (`6011`, `644`–`649`, `65`, 16 à 19), Diners (`300`–`305`, `3095`, `36`, `38`, `39`, 14 à 19), JCB (`3528`–`3589`, 16 à 19), UnionPay (`62`, 16 à 19), Maestro (`5018`, `5020`, `5038`, `5893`, `6304`, `6759`, `6761`–`6763`, 13 à 19). Les Visa de 13 chiffres sont écartés (forme des codes-barres EAN-13).
+
+Les validateurs ne s'exécutent pas dans un texte décodé de base64 (`allowStructured`, comme `jwt`). Les attentes du corpus viennent d'une seconde écriture indépendante des contrôles (`generator/rule-pack/personal-data.ts`, BigInt), comparée au moteur Go sur 80 cas (`vectors/detection/rules-personal-data.json`) ; la table `ibanLengths` du moteur est comparée à celle du générateur par un test.
 
 ### Groupes de capture
 

@@ -66,3 +66,21 @@ l'entrée de 64 Kio de `wasm/bench.mjs` le même jour, contre 300 à 360 ms mesu
 - Sur ce processeur, un fil placé sur un cœur d'efficacité est deux à trois fois plus lent : des passes isolées
   montent jusqu'à 12 ms à 64 Kio (×5,6). Les familles les plus longues partent les premières pour réduire cet écart.
 - Sur un poste chargé (compilation, analyse antivirus), le temps dépend des cœurs libres.
+
+## v0.7.0 (non publiée) : règles de données personnelles
+
+Mesure du 10 novembre 2026, même machine, mêmes conditions et même commande (`-benchtime 20x`, une passe), avant et après
+l'ajout des cinq règles `iban`, `fr_nir`, `fr_siret`, `fr_siren`, `payment_card` (aucune n'a de porte littérale : leurs
+motifs n'ont pas de littéral obligatoire de trois octets) :
+
+| Taille | Texte | Avant | Après |
+|---|---|---:|---:|
+| 2 Kio | propre | 0,38 ms | 0,58 ms |
+| 16 Kio | propre | 2,35 ms | 3,43 ms |
+| **64 Kio** | **propre** | **9,10 ms** | **13,70 ms** |
+| 64 Kio | secrets | 11,25 ms | 13,88 ms |
+| 256 Kio | propre | 39,2 ms | 58,6 ms |
+
+Coût par règle à 64 Kio sans secret : `iban` 2,0 ms, `payment_card` 2,1 ms, `fr_nir` 1,9 ms, `fr_siret` 1,6 ms, `fr_siren`
+0,5 ms. Un premier motif d'IBAN par pays (une branche par longueur) coûtait 25 ms à lui seul (64 Kio) : le motif est donc
+générique et le moteur raccourcit la correspondance (`detect/personaldata.go`). Mesure indicative, une seule passe.
