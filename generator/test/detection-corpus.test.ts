@@ -13,9 +13,11 @@ import { parse as parseToml } from 'smol-toml';
 import { describe, expect, it } from 'vitest';
 import { UPSTREAM_COMMIT as PACK_UPSTREAM_COMMIT } from '../rule-pack/catalog.ts';
 import { RulePack } from '../src/rule-pack.ts';
+import { PERSONAL_DATA_RULES, referenceFindings } from '../rule-pack/personal-data.ts';
 import { byteOffsetOf, decodeInput } from '../corpus/bytes.ts';
 import { CorpusError, coverageProblems, expectedFor, type CoverageInput, type EvaluatedCase } from '../corpus/corpus.ts';
 import { jsonString, serializeCaseFile } from '../corpus/json.ts';
+import { PERSONAL_DATA_FILE, personalDataCases, personalDataCoverageProblems } from '../corpus/personal-data.ts';
 import type { RecordedTest } from '../corpus/harness.ts';
 import { TESTS_WITHOUT_INPUT, upstreamSources } from '../corpus/main.ts';
 import {
@@ -66,9 +68,13 @@ const manifest = JSON.parse(manifestText) as {
 const fileTexts = new Map(manifest.files.map((entry) => [entry.file, read(new URL(entry.file, CORPUS))]));
 const corpus = new Map([...fileTexts].map(([file, text]) => [file, JSON.parse(text) as CorpusCase[]]));
 const allCases = [...corpus.values()].flat();
-const packRuleIds = RulePack.parse(JSON.parse(read(new URL('../../pack/initial/pack.json', import.meta.url)))).rules.map(
+const allPackRuleIds = RulePack.parse(JSON.parse(read(new URL('../../pack/initial/pack.json', import.meta.url)))).rules.map(
   (rule) => rule.ruleId,
 );
+// Règles du catalogue d'origine (jugées par le moteur d'origine) ; les règles de données personnelles (v0.7.0) sont
+// jugées par la lecture de référence de `rule-pack/personal-data.ts`.
+const personalRuleIds: readonly string[] = PERSONAL_DATA_RULES.map((rule) => rule.ruleId);
+const packRuleIds = allPackRuleIds.filter((id) => !personalRuleIds.includes(id));
 
 function inputBytes(value: CorpusCase): Uint8Array {
   return value.inputEncoding === 'utf8' ? new TextEncoder().encode(value.input) : Buffer.from(value.input, 'base64');
@@ -95,7 +101,7 @@ describe('corpus de parité commité', () => {
 
   it('chaque cas a la forme du contrat, un identifiant unique et ses constats triés en octets', () => {
     const ids = new Set<string>();
-    const pack = new Set(packRuleIds);
+    const pack = new Set(allPackRuleIds);
     for (const value of allCases) {
       expect(ids.has(value.id), value.id).toBe(false);
       ids.add(value.id);
@@ -151,8 +157,51 @@ describe('corpus de parité commité', () => {
       expect(Buffer.from(inputBytes(committed)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
       expect(committed.languageId, source.id).toBe(source.languageId);
     }
-    const others = allCases.filter((value) => !value.id.startsWith('upstream/'));
+    const others = allCases.filter((value) => !value.id.startsWith('upstream/') && !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value));
     expect(others.length).toBe(synthetic.length);
+  });
+
+  it('les cas de données personnelles sont exactement ceux du générateur, et leur résultat est celui de la lecture de référence', () => {
+    const sources = personalDataCases();
+    const committed = corpus.get(PERSONAL_DATA_FILE) ?? [];
+    expect(committed.map((value) => value.id)).toEqual(sources.map((source) => source.id));
+    sources.forEach((source, index) => {
+      const value = committed[index];
+      if (value === undefined) throw new Error('cas absent');
+      expect(Buffer.from(inputBytes(value)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
+      expect(value.inputEncoding).toBe('utf8');
+      // Constats attendus = ceux de la lecture de référence (vue d'identité, aucun constat du moteur d'origine à fusionner).
+      const decoded = decodeInput(inputBytes(value));
+      const found = referenceFindings(decoded.text).map((finding) => [
+        finding.rule.ruleId,
+        finding.rule.secretType,
+        'plain',
+        finding.rule.score,
+        levelForScore(finding.rule.score),
+        byteOffsetOf(decoded, finding.start),
+        byteOffsetOf(decoded, finding.end),
+      ]);
+      const expected = value.expected.findings.map((finding) => [
+        finding.ruleId,
+        finding.secretType,
+        finding.encoding,
+        finding.score,
+        finding.level,
+        finding.byteStart,
+        finding.byteEnd,
+      ]);
+      expect(expected, source.id).toEqual(found);
+      expect(value.expected.complete).toBe(true);
+    });
+    expect(
+      personalDataCoverageProblems(
+        sources.map((source, index) => ({
+          id: source.id,
+          ...(source.intent === undefined ? {} : { intent: source.intent }),
+          expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
+        })),
+      ),
+    ).toEqual([]);
   });
 
   it('chaque règle du Pack initial a un cas positif, négatif, de valeur fictive et d’exemple public, et chaque vue un cas positif', () => {

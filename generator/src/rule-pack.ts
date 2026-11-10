@@ -16,7 +16,10 @@ export const RULE_FAMILIES = ['fixed_pattern', 'private_key', 'credential_url', 
 export const RuleFamily = z.enum(RULE_FAMILIES);
 export type RuleFamily = z.infer<typeof RuleFamily>;
 
-/** Types de secret que produisent les règles du catalogue (`SecretType` de Secret Guard, hors types d'échec). */
+/**
+ * Types de secret que produisent les règles du catalogue (`SecretType` de Secret Guard, hors types d'échec), puis, depuis
+ * la v0.7.0, les types des règles de données personnelles ajoutées par xSOM.
+ */
 export const RULE_SECRET_TYPES = [
   'private_key',
   'provider_token',
@@ -28,6 +31,12 @@ export const RULE_SECRET_TYPES = [
   'api_key',
   'generic_secret',
   'high_entropy',
+  // Données personnelles (v0.7.0, `rule-pack/personal-data.ts`).
+  'iban',
+  'fr_social_security_number',
+  'fr_siret',
+  'fr_siren',
+  'payment_card_number',
 ] as const;
 export const RuleSecretType = z.enum(RULE_SECRET_TYPES);
 export type RuleSecretType = z.infer<typeof RuleSecretType>;
@@ -37,7 +46,16 @@ export type RuleSecretType = z.infer<typeof RuleSecretType>;
  * moteur Go, `LoadRules`, qui la compare à cette liste dans ses tests) plutôt qu'en `z.enum` : le générateur de types
  * Go du contrat ne produit pas d'énumération qui contient la chaîne vide.
  */
-export const RULE_VALIDATORS = ['', 'jwt_structure'] as const;
+export const RULE_VALIDATORS = [
+  '',
+  'jwt_structure',
+  // Données personnelles (v0.7.0) : IBAN (modulo 97), NIR (clé), SIRET et SIREN (Luhn), carte bancaire (Luhn, réseau).
+  'iban_mod97',
+  'fr_nir_key',
+  'fr_siret_luhn',
+  'fr_siren_luhn',
+  'payment_card_luhn',
+] as const;
 export type RuleValidator = (typeof RULE_VALIDATORS)[number];
 
 /**

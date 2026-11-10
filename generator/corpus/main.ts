@@ -11,11 +11,13 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { RulePack } from '../src/rule-pack.ts';
+import { PERSONAL_DATA_RULES } from '../rule-pack/personal-data.ts';
 import { utf8Bytes } from './bytes.ts';
 import { corpusCaseOf, coverageProblems, expectedFor, type CaseSource, type EvaluatedCase } from './corpus.ts';
 import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from './harness.ts';
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
+import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { PLACEHOLDER_NOT_APPLICABLE, PUBLIC_EXAMPLE_NOT_APPLICABLE, syntheticCases } from './synthetic.ts';
 import { transpileUpstream, UPSTREAM_COMMIT } from './upstream.ts';
 
@@ -117,7 +119,12 @@ async function main(): Promise<number> {
     process.stderr.write('Usage : vectors:detection --upstream <checkout de poc-AI_guard> [--check]\n');
     return 1;
   }
-  const packRuleIds = RulePack.parse(JSON.parse(readFileSync(PACK, 'utf8'))).rules.map((rule) => rule.ruleId);
+  const allRuleIds = RulePack.parse(JSON.parse(readFileSync(PACK, 'utf8'))).rules.map((rule) => rule.ruleId);
+  // Règles du catalogue d'origine (jugées par le moteur d'origine) et règles de données personnelles (v0.7.0, jugées
+  // par la lecture de référence de `rule-pack/personal-data.ts`) : deux ensembles disjoints, tous deux dans le Pack.
+  const personalRuleIds = PERSONAL_DATA_RULES.map((rule) => rule.ruleId);
+  const packRuleIds = allRuleIds.filter((id) => !personalRuleIds.includes(id));
+  const missingPersonal = personalRuleIds.filter((id) => !allRuleIds.includes(id));
   const upstream = await transpileUpstream(values.upstream, testImport);
   try {
     const { engine } = upstream;
@@ -133,6 +140,15 @@ async function main(): Promise<number> {
       evaluated.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
       written.push([source.file, corpusCaseOf(source, expected)]);
     }
+    const personal: EvaluatedCase[] = [];
+    for (const source of personalDataCases()) {
+      const expected = personalDataExpected(engine, source);
+      personal.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
+      written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
+    problems.push(...missingPersonal.map((id) => `règle de données personnelles absente du Pack : ${id}`));
+    problems.push(...personalDataCoverageProblems(personal));
     problems.push(
       ...coverageProblems({
         cases: evaluated,

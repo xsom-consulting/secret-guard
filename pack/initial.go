@@ -7,8 +7,8 @@ import (
 	_ "embed" // Pack initial embarqué.
 )
 
-// initialPack est le Pack initial (initial/pack.json) : les 35 règles du catalogue de Secret Guard traduites en RE2
-// (docs/rule-pack.md). Ne jamais l'éditer à la main : il est produit par le générateur (generator/).
+// initialPack est le Pack initial (initial/pack.json) : les 35 règles du catalogue de Secret Guard traduites en RE2,
+// puis les 5 règles de données personnelles ajoutées en v0.7.0 (docs/rule-pack.md). Ne jamais l'éditer à la main : il est produit par le générateur (generator/).
 //
 //go:embed initial/pack.json
 var initialPack []byte

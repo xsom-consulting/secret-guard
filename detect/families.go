@@ -100,6 +100,14 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			end = start + len(value)
 		}
 		value := text[start:end]
+		if r.trim != nil {
+			kept := r.trim(value)
+			if kept == 0 {
+				continue
+			}
+			end = start + kept
+			value = text[start:end]
+		}
 		if safeLiteral(value) || isSubstituteBeforeJoin(v, start, end) || !withinBounds(value, r.minLength, r.maxLength) {
 			continue
 		}

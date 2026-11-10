@@ -22,6 +22,12 @@ type validator func(value string, budget *decodeBudget) (bool, error)
 var validators = map[string]validator{
 	"":              nil,
 	"jwt_structure": isStructurallyValidJWT,
+	// Données personnelles (v0.7.0, personaldata.go).
+	validatorIBAN:  plainValidator(isValidIBAN),
+	validatorNIR:   plainValidator(isValidNIR),
+	validatorSiret: plainValidator(isValidSiret),
+	validatorSiren: plainValidator(isValidSiren),
+	validatorCard:  plainValidator(isValidPaymentCard),
 }
 
 // publicExamples : valeurs d'exemple publiques de la documentation des Fournisseurs (PUBLIC_EXAMPLES de Secret
