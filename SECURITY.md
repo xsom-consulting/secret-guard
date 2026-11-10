@@ -8,7 +8,7 @@
 
 Par un avis de sécurité privé GitHub : onglet « Security » du dépôt, puis « Report a vulnerability »
 (<https://github.com/xsom-consulting/secret-guard/security/advisories/new>). À défaut, par courriel à
-contact@xsom.fr, objet « Secret Guard : sécurité ». Jamais par un ticket public, une demande de fusion ni une
+julian.talou@xsom.fr, objet « Secret Guard : sécurité ». Jamais par un ticket public, une demande de fusion ni une
 discussion.
 
 Décrire le problème, la version (étiquette ou commit), le paquet ou le module touché, et un moyen de le reproduire.
@@ -39,7 +39,7 @@ l'avis si elle le souhaite. Seule la dernière version publiée reçoit les corr
 ### Reporting a vulnerability
 
 Through a private GitHub security advisory: the repository's "Security" tab, then "Report a vulnerability"
-(<https://github.com/xsom-consulting/secret-guard/security/advisories/new>). Otherwise by e-mail to contact@xsom.fr,
+(<https://github.com/xsom-consulting/secret-guard/security/advisories/new>). Otherwise by e-mail to julian.talou@xsom.fr,
 subject "Secret Guard: security". Never through a public issue, pull request or discussion.
 
 Describe the problem, the version (tag or commit), the affected package or module, and how to reproduce it. Send no
