@@ -34,6 +34,7 @@ var DefaultPackages = []string{
 	module + "/pack",
 	module + "/custom",
 	module + "/hidden",
+	module + "/injection",
 	module + "/mentions",
 	module + "/internal",
 }

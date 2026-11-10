@@ -61,7 +61,8 @@ linters:
             - pkg: "plugin"
               desc: "le programme livré ne charge aucun code"
 
-        # Le moteur (detect), le Pack (pack), le Pack de règles du client (custom), les instructions cachées (hidden),
+        # Le moteur (detect), le Pack (pack), le Pack de règles du client (custom), les instructions cachées (hidden), les consignes
+        # adressées à l'agent (injection),
         # les mentions (mentions), les limites (internal/limits) et la sémantique des chaînes de JavaScript
         # (internal/jstext, partagée avec l'expurgation) sont purs. Ni E/S, ni réseau, ni appel système, ni
         # horloge, ni hasard, ni journal : les bornes sont des budgets de travail, pas des délais. Les tests en sont
@@ -75,6 +76,7 @@ linters:
             - "**/pack/**"
             - "**/custom/**"
             - "**/hidden/**"
+            - "**/injection/**"
             - "**/mentions/**"
             - "**/internal/limits/**"
             - "**/internal/jstext/**"
