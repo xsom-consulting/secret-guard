@@ -70,7 +70,7 @@ func injections() []injection {
 	// Moteur, Pack, Pack de règles du client, instructions cachées, mentions, limites et sémantique des chaînes :
 	// purs, liste fermée d'imports.
 	for _, target := range []struct{ dir, pkg string }{
-		{"detect", "detect"}, {"pack", "pack"}, {"custom", "custom"}, {"hidden", "hidden"}, {"mentions", "mentions"},
+		{"detect", "detect"}, {"pack", "pack"}, {"custom", "custom"}, {"hidden", "hidden"}, {"injection", "injection"}, {"mentions", "mentions"},
 		{"internal/limits", "limits"}, {"internal/jstext", "jstext"},
 	} {
 		add("", target.dir, target.pkg, pureImports, backtracking)

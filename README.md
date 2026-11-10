@@ -20,7 +20,7 @@ Deux paquets l'accompagnent, portés de la même origine : `hidden` (instruction
 
 ### Ce qu'il ne fait jamais
 
-- **Aucun réseau, aucune télémétrie, aucun modèle de langage.** Le moteur (`detect`, `pack`, `custom`, `hidden`, `mentions`) n'importe ni réseau, ni fichier, ni horloge, ni hasard, ni journal : règle `depguard` de [.golangci.yml](.golangci.yml), prouvée import par import par `go run ./tools/depguardcheck`. Le module WebAssembly n'importe qu'une liste fermée de fonctions WASI, sans fonction réseau (`sock_*`) ni d'ouverture de fichier (`path_*`) : test `wasm/secret-guard.test.mjs`.
+- **Aucun réseau, aucune télémétrie, aucun modèle de langage.** Le moteur (`detect`, `pack`, `custom`, `hidden`, `injection`, `mentions`) n'importe ni réseau, ni fichier, ni horloge, ni hasard, ni journal : règle `depguard` de [.golangci.yml](.golangci.yml), prouvée import par import par `go run ./tools/depguardcheck`. Le module WebAssembly n'importe qu'une liste fermée de fonctions WASI, sans fonction réseau (`sock_*`) ni d'ouverture de fichier (`path_*`) : test `wasm/secret-guard.test.mjs`.
 - **Aucune valeur détectée en sortie.** Un constat porte la règle, le type de secret, la lecture, le score, le niveau et l'étendue en octets : jamais la valeur, un extrait, un masque ni un condensat non salé. Des tests par réflexion et par arbre syntaxique relèvent la liste fermée de l'API exportée.
 - **Jamais « rien trouvé » par défaut.** Une analyse incomplète (entrée trop grande, budget épuisé, panique rattrapée) rend `complete: false` et aucun constat : l'appelant décide (bloquer), jamais sur le seul nombre de constats.
 
@@ -112,6 +112,22 @@ clean := hidden.Strip(text)   // retire exactement ce que Find signale ; rend to
 ```
 
 Un octet hors UTF-8 se lit comme U+FFFD (un par octet) : jamais signalé, il compte comme un caractère. `Strip` l'écrit U+FFFD : garder l'octet pourrait, une fois retiré un caractère voisin, former avec d'autres octets un caractère qui n'était pas là (U+202E par exemple). Comme à l'origine, `Strip` fait une seule passe : deux caractères invisibles que le retrait rapproche peuvent être signalés par un nouvel appel de `Find`. Parité : 152 cas produits par le `hidden.ts` d'origine (`vectors/hidden.json`, `TestHiddenParity`).
+
+### Consignes adressées à l'agent (`injection`)
+
+Une page lue, un résultat d'outil ou un fichier cité peut porter, en texte visible, des phrases écrites pour l'agent et non pour la personne : « ignore les instructions précédentes », un changement de rôle, la demande d'envoyer des clés à une adresse, l'ordre de ne rien dire à l'utilisateur, des balises de tours de parole de modèles. Le paquet `injection` les relève, en français et en anglais, sous cinq règles : `injection_instruction_override`, `injection_role_switch`, `injection_exfiltration`, `injection_concealment` et `injection_message_markers`.
+
+```go
+report := injection.Find(text)   // texte en octets, 1 Mio au plus
+if !report.Complete {
+	// plus de 1 Mio : rien n'est lu, ne jamais tenir le texte pour propre
+}
+for _, f := range report.Findings { // 50 constats au plus ; report.Total reste exact
+	// f.Rule, f.Line, f.Column, f.ByteStart, f.ByteEnd : jamais le texte trouvé
+}
+```
+
+C'est un détecteur de constat : il ne masque ni n'expurge rien (le texte d'une page lue n'est pas à réécrire) et il ne juge pas. Un texte qui cite ces phrases pour les expliquer, une documentation sur l'injection de prompt par exemple, est signalé comme celui qui les emploie : l'appelant choisit la décision (avertir est le choix sûr pour un texte lu). Il ne couvre que les formes ci-dessus ; une consigne écrite autrement passe, et l'absence de constat n'est pas une preuve d'innocuité. Les motifs sont des expressions RE2 (temps linéaire) et chaque règle est contrainte par un corpus de bruit (`vectors/injection.json` : textes ordinaires qui ne doivent rien signaler) : une règle ne s'ajoute pas sans cas de bruit. Pas de portage d'origine : le corpus est écrit pour ce paquet. La ligne de commande et le module WebAssembly ne l'exposent pas encore.
 
 ### Fichiers cités par « @ » (`mentions`)
 
