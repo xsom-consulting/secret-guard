@@ -6,13 +6,13 @@
 
 Secret Guard est un moteur de détection de secrets (clés d'API, jetons, clés privées, mots de passe, URL à identifiants…) dans un texte, écrit en Go. Il analyse localement, dans le processus qui l'appelle : c'est la brique qui lit un prompt ou un fichier avant qu'il ne parte vers un assistant de code, et ce dépôt est public pour que chacun puisse le vérifier.
 
-C'est le portage en Go du moteur TypeScript de Secret Guard (origine, licence et modifications : [UPSTREAM.md](UPSTREAM.md)). Le portage rend exactement les résultats de l'original sur un corpus figé de 823 cas (`TestParity`).
+C'est le portage en Go du moteur TypeScript de Secret Guard (origine, licence et modifications : [UPSTREAM.md](UPSTREAM.md)). Le portage rend exactement les résultats de l'original sur un corpus figé de 823 cas (`TestParity`) ; depuis la v0.7.0 (non publiée), le corpus compte 80 cas de plus pour les règles de données personnelles, qui n'existent pas dans l'original (voir « Données personnelles »).
 
 Deux paquets l'accompagnent, portés de la même origine : `hidden` (instructions cachées dans un texte) et `mentions` (fichiers cités par « @ » dans un prompt).
 
 ### Ce que fait le moteur
 
-- 35 règles (Pack initial, `pack/initial/pack.json`) : formats fixes de jetons connus, clés privées PEM, URL à identifiants, affectations sensibles (`password = …`, en-têtes, cookies, `curl -u`, `auth` de Docker), entropie.
+- 40 règles (Pack initial, `pack/initial/pack.json`) : les 35 du catalogue d'origine (formats fixes de jetons connus, clés privées PEM, URL à identifiants, affectations sensibles (`password = …`, en-têtes, cookies, `curl -u`, `auth` de Docker), entropie) et, depuis la v0.7.0 (non publiée), 5 règles de données personnelles à clé de contrôle (IBAN, numéro de sécurité sociale, SIRET, SIREN, carte bancaire).
 - Plusieurs lectures du même texte : telle quelle, normalisée (NFKC, caractères invisibles retirés), décodée une fois (pourcentage, échappements JSON, base64), lignes coupées rejointes.
 - Expressions régulières RE2 seulement (`regexp` de Go) : temps linéaire, aucun retour arrière.
 - Travail borné : entrée de 1 Mio au plus, budgets de décodages, de fenêtres et de vues ; au-delà, l'analyse est déclarée incomplète.
@@ -246,6 +246,29 @@ Fuzz : `go test ./detect -run '^$' -fuzz '^FuzzScan$' -fuzztime=60s` (autres cib
 
 Signaler une vulnérabilité selon [SECURITY.md](SECURITY.md) : avis de sécurité privé GitHub (onglet « Security » du dépôt), jamais un ticket public. Le temps d'une analyse est borné par des budgets de travail, pas par une horloge : le pire cas mesuré (1 Mio d'expansion NFKC maximale) prend quelques secondes en Go natif ; l'appelant fixe son échéance. Les fichiers de cas du corpus `vectors/detection/` et les vecteurs du masquage `vectors/redact.json` contiennent des valeurs synthétiques à la forme de jetons : ce sont les seules exceptions de la recherche de secrets ([.gitleaks.toml](.gitleaks.toml)).
 
+### Données personnelles (v0.7.0, non publiée)
+
+Le Pack initial détecte aussi des données personnelles françaises et bancaires, par des règles « motif seul » dont un **validateur** contrôle la clé du format : un numéro de même longueur sans clé valide (téléphone, commande, horodatage) n'est pas un constat.
+
+| `ruleId` | `secretType` | Validateur | Score (niveau) | Ce qui est reconnu |
+|---|---|---|---:|---|
+| `iban` | `iban` | `iban_mod97` | 45 (MEDIUM) | IBAN de tout pays (ISO 13616, modulo 97, chiffres de contrôle 02 à 98), écrit d'un bloc ou par groupes de quatre ; longueur du pays imposée pour 52 pays d'Europe et du pourtour, 15 à 34 caractères ailleurs ; lettres majuscules ou minuscules |
+| `fr_nir` | `fr_social_security_number` | `fr_nir_key` | 60 (HIGH) | numéro de sécurité sociale (NIR) de 13 caractères et sa clé de 2 chiffres (97 − nombre mod 97 ; Corse `2A` = 19, `2B` = 18), avec ou sans espaces ; ni département, ni commune, ni numéro d'ordre nul |
+| `fr_siret` | `fr_siret` | `fr_siret_luhn` | 35 (MEDIUM) | SIRET de 14 chiffres (Luhn ; exception de La Poste, SIREN 356000000 : somme des chiffres multiple de 5), en groupes de 3-3-3-5 ou non ; un nombre qui se lit AAAAMMJJHHMMSS (horodatage) ou fait d'un seul chiffre n'en est pas un |
+| `fr_siren` | `fr_siren` | `fr_siren_luhn` | 35 (MEDIUM) | SIREN de 9 chiffres (Luhn), **seulement après le mot « SIREN »** (« SIREN : », `siren=`, « SIREN n° », guillemets de JSON) ; le mot n'est pas dans l'étendue du constat. Règle « motif seul » dont le motif porte le contexte : la valeur est le premier groupe capturant |
+| `payment_card` | `payment_card_number` | `payment_card_luhn` | 70 (HIGH) | carte bancaire de 13 à 19 chiffres (Luhn) d'un réseau courant (Visa 16 et 19, Mastercard, American Express, Discover, Diners, JCB, UnionPay, Maestro), d'un bloc ou par groupes 4-4-4-4 / 4-6-5 / 4-6-4 séparés d'une espace ou d'un tiret (un seul des deux) ; les numéros de 19 chiffres s'écrivent d'un bloc |
+
+À savoir :
+
+- Les validateurs sont actifs dans la lecture telle quelle, normalisée, en pourcentage et en échappements JSON (score diminué de 5), pas dans un texte décodé de base64 (comme `jwt`).
+- Le motif de l'IBAN est volontairement générique ; le moteur retient, parmi les fins de groupe de la correspondance, la plus longue dont la clé est valide, pour qu'un IBAN suivi d'un mot ou d'un nombre de quatre caractères (« … 1332 pour ») soit trouvé sans ce mot.
+- Une carte d'essai publique (`4111 1111 1111 1111`) est une carte : le moteur ne garde pas de liste d'exemples. Un produit qui l'embarque choisit, par règle (`ruleId`), de bloquer, d'avertir ou de laisser passer.
+- Coût : sur le banc de `docs/bench.md` (64 Kio sans secret, même machine), l'analyse passe de 9,1 à 13,7 ms avec les 5 règles.
+- Substituts : un type par règle dans les deux langues (« IBAN », « numéro de sécurité sociale », « numéro SIRET », « numéro SIREN », « numéro de carte bancaire » ; `SubstituteLabels()`). Un programme qui tient sa propre table de types de Substituts la complète.
+- Liste fermée du schéma `RulePack` : 5 valeurs de `secretType` et 5 `validator` de plus. Un moteur antérieur à la v0.7.0 refuse un Pack qui les emploie (`unknown_secret_type`, `unknown_validator`).
+- Corpus : `vectors/detection/rules-personal-data.json` (80 cas : 45 positifs, 35 négatifs, tous calculés), dont le résultat attendu vient d'une seconde écriture indépendante des contrôles (`generator/rule-pack/personal-data.ts`), pas du moteur d'origine. Les vecteurs du masquage et du Pack du client restent ceux du moteur d'origine.
+- Limites : numéros de 19 chiffres de carte groupés, IBAN écrits avec d'autres séparateurs que l'espace, NIR sans clé (13 chiffres), SIREN hors contexte, numéros dans un texte décodé de base64 : non reconnus. Le moteur réduit le risque, il ne le supprime pas.
+
 ### Migration vers la v0.6.0
 
 L'expurgation quitte le paquet `detect` pour le module `github.com/xsom-consulting/secret-guard/expurgation`, à exiger à la même version que la racine :
@@ -277,9 +300,9 @@ Composants tiers et origine : [UPSTREAM.md](UPSTREAM.md). Contribuer : [CONTRIBU
 
 Secret Guard is a secret detection engine (API keys, tokens, private keys, passwords, URLs with credentials…) for text, written in Go. It runs locally, inside the calling process: it is the piece that reads a prompt or a file before it goes to a coding assistant, and this repository is public so that anyone can check it.
 
-It is the Go port of the Secret Guard TypeScript engine (origin, license and changes: [UPSTREAM.md](UPSTREAM.md)). The port returns exactly the original results on a frozen corpus of 823 cases (`TestParity`).
+It is the Go port of the Secret Guard TypeScript engine (origin, license and changes: [UPSTREAM.md](UPSTREAM.md)). The port returns exactly the original results on a frozen corpus of 823 cases (`TestParity`); since v0.7.0 (unreleased) the corpus has 80 more cases for the personal-data rules, which do not exist in the original.
 
-**What it does**: 35 rules (initial Pack), several readings of the same text (as is, NFKC-normalized, decoded once from percent, JSON escapes and base64, wrapped lines joined), RE2 regular expressions only (linear time), bounded work (1 MiB input, decoding, window and view budgets). Speed: on 19 October 2026, on an Apple M2 Pro, 64 KiB of code without secrets is scanned in 9.2 ms (67.5 ms in v0.3.0, ×7.4), thanks to an exact literal gate and to running the rule families without shared budget in parallel, with no result changed ([docs/bench.md](docs/bench.md)).
+**What it does**: 40 rules (initial Pack: the 35 of the original catalog and, since v0.7.0 (unreleased), 5 personal-data rules with a check key: IBAN, French social security number, SIRET, SIREN, payment card number), several readings of the same text (as is, NFKC-normalized, decoded once from percent, JSON escapes and base64, wrapped lines joined), RE2 regular expressions only (linear time), bounded work (1 MiB input, decoding, window and view budgets). Speed: on 19 October 2026, on an Apple M2 Pro, 64 KiB of code without secrets is scanned in 9.2 ms (67.5 ms in v0.3.0, ×7.4), thanks to an exact literal gate and to running the rule families without shared budget in parallel, with no result changed ([docs/bench.md](docs/bench.md)).
 
 **What it never does**: no network, no telemetry, no language model (the engine, `custom`, `hidden` and `mentions` import no network, file, clock, randomness or logging package: `depguard` rule proven by `tools/depguardcheck`; the WebAssembly module imports no `sock_*` or `path_open`); no detected value in the output (a finding carries rule, secret type, reading, score, level and byte span, never the value, an excerpt, a mask or an unsalted hash); never "nothing found" by default (an incomplete scan returns `complete: false` and no finding, so the caller blocks). The engine only finds what its rules describe: it lowers the risk, it does not remove it.
 
@@ -304,6 +327,8 @@ It is the Go port of the Secret Guard TypeScript engine (origin, license and cha
 **Regenerating**: the TypeScript generator in `generator/` (Node 26) rebuilds the initial Pack, the engine patterns, the parity corpus, the redaction and decision vectors, the hidden and mention vectors and the Unicode tables of `hidden` (`npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout> --check`, `npm run vectors:redact -- --upstream <checkout> --check`, `npm run vectors:hidden -- --upstream <checkout> --check`, `npm run vectors:custom -- --upstream <checkout> --check`, `npm run hidden:tables -- --check`). Never edit these files by hand.
 
 **Security**: report vulnerabilities as described in [SECURITY.md](SECURITY.md) (private GitHub security advisory, never a public issue). Scan time is bounded by work budgets, not a clock: the caller sets its deadline.
+
+**Personal data (v0.7.0, unreleased)**: the initial Pack also detects IBANs (`iban`, ISO 13616 mod 97), French social security numbers (`fr_nir`, 97 − number mod 97 key, Corsican `2A`/`2B`), SIRET (`fr_siret`, Luhn and the La Poste sum rule), SIREN (`fr_siren`, Luhn, only after the word "SIREN") and payment card numbers (`payment_card`, Luhn and a network prefix), as fixed-pattern rules whose named validator checks the format's key (`iban_mod97`, `fr_nir_key`, `fr_siret_luhn`, `fr_siren_luhn`, `payment_card_luhn`), so phone, order and timestamp numbers of the same length are not findings. Secret types `iban`, `fr_social_security_number`, `fr_siret`, `fr_siren`, `payment_card_number` (levels: card HIGH, social security number HIGH, others MEDIUM). Validators run on the plain, normalized, percent and JSON-escaped readings, not on base64-decoded text. The IBAN pattern is generic and the engine keeps the longest group end whose key is valid, so a trailing four-character word is not absorbed. Cost: 64 KiB without secrets goes from 9.1 to 13.7 ms. Substitute types are added for the five rules (`SubstituteLabels()`). New parity cases: `vectors/detection/rules-personal-data.json` (80 cases, expected results from an independent second implementation of the checks, not from the original engine). The `RulePack` schema gains 5 secret types and 5 validators; an engine older than v0.7.0 refuses a Pack that uses them. Details: [docs/rule-pack.md](docs/rule-pack.md).
 
 **Migrating to v0.6.0**: expurgation leaves `detect` for the module `github.com/xsom-consulting/secret-guard/expurgation` (require it at the same version as the root): `detect.Expurgate`, `ExpurgateAndRescan`, `Substitution`, `SanitizeOrdinal` → `expurgation.Expurgate`, `ExpurgateAndRescan`, `Substitution`, `SanitizeOrdinal`; `detect.ErrExpurgate*` → `expurgation.ErrIncomplete`, `ErrSpan`, `ErrEncoding`, `ErrOrdinal`, `ErrLanguage`; `Options.SubstituteLanguage` → `expurgation.Options{Options: detect.Options{…}, SubstituteLanguage: …}`; new public primitives of `detect`: `ScanWith`, `Fingerprint`, `FingerprintKey.Usable`, `SecretRange`, `Rules.FirstLineSecretEnd`, `SubstituteText`, `SubstituteLanguage.Valid`, `ErrSubstituteOrdinal`, `ErrSubstituteLanguage`. Expurgated texts, substitutes and refusals are unchanged (`vectors/expurgate.json`).
 

@@ -64,7 +64,12 @@
               "password",
               "api_key",
               "generic_secret",
-              "high_entropy"
+              "high_entropy",
+              "iban",
+              "fr_social_security_number",
+              "fr_siret",
+              "fr_siren",
+              "payment_card_number"
             ],
             "type": "string"
           },

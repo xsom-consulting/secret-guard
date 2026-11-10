@@ -117,6 +117,12 @@ var substituteLabels = []SubstituteLabel{
 	{"contextual_api_key", "clé d’API", "API key"},
 	{"contextual_access_token", "jeton d’accès", "access token"},
 	{"cookie_session_credential", "cookie de session", "session cookie"},
+	// Données personnelles (v0.7.0).
+	{"iban", "IBAN", "IBAN"},
+	{"fr_nir", "numéro de sécurité sociale", "social security number"},
+	{"fr_siret", "numéro SIRET", "SIRET number"},
+	{"fr_siren", "numéro SIREN", "SIREN number"},
+	{"payment_card", "numéro de carte bancaire", "payment card number"},
 }
 
 // substituteLabelByRule : la table, par règle.

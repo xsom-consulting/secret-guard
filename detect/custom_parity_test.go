@@ -96,6 +96,30 @@ func readJSON(t *testing.T, path string, into any) {
 	}
 }
 
+// personalDataRules : règles de données personnelles du Pack initial (v0.7.0). Le moteur d'origine, qui a produit les
+// vecteurs de ce fichier, ne les connaît pas : ces essais chargent les seules règles du catalogue d'origine.
+var personalDataRules = map[string]bool{"iban": true, "fr_nir": true, "fr_siret": true, "fr_siren": true, "payment_card": true}
+
+// catalogPack rend le Pack initial sans les règles de données personnelles.
+func catalogPack(t *testing.T) *pack.Pack {
+	t.Helper()
+	initial, err := pack.Initial()
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog := *initial
+	catalog.Rules = nil
+	for _, r := range initial.Rules {
+		if !personalDataRules[r.RuleID] {
+			catalog.Rules = append(catalog.Rules, r)
+		}
+	}
+	if len(catalog.Rules) != 35 {
+		t.Fatalf("%d règles du catalogue, attendu 35", len(catalog.Rules))
+	}
+	return &catalog
+}
+
 func TestCustomScanParity(t *testing.T) {
 	var manifest struct {
 		Files []struct {
@@ -113,11 +137,7 @@ func TestCustomScanParity(t *testing.T) {
 			t.Fatalf("%d cas, %d au manifeste", len(cases), f.Cases)
 		}
 	}
-	initial, err := pack.Initial()
-	if err != nil {
-		t.Fatal(err)
-	}
-	rules, err := detect.LoadRules(initial)
+	rules, err := detect.LoadRules(catalogPack(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -227,8 +247,7 @@ func TestCustomRedactParity(t *testing.T) {
 	for _, p := range packCases {
 		packs[p.ID] = customInput(t, p.Pack, p.PackEncoding)
 	}
-	initial, _ := pack.Initial()
-	rules, err := detect.LoadRules(initial)
+	rules, err := detect.LoadRules(catalogPack(t))
 	if err != nil {
 		t.Fatal(err)
 	}

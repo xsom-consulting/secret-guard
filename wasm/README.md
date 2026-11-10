@@ -16,7 +16,7 @@ dependency-free loaders for Node and for browsers or browser extensions.
 - **Never "nothing found" by default.** An incomplete scan (input over 1 MiB, budget exhausted) returns
   `complete: false` and no finding: decide on `complete` and `failure`, not on the number of findings.
 - **Same results as the Go engine.** Every release runs the module and the native Go engine on the whole corpus of the
-  repository (823 detection cases, expurgation and hidden-instruction vectors) and requires identical documents.
+  repository (903 detection cases, expurgation and hidden-instruction vectors) and requires identical documents.
 
 ```js
 // Node
@@ -65,7 +65,7 @@ navigateur ou une extension de navigateur.
 - **Jamais « rien trouvé » par défaut.** Une analyse incomplète (entrée de plus de 1 Mio, budget épuisé) rend
   `complete: false` et aucun constat : décider sur `complete` et `failure`.
 - **Mêmes résultats que le moteur Go.** Chaque Release exécute le module et le moteur Go natif sur tout le corpus du
-  dépôt (823 cas de détection, vecteurs de l'expurgation et des instructions cachées) et exige des documents identiques.
+  dépôt (903 cas de détection, vecteurs de l'expurgation et des instructions cachées) et exige des documents identiques.
 
 `expurgate` remplace chaque secret par un Substitut typé (`[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]`, après le préfixe public ; en anglais avec `substituteLanguage: 'en'`), sans rien de la valeur ; une même valeur
 reprend son numéro si l'appelant redonne les Substituts déjà posés (`known`). Exige `setFingerprintKey`.

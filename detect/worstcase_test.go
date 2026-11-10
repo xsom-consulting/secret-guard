@@ -56,6 +56,12 @@ func worstCaseInputs(fill func(string) []byte, size int) []worstCase {
 		{"candidats base64 décodés", fill(b64(password) + " "), []error{errDecodeBudgetExhausted}},
 		{"base64 de pourcentages et d'échappements (décodages imbriqués)", fill(b64(strings.Repeat(`%5Cu0067hp\u005f`, 100)) + "\n"), []error{errDecodeBudgetExhausted}},
 		{"mélange", fill("%5C\\u0041\r\n\xe2\x80\x8bg\nhp_\xff=QUJD"), []error{errJoinedWindowBudgetExhausted}},
+		// Données personnelles (v0.7.0) : candidats de longueur maximale en chaîne, tous refusés par leur clé de contrôle.
+		{"têtes d'IBAN enchaînées", fill("ab12 "), nil},
+		{"groupes de quatre chiffres (IBAN, carte, SIRET, NIR)", fill("1234 5678 "), nil},
+		{"suite de chiffres de 1 Mio", fill("0123456789"), nil},
+		{"IBAN valide répété", fill("FR76 3000 6000 0112 3456 7890 189 "), []error{errTooManyFindings}},
+		{"mot SIREN répété", fill("SIREN 1 "), nil},
 	}
 }
 

@@ -368,6 +368,12 @@ func TestRuleScoresAndReasons(t *testing.T) {
 		other("cookie_session_credential", "Cookie: session="+value, "credential_cookie_header"),
 		other("cli_basic_auth", httpClient+" -u alice:"+low+" https://example.test", "basic_auth_command_argument"),
 		other("docker_auth", `{"auth":"`+base64.StdEncoding.EncodeToString([]byte("alice:"+low))+`"}`, "docker_auth_base64_credentials"),
+		// Données personnelles (v0.7.0) : numéros calculés, jamais réels.
+		fixed("iban", "IBAN FR76 3000 6000 0112 3456 7890 189 fin", 45),
+		fixed("fr_nir", "numéro 1 84 12 76 451 089 46 fin", 60),
+		fixed("fr_siret", "établissement 123 456 782 00010 fin", 35),
+		fixed("fr_siren", "SIREN : 123 456 782 fin", 35),
+		fixed("payment_card", "carte 4111 1111 1111 1111 fin", 70),
 		{id: "high_entropy", input: "note " + value + " fin", score: 35,
 			reasons: func(e Encoding) []string {
 				reasons := []string{"high_entropy_shape", "unanchored_entropy_is_warning_only"}

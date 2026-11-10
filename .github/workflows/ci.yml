@@ -64,7 +64,7 @@ jobs:
         run: go test -count=1 -v -run '^(TestExpurgateVectors|TestExpurgateCorpus|TestExpurgateRedactResiduals|TestLicense)$' .
       # Déjà exécutée par go test : cette étape la nomme et l'affiche dans le journal (nombre de cas, identifiants en
       # écart, jamais une entrée).
-      - name: "Parité à 100 % avec Secret Guard (vectors/detection/, 823 cas)"
+      - name: "Parité à 100 % avec Secret Guard (vectors/detection/, 903 cas : 823 de l'original, 80 de données personnelles)"
         run: go test -count=1 -v -run '^TestParity$' ./detect
       - name: "Parité du masquage et des décisions (vectors/redact.json, vectors/decision.json)"
         run: go test -count=1 -v -run '^(TestRedactParity|TestDecisionParity|TestRedactLeavesNoValue)$' ./detect

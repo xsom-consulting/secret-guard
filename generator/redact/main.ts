@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { decodeInput } from '../corpus/bytes.ts';
 import { testImport } from '../corpus/harness.ts';
+import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { MANIFEST_FILE, type CorpusCase } from '../corpus/model.ts';
 import { readScanResult, transpileUpstream, UPSTREAM_COMMIT, UpstreamError } from '../corpus/upstream.ts';
 import { intentProblem, redactSources, spanSources } from './cases.ts';
@@ -136,7 +137,8 @@ async function main(): Promise<number> {
 
     const cases: RedactCase[] = [];
     for (const { file, value } of committedCorpus()) {
-      if (!corpusCaseSelected(value)) continue;
+      // Règles de données personnelles (v0.7.0) : absentes du moteur d'origine, son masquage ne les connaît pas.
+      if (file === PERSONAL_DATA_FILE || !corpusCaseSelected(value)) continue;
       const { initial, ...expected } = redactExpectedFor(upstream.engine, engine, corpusInput(value), value.languageId).expected;
       if (JSON.stringify(initial) !== JSON.stringify(value.expected)) problems.push(`${value.id} : analyse initiale différente du corpus`);
       cases.push({ id: value.id, corpusFile: file, expected });

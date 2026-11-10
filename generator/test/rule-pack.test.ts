@@ -19,6 +19,10 @@ const packText = readFileSync(new URL('../../pack/initial/pack.json', import.met
 const upstreamNotes = readFileSync(new URL('../../UPSTREAM.md', import.meta.url), 'utf8');
 
 const pack = RulePack.parse(JSON.parse(packText));
+// Les 35 règles du catalogue Secret Guard, puis les règles de données personnelles ajoutées par xSOM (v0.7.0).
+const CATALOG_RULE_COUNT = 35;
+const catalogRules = pack.rules.slice(0, CATALOG_RULE_COUNT);
+const personalRules = pack.rules.slice(CATALOG_RULE_COUNT);
 
 /**
  * Les 35 règles du catalogue Secret Guard au commit cité, relevées à la main dans `rules.ts` (`FIXED_RULES`,
@@ -76,16 +80,19 @@ describe('Pack initial', () => {
 
     // Une règle du Pack par règle du catalogue, même identifiant, famille, type de secret et score, même ordre :
     // contre la table écrite à la main (indépendante du générateur), puis contre l'extraction.
-    expect(CATALOG_BY_HAND).toHaveLength(35);
-    expect(pack.rules.map((rule) => [rule.ruleId, rule.family, rule.secretType, rule.score])).toEqual(CATALOG_BY_HAND);
-    expect(catalog).toHaveLength(35);
-    expect(pack.rules.map((rule) => [rule.ruleId, rule.family, rule.secretType, rule.score])).toEqual(
+    expect(CATALOG_BY_HAND).toHaveLength(CATALOG_RULE_COUNT);
+    expect(catalogRules.map((rule) => [rule.ruleId, rule.family, rule.secretType, rule.score])).toEqual(CATALOG_BY_HAND);
+    expect(catalog).toHaveLength(CATALOG_RULE_COUNT);
+    expect(catalogRules.map((rule) => [rule.ruleId, rule.family, rule.secretType, rule.score])).toEqual(
       catalog.map((rule) => [rule.ruleId, rule.family, rule.secretType, rule.score]),
     );
     // Chaque famille de rules.ts est représentée ; toutes les règles fixes y sont.
-    expect([...new Set(pack.rules.map((rule) => rule.family))].sort()).toEqual([...RULE_FAMILIES].sort());
+    expect([...new Set(catalogRules.map((rule) => rule.family))].sort()).toEqual([...RULE_FAMILIES].sort());
     expect(upstreamText.includes('export const FIXED_RULE_IDS')).toBe(true);
-    expect(pack.rules.filter((rule) => rule.family === 'fixed_pattern')).toHaveLength(20);
+    expect(catalogRules.filter((rule) => rule.family === 'fixed_pattern')).toHaveLength(20);
+    // Puis cinq règles de données personnelles, toutes « motif seul » (docs/rule-pack.md).
+    expect(personalRules.map((rule) => rule.ruleId)).toEqual(['iban', 'fr_nir', 'fr_siret', 'fr_siren', 'payment_card']);
+    expect(personalRules.every((rule) => rule.family === 'fixed_pattern')).toBe(true);
 
     // Le fichier commité est exactement la traduction de la source figée (aucune écriture à la main).
     expect(packText).toBe(serializePack(buildInitialPack(upstreamText)));
@@ -108,7 +115,7 @@ describe('Pack initial', () => {
   });
 
   it('bornes de longueur reportées pour chaque répétition ouverte, absentes sinon', () => {
-    for (const [index, rule] of pack.rules.entries()) {
+    for (const [index, rule] of catalogRules.entries()) {
       const entry = catalog[index];
       expect(entry?.ruleId).toBe(rule.ruleId);
       const opened = entry === undefined ? [] : translationOf(entry).openedRepetitions;
@@ -124,7 +131,14 @@ describe('Pack initial', () => {
   });
 
   it('validateur nommé et valeur portée par le premier groupe des règles fixes', () => {
-    expect(pack.rules.filter((rule) => rule.validator !== '').map((rule) => [rule.ruleId, rule.validator])).toEqual([['jwt', 'jwt_structure']]);
+    expect(catalogRules.filter((rule) => rule.validator !== '').map((rule) => [rule.ruleId, rule.validator])).toEqual([['jwt', 'jwt_structure']]);
+    expect(personalRules.map((rule) => [rule.ruleId, rule.validator])).toEqual([
+      ['iban', 'iban_mod97'],
+      ['fr_nir', 'fr_nir_key'],
+      ['fr_siret', 'fr_siret_luhn'],
+      ['fr_siren', 'fr_siren_luhn'],
+      ['payment_card', 'payment_card_luhn'],
+    ]);
     // Validateurs de la liste fermée ; motif présent pour chaque famille qui en exige un.
     expect(pack.rules.every((rule) => (RULE_VALIDATORS as readonly string[]).includes(rule.validator))).toBe(true);
     for (const rule of pack.rules) {

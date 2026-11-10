@@ -90,10 +90,11 @@ var knownFamilies = map[string]bool{
 	familyEntropy: true,
 }
 
-// knownSecretTypes : types de secret de Secret Guard (RULE_SECRET_TYPES).
+// knownSecretTypes : types de secret de Secret Guard et, depuis la v0.7.0, des données personnelles (RULE_SECRET_TYPES).
 var knownSecretTypes = map[string]bool{
 	"private_key": true, "provider_token": true, "access_token": true, "jwt": true, "database_credentials": true,
 	"cloud_credential": true, "password": true, "api_key": true, "generic_secret": true, "high_entropy": true,
+	"iban": true, "fr_social_security_number": true, "fr_siret": true, "fr_siren": true, "payment_card_number": true,
 }
 
 // maxScore : score de base le plus élevé d'une règle (schéma RulePack).
@@ -128,6 +129,8 @@ type rule struct {
 	// gate : porte littérale du motif (prefilter.go), nil sans porte (la règle s'exécute toujours).
 	gate                 *literalGate
 	minLength, maxLength int
+	// trim : raccourcit la correspondance du motif avant les bornes et le validateur (personaldata.go), nil sinon.
+	trim func(value []byte) int
 	// dashTail : motif sans son « \b » final, pour les jetons finis par un tiret (dashtail.go), nil sinon.
 	dashTail *regexp.Regexp
 }
@@ -296,7 +299,8 @@ func loadRule(spec ruleSpec, expected map[string]engineRule) (*rule, error) {
 	}
 	return &rule{
 		id: spec.RuleID, family: spec.Family, secretType: spec.SecretType, score: spec.Score, validator: check,
-		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength, dashTail: dashTail,
+		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength, trim: trimmers[spec.Validator],
+		dashTail: dashTail,
 	}, nil
 }
 

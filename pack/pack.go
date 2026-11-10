@@ -42,6 +42,12 @@ const (
 	SecretTypeAPIKey              SecretType = "api_key"
 	SecretTypeGenericSecret       SecretType = "generic_secret"
 	SecretTypeHighEntropy         SecretType = "high_entropy"
+	// Données personnelles (v0.7.0) : règles à validateur du Pack initial, voir docs/rule-pack.md.
+	SecretTypeIBAN              SecretType = "iban"
+	SecretTypeFrSocialSecurity  SecretType = "fr_social_security_number"
+	SecretTypeFrSiret           SecretType = "fr_siret"
+	SecretTypeFrSiren           SecretType = "fr_siren"
+	SecretTypePaymentCardNumber SecretType = "payment_card_number"
 )
 
 // SecretTypes rend la liste fermée des types de secret, dans l'ordre du schéma.
@@ -49,7 +55,8 @@ func SecretTypes() []SecretType {
 	return []SecretType{
 		SecretTypePrivateKey, SecretTypeProviderToken, SecretTypeAccessToken, SecretTypeJWT,
 		SecretTypeDatabaseCredentials, SecretTypeCloudCredential, SecretTypePassword, SecretTypeAPIKey,
-		SecretTypeGenericSecret, SecretTypeHighEntropy,
+		SecretTypeGenericSecret, SecretTypeHighEntropy, SecretTypeIBAN, SecretTypeFrSocialSecurity, SecretTypeFrSiret,
+		SecretTypeFrSiren, SecretTypePaymentCardNumber,
 	}
 }
 

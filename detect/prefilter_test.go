@@ -123,7 +123,7 @@ func TestPrefilterInitialPack(t *testing.T) {
 				t.Errorf("%s : littéraux %q, attendu %q", spec.RuleID, got, want[spec.RuleID])
 			}
 		}
-		if seen != len(p.Rules) || seen != 35 {
+		if seen != len(p.Rules) || seen != 40 {
 			t.Fatalf("%d règles relues", seen)
 		}
 	})

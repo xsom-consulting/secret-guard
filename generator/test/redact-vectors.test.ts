@@ -12,6 +12,7 @@ import { decodeInput } from '../corpus/bytes.ts';
 import { levelForScore, MANIFEST_FILE, type CorpusCase, type CorpusExpected } from '../corpus/model.ts';
 import { UPSTREAM_COMMIT, type EngineResult, type UpstreamEngine } from '../corpus/upstream.ts';
 import { filledPrefix, intentProblem, redactSources, sourceBytes, spanSources } from '../redact/cases.ts';
+import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { corpusCaseSelected } from '../redact/main.ts';
 import {
   DECISIONS,
@@ -99,8 +100,9 @@ describe('vecteurs du masquage commités', () => {
       expect(c.input, c.id).toBeUndefined();
       expect(c.expected.initial, c.id).toBeUndefined();
     }
+    // Les règles de données personnelles (v0.7.0) ne sont pas dans le moteur d'origine : son masquage ne les reprend pas.
     const selected = [...corpus].flatMap(([file, cases]) =>
-      [...cases.values()].filter(corpusCaseSelected).map((c) => `${file}\u0000${c.id}`),
+      file === PERSONAL_DATA_FILE ? [] : [...cases.values()].filter(corpusCaseSelected).map((c) => `${file}\u0000${c.id}`),
     );
     expect(referenced.map((c) => `${c.corpusFile ?? ''}\u0000${c.id}`).sort()).toEqual(selected.sort());
     expect(selected.length).toBeGreaterThan(500);
