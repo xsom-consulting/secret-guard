@@ -19,9 +19,12 @@ const (
 	// MaxInputBytes est la taille d'entrée la plus grande analysée (MAX_INPUT_BYTES de Secret Guard, 1 Mio), en
 	// octets reçus. Au-delà, rien n'est analysé, pas même un préfixe (FailureScanLimit).
 	MaxInputBytes = limits.MaxInputBytes
-	// MaxFindings est le nombre de constats le plus grand avant déduplication (MAX_FINDINGS de Secret Guard) ; au-delà,
-	// l'analyse est incomplète (FailureScanError).
+	// MaxFindings est le nombre de constats le plus grand après déduplication (MAX_FINDINGS de Secret Guard, qui le
+	// compte avant ; écart v0.8.1, UPSTREAM.md) ; au-delà, l'analyse est incomplète (FailureScanError).
 	MaxFindings = limits.MaxFindings
+	// maxRawFindings borne les constats avant déduplication (mémoire de l'analyse) ; au-delà, l'analyse est
+	// incomplète.
+	maxRawFindings = limits.MaxRawFindings
 )
 
 var (
@@ -112,7 +115,7 @@ type scanState struct {
 
 func appendBounded(target []finding, additions []finding) ([]finding, error) {
 	target = append(target, additions...)
-	if len(target) > MaxFindings {
+	if len(target) > maxRawFindings {
 		return nil, errTooManyFindings
 	}
 	return target, nil
@@ -217,7 +220,11 @@ func (s *scanState) collect(content []byte, lang language) ([]finding, error) {
 			}
 		}
 	}
-	return dedupeOverlaps(content, findings), nil
+	kept := dedupeOverlaps(content, findings)
+	if len(kept) > MaxFindings {
+		return nil, errTooManyFindings
+	}
+	return kept, nil
 }
 
 // base64Candidates suit scanBase64Candidates de Secret Guard.
@@ -239,7 +246,7 @@ func (s *scanState) base64Candidates(v *view) ([]finding, error) {
 				value: f.value,
 			})
 		}
-		if len(findings) > MaxFindings {
+		if len(findings) > maxRawFindings {
 			return errTooManyFindings
 		}
 		return nil
