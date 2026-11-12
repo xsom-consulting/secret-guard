@@ -18,6 +18,12 @@ import { byteOffsetOf, decodeInput } from '../corpus/bytes.ts';
 import { CorpusError, coverageProblems, expectedFor, type CoverageInput, type EvaluatedCase } from '../corpus/corpus.ts';
 import { jsonString, serializeCaseFile } from '../corpus/json.ts';
 import { PERSONAL_DATA_FILE, personalDataCases, personalDataCoverageProblems } from '../corpus/personal-data.ts';
+import {
+  PASSWORD_PHRASE_FILE,
+  passwordPhraseCases,
+  passwordPhraseCoverageProblems,
+  passwordPhraseReference,
+} from '../corpus/password-phrase.ts';
 import type { RecordedTest } from '../corpus/harness.ts';
 import { TESTS_WITHOUT_INPUT, upstreamSources } from '../corpus/main.ts';
 import {
@@ -157,7 +163,12 @@ describe('corpus de parité commité', () => {
       expect(Buffer.from(inputBytes(committed)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
       expect(committed.languageId, source.id).toBe(source.languageId);
     }
-    const others = allCases.filter((value) => !value.id.startsWith('upstream/') && !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value));
+    const others = allCases.filter(
+      (value) =>
+        !value.id.startsWith('upstream/') &&
+        !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value) &&
+        !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value),
+    );
     expect(others.length).toBe(synthetic.length);
   });
 
@@ -198,6 +209,29 @@ describe('corpus de parité commité', () => {
         sources.map((source, index) => ({
           id: source.id,
           ...(source.intent === undefined ? {} : { intent: source.intent }),
+          expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
+        })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('les cas du mot de passe annoncé sont exactement ceux du générateur, et leur résultat est celui de la lecture de référence', () => {
+    const sources = passwordPhraseCases();
+    const committed = corpus.get(PASSWORD_PHRASE_FILE) ?? [];
+    expect(committed.map((value) => value.id)).toEqual(sources.map((source) => source.id));
+    sources.forEach((source, index) => {
+      const value = committed[index];
+      if (!value) throw new Error('cas absent');
+      expect(Buffer.from(inputBytes(value)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
+      expect(value.inputEncoding).toBe('utf8');
+      expect(value.expected.complete).toBe(true);
+      expect(value.expected.findings, source.id).toEqual(passwordPhraseReference(inputBytes(value)));
+    });
+    expect(
+      passwordPhraseCoverageProblems(
+        sources.map((source, index) => ({
+          id: source.id,
+          ...(source.intent ? { intent: source.intent } : {}),
           expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
         })),
       ),

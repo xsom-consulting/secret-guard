@@ -8,6 +8,7 @@
     {"file":"rules-credential-url.json","cases":34},
     {"file":"rules-entropy.json","cases":19},
     {"file":"rules-fixed.json","cases":106},
+    {"file":"rules-password-phrase.json","cases":27},
     {"file":"rules-personal-data.json","cases":80},
     {"file":"rules-private-key.json","cases":19},
     {"file":"upstream-encoding.json","cases":12},

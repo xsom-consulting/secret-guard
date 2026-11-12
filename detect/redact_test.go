@@ -143,6 +143,10 @@ func redactCorpus(t *testing.T) map[string]map[string]corpusCase {
 // personalDataCorpusFile : fichier du corpus des règles de données personnelles (v0.7.0), absentes du moteur d'origine.
 const personalDataCorpusFile = "rules-personal-data.json"
 
+// passwordPhraseCorpusFile : fichier du corpus du mot de passe annoncé dans une phrase (v0.8.1), lecture absente du
+// moteur d'origine.
+const passwordPhraseCorpusFile = "rules-password-phrase.json"
+
 // redactSelected dit si un cas du corpus est repris par les vecteurs du masquage : au moins un constat, ou analyse
 // incomplète (selectedCorpusCase du générateur).
 func redactSelected(c corpusCase) bool { return !c.Expected.Complete || len(c.Expected.Findings) > 0 }
@@ -283,8 +287,9 @@ func TestRedactParity(t *testing.T) {
 		}
 		selected := 0
 		for file, cases := range corpus {
-			if file == personalDataCorpusFile {
-				// Règles ajoutées en v0.7.0 : le masquage du moteur d'origine ne les connaît pas (TestPersonalDataRedaction).
+			if file == personalDataCorpusFile || file == passwordPhraseCorpusFile {
+				// Règles ajoutées en v0.7.0 et annonces de mot de passe (v0.8.1) : le masquage du moteur d'origine ne les
+				// connaît pas (TestPersonalDataRedaction, TestPasswordPhraseRedaction).
 				continue
 			}
 			for id, c := range cases {
