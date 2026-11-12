@@ -105,6 +105,7 @@ func (r *Rules) scanContextualAssignments(v *view, budget *decodeBudget, lang la
 	}
 	findings = r.scanCookieCredentials(v, findings)
 	findings = r.scanBasicAuthArguments(v, findings)
+	findings = r.scanPasswordPhrases(v, findings, findings)
 	if allowStructured {
 		var err error
 		if findings, err = r.scanDockerAuth(v, ctx, budget, findings); err != nil {
