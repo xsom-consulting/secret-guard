@@ -1,10 +1,15 @@
-# Vérification de Secret Guard à chaque poussée et à chaque demande de fusion : module racine (Apache-2.0) et module
-# expurgation (dossier expurgation/, PolyForm Small Business 1.0.0).
+# Vérification de Secret Guard à chaque poussée sur main et à chaque demande de fusion : module racine (Apache-2.0) et
+# module expurgation (dossier expurgation/, PolyForm Small Business 1.0.0).
+# Pas de déclenchement sur les autres branches ni sur les étiquettes : une branche poussée avec une demande de fusion
+# était vérifiée deux fois sur trois systèmes, et une étiquette pose sur un commit de main déjà vérifié (release.yml
+# construit et vérifie le module WebAssembly). Vérification d'une branche sans demande de fusion : à la main.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
