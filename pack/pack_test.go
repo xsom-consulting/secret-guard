@@ -23,12 +23,12 @@ func validPack(rule string) string {
 }
 
 func TestInitialPack(t *testing.T) {
-	t.Run("le Pack initial embarqué se décode strictement : 40 règles, version 1", func(t *testing.T) {
+	t.Run("le Pack initial embarqué se décode strictement : 334 règles (35 du catalogue, 5 de données personnelles, 294 de fournisseurs), version 1", func(t *testing.T) {
 		p, err := Initial()
 		if err != nil {
 			t.Fatal(err)
 		}
-		if p.SchemaVersion != 1 || p.PackVersion != 1 || len(p.Rules) != 40 {
+		if p.SchemaVersion != 1 || p.PackVersion != 1 || len(p.Rules) != 334 {
 			t.Fatalf("schéma %d, version %d, %d règles", p.SchemaVersion, p.PackVersion, len(p.Rules))
 		}
 	})

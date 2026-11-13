@@ -8,6 +8,14 @@
 // par construction. Sinon, le motif s'exécute sur tout le texte de la vue, comme sans porte : la porte ne change
 // jamais un résultat, elle évite seulement une exécution inutile. Une règle dont les littéraux ne sont pas prouvés
 // n'a pas de porte et s'exécute toujours.
+//
+// Motif qui replie la casse (« (?i) », depuis la v0.8.1) : la porte est « repliée ». Ses littéraux sont en minuscules
+// ASCII et se cherchent sans tenir compte de la casse ASCII. RE2 replie aussi K (U+212A, signe kelvin) sur « k » et
+// ſ (U+017F, s long) sur « s » : un texte qui porte l'un de ces deux points de code est toujours admis par une porte
+// repliée (hasFoldEscape). Un littéral replié qui porte une autre lettre hors ASCII retire la porte.
+//
+// Les portes des règles « motif seul » d'un Pack sont réunies dans un index (literalindex.go) : une seule lecture du
+// texte dit quelles règles peuvent y avoir une correspondance.
 
 package detect
 
@@ -31,15 +39,70 @@ const (
 // aucune porte, la règle s'exécute toujours.
 type literalGate struct {
 	literals [][]byte
+	// fold : porte repliée ; les littéraux sont en minuscules ASCII et se cherchent sans tenir compte de la casse.
+	fold bool
 }
 
-// admits dit si la règle doit s'exécuter sur text : vrai sans porte, ou si l'un des littéraux y figure.
+// admits dit si la règle doit s'exécuter sur text : vrai sans porte, ou si l'un des littéraux y figure (porte
+// repliée : sans tenir compte de la casse ASCII, ou si le texte porte U+212A ou U+017F).
 func (g *literalGate) admits(text []byte) bool {
 	if g == nil {
 		return true
 	}
+	if g.fold {
+		if hasFoldEscape(text) {
+			return true
+		}
+		for _, literal := range g.literals {
+			if containsFoldASCII(text, literal) {
+				return true
+			}
+		}
+		return false
+	}
 	for _, literal := range g.literals {
 		if bytes.Contains(text, literal) {
+			return true
+		}
+	}
+	return false
+}
+
+// Encodages UTF-8 des deux points de code hors ASCII que RE2 replie sur une lettre ASCII : K (U+212A) et ſ (U+017F).
+var (
+	kelvinSign = []byte("\u212a")
+	longS      = []byte("\u017f")
+)
+
+// hasFoldEscape dit si text porte U+212A ou U+017F : une porte repliée l'admet alors sans chercher ses littéraux.
+func hasFoldEscape(text []byte) bool {
+	return bytes.Contains(text, kelvinSign) || bytes.Contains(text, longS)
+}
+
+// lowerASCII rend c en minuscule s'il est une majuscule ASCII, c sinon.
+func lowerASCII(c byte) byte {
+	if 'A' <= c && c <= 'Z' {
+		return c + 'a' - 'A'
+	}
+	return c
+}
+
+// containsFoldASCII dit si literal (minuscules ASCII) figure dans text sans tenir compte de la casse ASCII.
+func containsFoldASCII(text, literal []byte) bool {
+	n := len(literal)
+	if n == 0 {
+		return true
+	}
+	first := literal[0]
+	for i := 0; i+n <= len(text); i++ {
+		if lowerASCII(text[i]) != first {
+			continue
+		}
+		j := 1
+		for j < n && lowerASCII(text[i+j]) == literal[j] {
+			j++
+		}
+		if j == n {
 			return true
 		}
 	}
@@ -59,28 +122,62 @@ type literalInfo struct {
 // unknownLiterals : rien n'est prouvé sur les correspondances du nœud.
 var unknownLiterals = literalInfo{}
 
-// gateFor calcule la porte d'un motif analysé par syntax.Parse (mêmes drapeaux que regexp.Compile). Tout nœud qui
-// replie la casse (drapeau FoldCase, « (?i) » ou classe [xX] que l'analyseur a réécrite en littéral replié) retire
-// toute porte : le repliement Unicode de RE2 (K et U+212A, s et U+017F…) n'est pas développé.
+// gateFor calcule la porte d'un motif analysé par syntax.Parse (mêmes drapeaux que regexp.Compile). Si un nœud replie
+// la casse (drapeau FoldCase, « (?i) » ou classe [xX] que l'analyseur a réécrite en littéral replié), la porte est
+// repliée : chaque littéral est ramené en minuscules ASCII (foldLiterals), et la porte est retirée si l'un d'eux
+// porte une lettre que ce repliement ne couvre pas.
 func gateFor(re *syntax.Regexp) *literalGate {
-	if foldsCase(re) {
-		return nil
-	}
 	info := literalsOf(re)
 	set := info.required
 	if info.exact {
 		set = info.exactSet
 	}
+	fold := foldsCase(re)
+	if fold {
+		var ok bool
+		if set, ok = foldLiterals(set); !ok {
+			return nil
+		}
+	}
 	if !usableGate(set) {
 		return nil
 	}
-	gate := &literalGate{}
+	gate := &literalGate{fold: fold}
 	for _, literal := range set {
 		if !containsAnother(set, literal) {
 			gate.literals = append(gate.literals, []byte(literal))
 		}
 	}
 	return gate
+}
+
+// foldLiterals ramène les littéraux d'un motif qui replie la casse en minuscules ASCII, sans doublon : majuscule ASCII
+// en minuscule, U+212A en « k », U+017F en « s » (un texte qui porte l'un de ces deux points de code est admis
+// d'office, hasFoldEscape). Faux si un littéral porte un autre point de code hors ASCII : son repliement n'est pas
+// développé, aucune porte.
+func foldLiterals(set []string) ([]string, bool) {
+	var out []string
+	seen := map[string]bool{}
+	for _, literal := range set {
+		folded := make([]byte, 0, len(literal))
+		for _, r := range literal {
+			switch {
+			case r == '\u212a':
+				folded = append(folded, 'k')
+			case r == '\u017f':
+				folded = append(folded, 's')
+			case r < utf8.RuneSelf:
+				folded = append(folded, lowerASCII(byte(r)))
+			default:
+				return nil, false
+			}
+		}
+		if !seen[string(folded)] {
+			seen[string(folded)] = true
+			out = append(out, string(folded))
+		}
+	}
+	return out, true
 }
 
 // containsAnother dit si literal contient un autre littéral de l'ensemble (sans doublon) : il est alors superflu, un

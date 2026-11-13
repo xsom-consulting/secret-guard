@@ -22,8 +22,9 @@ import (
 // épuisé par un validateur : errDecodeBudgetExhausted (analyse incomplète).
 func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bool) ([]finding, error) {
 	findings := r.scanPrivateKeys(v)
-	for _, fixed := range r.fixed {
-		if fixed.validator != nil && !allowStructured {
+	admitted := r.admittedFixed(v.text)
+	for i, fixed := range r.fixed {
+		if fixed.validator != nil && !allowStructured || admitted != nil && !admitted.has(i) {
 			continue
 		}
 		var err error
@@ -37,6 +38,15 @@ func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bo
 		}
 	}
 	return findings, nil
+}
+
+// admittedFixed rend les règles « motif seul » (indices de r.fixed) dont la porte peut admettre text, par l'index du
+// Pack ; nil sans index : chaque règle juge alors sa porte elle-même.
+func (r *Rules) admittedFixed(text []byte) admittedRules {
+	if r.index == nil || r.index.count != len(r.fixed) {
+		return nil
+	}
+	return r.index.admitted(text)
 }
 
 // scanPrivateKeys : en-tête PEM de clé privée jusqu'à sa marque de fin, ou jusqu'à la fin du texte si elle manque

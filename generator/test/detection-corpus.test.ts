@@ -24,6 +24,15 @@ import {
   passwordPhraseCoverageProblems,
   passwordPhraseReference,
 } from '../corpus/password-phrase.ts';
+import {
+  mergeProviderFindings,
+  PROVIDER_RULES_FILE,
+  providerReference,
+  providerRuleCases,
+  providerRuleCoverageProblems,
+  providerSampleText,
+} from '../corpus/provider-rules.ts';
+import { PROVIDER_RULE_SOURCES } from '../rule-pack/provider-rules.ts';
 import type { RecordedTest } from '../corpus/harness.ts';
 import { TESTS_WITHOUT_INPUT, upstreamSources } from '../corpus/main.ts';
 import {
@@ -80,7 +89,9 @@ const allPackRuleIds = RulePack.parse(JSON.parse(read(new URL('../../pack/initia
 // Règles du catalogue d'origine (jugées par le moteur d'origine) ; les règles de données personnelles (v0.7.0) sont
 // jugées par la lecture de référence de `rule-pack/personal-data.ts`.
 const personalRuleIds: readonly string[] = PERSONAL_DATA_RULES.map((rule) => rule.ruleId);
-const packRuleIds = allPackRuleIds.filter((id) => !personalRuleIds.includes(id));
+// Les règles de fournisseurs (v0.8.1) sont jugées par la lecture de référence de `rule-pack/provider-rules.ts`.
+const providerRuleIds: readonly string[] = PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId);
+const packRuleIds = allPackRuleIds.filter((id) => !personalRuleIds.includes(id) && !providerRuleIds.includes(id));
 
 function inputBytes(value: CorpusCase): Uint8Array {
   return value.inputEncoding === 'utf8' ? new TextEncoder().encode(value.input) : Buffer.from(value.input, 'base64');
@@ -167,7 +178,8 @@ describe('corpus de parité commité', () => {
       (value) =>
         !value.id.startsWith('upstream/') &&
         !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value) &&
-        !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value),
+        !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value) &&
+        !(corpus.get(PROVIDER_RULES_FILE) ?? []).includes(value),
     );
     expect(others.length).toBe(synthetic.length);
   });
@@ -209,6 +221,47 @@ describe('corpus de parité commité', () => {
         sources.map((source, index) => ({
           id: source.id,
           ...(source.intent === undefined ? {} : { intent: source.intent }),
+          expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
+        })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('les cas des règles de fournisseurs sont exactement ceux du générateur, et la lecture de référence y trouve la valeur construite', () => {
+    const providerIds = new Set(PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId));
+    const sources = providerRuleCases();
+    const committed = corpus.get(PROVIDER_RULES_FILE) ?? [];
+    expect(committed.map((value) => value.id)).toEqual(sources.map((source) => source.id));
+    expect(committed).toHaveLength(2 * PROVIDER_RULE_SOURCES.length);
+    sources.forEach((source, index) => {
+      const value = committed[index];
+      if (!value) throw new Error('cas absent');
+      expect(Buffer.from(inputBytes(value)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
+      expect(value.inputEncoding).toBe('utf8');
+      expect(value.expected.complete).toBe(true);
+      // Chaque constat de la lecture de référence est couvert par un constat attendu (le sien, ou celui d'une règle
+      // mieux classée qui l'a absorbé) ; chaque constat attendu d'une règle de fournisseur vient de cette lecture.
+      const reference = providerReference(inputBytes(value));
+      for (const found of reference) {
+        expect(value.expected.findings.some((finding) => finding.byteStart <= found.byteStart && found.byteEnd <= finding.byteEnd), source.id).toBe(true);
+      }
+      for (const finding of value.expected.findings.filter((entry) => providerIds.has(entry.ruleId))) {
+        expect(reference.some((found) => found.ruleId === finding.ruleId && finding.byteStart <= found.byteStart && found.byteEnd <= finding.byteEnd), source.id).toBe(true);
+      }
+      // Sans constat du moteur d'origine, la fusion rend la lecture de référence dédupliquée.
+      expect(mergeProviderFindings(source.id, [], reference).length, source.id).toBeLessThanOrEqual(reference.length);
+    });
+    // Valeur construite : la lecture de référence la trouve à son étendue exacte dans le cas positif.
+    for (const rule of PROVIDER_RULE_SOURCES) {
+      const { text, start, end } = providerSampleText(rule, 'value');
+      const found = providerReference(Buffer.from(text)).filter((finding) => finding.ruleId === rule.ruleId);
+      expect(found.map((finding) => [finding.byteStart, finding.byteEnd]), rule.ruleId).toEqual([[start, end]]);
+    }
+    expect(
+      providerRuleCoverageProblems(
+        sources.map((source, index) => ({
+          id: source.id,
+          ...(source.intent ? { intent: source.intent } : {}),
           expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
         })),
       ),

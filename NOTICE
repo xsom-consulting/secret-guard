@@ -24,6 +24,16 @@ Licences de ce dépôt / licenses of this repository:
   with no code from the original work. Versions v0.1.0 to v0.5.1 remain Apache-2.0.
 
 Composants tiers / third-party components:
+- Règles de fournisseurs du Pack initial (pack/initial/pack.json, generator/rule-pack/provider-rules.json),
+  depuis la v0.8.1 : motifs repris et modifiés des règles de détection de Titus
+  (https://github.com/praetorian-inc/titus, pkg/rule/rules/, commit b3964d4352ac2f84af11d1396e864bdc772f2b92),
+  Copyright 2026 Praetorian Security, Inc., Apache-2.0 ; ces règles sont dérivées de NoseyParker
+  (https://github.com/praetorian-inc/noseyparker), Copyright 2023-2026 Praetorian Security, Inc., Apache-2.0,
+  et de Kingfisher (https://github.com/mongodb/kingfisher), Copyright MongoDB, Inc., Apache-2.0.
+  Modifications : UPSTREAM.md, « Règles de fournisseurs ».
+  Provider rules of the initial Pack, since v0.8.1: patterns taken and modified from the detection rules of
+  Titus (Praetorian Security, Inc., Apache-2.0), themselves derived from NoseyParker (Praetorian Security, Inc.,
+  Apache-2.0) and Kingfisher (MongoDB, Inc., Apache-2.0). Changes: UPSTREAM.md, "Règles de fournisseurs".
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.
 - Données Unicode / Unicode data (Unicode License v3), Copyright (c) 1991-2026 Unicode, Inc.

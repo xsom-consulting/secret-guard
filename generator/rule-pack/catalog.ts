@@ -9,6 +9,7 @@ import type { RuleFamily, RulePack, RulePackRule, RuleSecretType } from '../src/
 import { RULE_FAMILIES, RULE_SECRET_TYPES } from '../src/rule-pack.ts';
 import { translateJsPattern, type Translation } from './js-to-re2.ts';
 import { PERSONAL_DATA_RULES } from './personal-data.ts';
+import { PROVIDER_RULES } from './provider-rules.ts';
 
 /** Dépôt, commit et chemin d'origine du catalogue (Apache-2.0). */
 export const UPSTREAM_REPOSITORY = 'jt33120/poc-AI_guard';
@@ -299,10 +300,11 @@ export function buildCatalogRules(text: string): RulePackRule[] {
 
 /**
  * Pack de règles initial : les règles du catalogue Secret Guard depuis le texte figé de `rules.ts`, puis les règles de
- * données personnelles ajoutées par xSOM (v0.7.0, `personal-data.ts`).
+ * données personnelles ajoutées par xSOM (v0.7.0, `personal-data.ts`), puis les règles de fournisseurs (v0.8.1,
+ * `provider-rules.ts`).
  */
 export function buildInitialPack(text: string): RulePack {
-  return { ...INITIAL_PACK_HEADER, rules: [...buildCatalogRules(text), ...PERSONAL_DATA_RULES] };
+  return { ...INITIAL_PACK_HEADER, rules: [...buildCatalogRules(text), ...PERSONAL_DATA_RULES, ...PROVIDER_RULES] };
 }
 
 /** Écriture du Pack sur disque : JSON indenté de deux espaces, fin de ligne finale. */

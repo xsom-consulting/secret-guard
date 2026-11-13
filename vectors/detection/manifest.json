@@ -11,6 +11,7 @@
     {"file":"rules-password-phrase.json","cases":27},
     {"file":"rules-personal-data.json","cases":80},
     {"file":"rules-private-key.json","cases":19},
+    {"file":"rules-providers.json","cases":588},
     {"file":"upstream-encoding.json","cases":12},
     {"file":"upstream-scan.json","cases":111},
     {"file":"upstream-security.json","cases":126},

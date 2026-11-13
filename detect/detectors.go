@@ -168,8 +168,9 @@ var detectorTasksOf = (*Rules).detectorTasks
 // sont des mémos d'un calcul sur le texte de la vue, sans effet sur les résultats.
 func (r *Rules) detectorTasks(v *view, budget *decodeBudget, entropy bool, lang language, allowStructured bool) []detectorTask {
 	tasks := []detectorTask{{run: func() ([]finding, error) { return r.scanPrivateKeys(v), nil }, rank: rankGated}}
-	for _, fixed := range r.fixed {
-		if fixed.validator != nil && !allowStructured {
+	admitted := r.admittedFixed(v.text)
+	for i, fixed := range r.fixed {
+		if fixed.validator != nil && !allowStructured || admitted != nil && !admitted.has(i) {
 			continue
 		}
 		scanRule := scanFixedPattern

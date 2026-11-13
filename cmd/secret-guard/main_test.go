@@ -189,7 +189,7 @@ func TestScanCommand(t *testing.T) {
 		if code, stdout, _ := runCommand(t, files, "", "--help"); code != 0 || !strings.Contains(stdout, "Codes de sortie") {
 			t.Fatalf("aide : %d", code)
 		}
-		if code, stdout, _ := runCommand(t, files, "", "version"); code != 0 || !strings.Contains(stdout, "Pack initial : version 1, 40 règles") {
+		if code, stdout, _ := runCommand(t, files, "", "version"); code != 0 || !strings.Contains(stdout, "Pack initial : version 1, 334 règles") {
 			t.Fatalf("version : %d %q", code, stdout)
 		}
 	})

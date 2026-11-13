@@ -100,7 +100,8 @@ func readJSON(t *testing.T, path string, into any) {
 // vecteurs de ce fichier, ne les connaît pas : ces essais chargent les seules règles du catalogue d'origine.
 var personalDataRules = map[string]bool{"iban": true, "fr_nir": true, "fr_siret": true, "fr_siren": true, "payment_card": true}
 
-// catalogPack rend le Pack initial sans les règles de données personnelles.
+// catalogPack rend les règles du catalogue d'origine : celles du Pack initial qui précèdent les règles de données
+// personnelles (les règles de fournisseurs de la v0.8.1 viennent après elles).
 func catalogPack(t *testing.T) *pack.Pack {
 	t.Helper()
 	initial, err := pack.Initial()
@@ -110,9 +111,10 @@ func catalogPack(t *testing.T) *pack.Pack {
 	catalog := *initial
 	catalog.Rules = nil
 	for _, r := range initial.Rules {
-		if !personalDataRules[r.RuleID] {
-			catalog.Rules = append(catalog.Rules, r)
+		if personalDataRules[r.RuleID] {
+			break
 		}
+		catalog.Rules = append(catalog.Rules, r)
 	}
 	if len(catalog.Rules) != 35 {
 		t.Fatalf("%d règles du catalogue, attendu 35", len(catalog.Rules))

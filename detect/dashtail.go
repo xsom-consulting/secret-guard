@@ -100,7 +100,8 @@ const dashTailWindow = 512
 // (préfixe du jeton), cherchées dans une fenêtre qui suit chaque littéral : le motif n'est jamais lu sur tout le texte.
 // Sans porte, toutes les correspondances.
 func dashTailCandidates(r *rule, text []byte) [][]int {
-	if r.gate == nil {
+	if r.gate == nil || r.gate.fold {
+		// Sans porte, ou porte repliée (ses littéraux en minuscules ne disent pas où le jeton commence) : tout le texte.
 		return r.dashTail.FindAllIndex(text, -1)
 	}
 	var out [][]int

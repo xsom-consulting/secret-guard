@@ -18,6 +18,7 @@ import { decodeInput } from '../corpus/bytes.ts';
 import { testImport } from '../corpus/harness.ts';
 import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { PASSWORD_PHRASE_FILE } from '../corpus/password-phrase.ts';
+import { PROVIDER_RULES_FILE } from '../corpus/provider-rules.ts';
 import { MANIFEST_FILE, type CorpusCase } from '../corpus/model.ts';
 import { readScanResult, transpileUpstream, UPSTREAM_COMMIT, UpstreamError } from '../corpus/upstream.ts';
 import { intentProblem, redactSources, spanSources } from './cases.ts';
@@ -140,7 +141,7 @@ async function main(): Promise<number> {
     for (const { file, value } of committedCorpus()) {
       // Règles de données personnelles (v0.7.0) et annonces de mot de passe (v0.8.1) : absentes du moteur d'origine,
       // son masquage ne les connaît pas.
-      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || !corpusCaseSelected(value)) continue;
+      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || !corpusCaseSelected(value)) continue;
       const { initial, ...expected } = redactExpectedFor(upstream.engine, engine, corpusInput(value), value.languageId).expected;
       if (JSON.stringify(initial) !== JSON.stringify(value.expected)) problems.push(`${value.id} : analyse initiale différente du corpus`);
       cases.push({ id: value.id, corpusFile: file, expected });
