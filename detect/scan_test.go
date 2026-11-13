@@ -164,18 +164,19 @@ func TestScanFailures(t *testing.T) {
 		}
 	})
 
-	t.Run("2 048 constats au plus avant la déduplication (même jeton vu dans plusieurs vues)", func(t *testing.T) {
+	t.Run("2 048 constats au plus après la déduplication (même jeton vu dans plusieurs vues)", func(t *testing.T) {
 		rules := loadInitialRules(t)
 		slackToken := "xo" + "xb-" + "7Kq2Xw9Lm4"
 		// Chaque jeton est vu dans la vue d'identité et dans la vue pourcentage (« %41 » la fait exister) : deux
-		// constats avant déduplication, un seul après.
-		within := strings.Repeat(slackToken+" %41 ", MaxFindings/2)
-		if result := Scan([]byte(within), rules, Options{}); !result.Complete || len(result.Findings) != MaxFindings/2 {
+		// constats avant déduplication, un seul après. Écart v0.8.1 (A1-11) : la borne compte les constats gardés, pas
+		// les doublons ; 4 096 constats avant déduplication donnent une analyse complète de 2 048 constats.
+		within := strings.Repeat(slackToken+" %41 ", MaxFindings)
+		if result := Scan([]byte(within), rules, Options{}); !result.Complete || len(result.Findings) != MaxFindings {
 			t.Fatalf("%v, %d constats", result.Failure, len(result.Findings))
 		}
-		beyond := strings.Repeat(slackToken+" %41 ", MaxFindings/2+1)
+		beyond := strings.Repeat(slackToken+" %41 ", MaxFindings+1)
 		if result := Scan([]byte(beyond), rules, Options{}); result.Failure != FailureScanError {
-			t.Fatalf("%d constats après déduplication, issue %v", MaxFindings/2+1, result.Failure)
+			t.Fatalf("%d constats après déduplication, issue %v", MaxFindings+1, result.Failure)
 		}
 	})
 

@@ -178,6 +178,10 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 			continue
 		}
 		valueSyntaxOffset := lastIndex
+		comparison := false
+		if p.plain {
+			valueSyntaxOffset, comparison = afterComparison(text, m[0], valueSyntaxOffset)
+		}
 		parsed := ctx.parseAssignmentValue(valueSyntaxOffset, lang)
 		hasTail := parsed != nil && hasExpressionTail(text, parsed)
 		findingStart, findingEnd := 0, -1
@@ -193,6 +197,9 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 			continue
 		}
 		value := text[parsed.start:parsed.valueEnd]
+		if comparison && parsed.kind == kindUnquoted && isComparisonOperand(value) {
+			continue
+		}
 		if p.valueShape && !indirectValueShape(v, parsed) {
 			continue
 		}
@@ -217,6 +224,54 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 		findings = append(findings, newFinding(v, matched, findingStart, findingEnd, score, reasons))
 	}
 	return findings
+}
+
+// afterComparison rend la position qui suit l'opérateur de comparaison « == » ou « === » quand le séparateur « = »
+// d'une affectation ordinaire (ASSIGNMENT) en est le premier signe, et vrai ; sinon end, inchangé, et faux.
+//
+// Écart avec Secret Guard (UPSTREAM.md) : dans une comparaison d'un nom sensible à « undefined » ou « null »,
+// ASSIGNMENT lit le nom suivi du premier « = » et prend le reste de l'opérateur et l'opérande pour la valeur, une
+// affectation de secret ; relevé sur un Poste réel (xSOM Fleet, 11 novembre 2026), où cette suite était expurgée
+// partout dans la session. La valeur est lue après l'opérateur : une comparaison à un mot réservé ou à un nom de code
+// (isComparisonOperand) est écartée, une valeur littérale (entre guillemets, ou jeton collé à l'opérateur) reste
+// détectée.
+func afterComparison(text []byte, matchStart, end int) (int, bool) {
+	// Le séparateur est le dernier signe de la correspondance (aucun blanc ne le suit) : il faut qu'il soit « = » et
+	// que le signe suivant soit « = » ; « := » n'en est pas un.
+	if end >= len(text) || text[end] != '=' || end-1 <= matchStart || text[end-1] != '=' || text[end-2] == ':' {
+		return end, false
+	}
+	i := end
+	for i < len(text) && i-end < 2 && text[i] == '=' {
+		i++
+	}
+	return i, true
+}
+
+// isComparisonOperand dit si value, lue après « == » ou « === », commence par un opérande qui n'est pas un secret : un
+// mot réservé (reSafeLiteralWord) ou un nom de code dont chaque partie, entre « . », « _ » et « $ », est un mot de nom
+// (nameTokenLetters : casse de chameau, minuscules, majuscules). Une suite aléatoire de jeton n'en a pas la forme et
+// reste détectée.
+func isComparisonOperand(value []byte) bool {
+	end := 0
+	for end < len(value) && (isASCIIAlphanumeric(value[end]) || value[end] == '_' || value[end] == '$' || value[end] == '.') {
+		end++
+	}
+	operand := value[:end]
+	if len(operand) == 0 {
+		return false
+	}
+	if safeLiteralWord.Match(operand) {
+		return true
+	}
+	parts := 0
+	for _, part := range bytes.FieldsFunc(operand, func(r rune) bool { return r == '.' || r == '_' || r == '$' }) {
+		if _, ok := nameTokenLetters(part); !ok {
+			return false
+		}
+		parts++
+	}
+	return parts > 0
 }
 
 func skipSpacesAndTabs(text []byte, i int) int {

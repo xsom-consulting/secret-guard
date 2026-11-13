@@ -245,6 +245,7 @@ Ne jamais éditer `pack.json`, `engine_patterns.go`, `hidden/unicode_tables.go`,
 go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...
 (cd expurgation && go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...)   # module expurgation
 go test -count=1 -v -run '^TestParity$' ./detect
+go test -count=1 -v -run '^TestNoiseCorpus$' ./detect   # corpus de bruit (vectors/noise.json) : aucun constat
 go test -count=1 -v -run '^(TestRedactParity|TestDecisionParity|TestRedactLeavesNoValue)$' ./detect   # masquage et décisions
 go test -count=1 -v -run '^TestHiddenParity$' ./hidden
 go test -count=1 -v -run '^TestMentionsParity$' ./mentions

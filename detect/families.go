@@ -470,7 +470,8 @@ func (r *Rules) scanEntropy(v *view) []finding {
 	for _, m := range entropy.pattern.FindAllIndex(text, -1) {
 		value := text[m[0]:m[1]]
 		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) ||
-			isPathContinuation(v, m[0], value) || isKnownResourceLink(v, m[0], value) || isWordSlug(value) || !hasStrongEntropy(v, m[0], m[1]) {
+			isPathContinuation(v, m[0], value) || isKnownResourceLink(v, m[0], value) || isWordSlug(value) ||
+			isEntropyName(value) || isProviderObjectID(text, m[0], value) || !hasStrongEntropy(v, m[0], m[1]) {
 			continue
 		}
 		score := entropy.score
