@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 // Parité du module WebAssembly avec le moteur Go : node --test wasm/parity.test.mjs (Go et le module construit requis).
-// tools/wasmparity exécute en Go natif, sur tout le corpus du module (vectors/detection/, 903 cas ; vectors/expurgate.json ;
+// tools/wasmparity exécute en Go natif, sur tout le corpus du module (vectors/detection/, 930 cas ; vectors/expurgate.json ;
 // vectors/hidden.json), l'analyse, l'expurgation et les instructions cachées ; chaque chargeur du paquet exécute les
 // mêmes cas, sur les mêmes octets, dans le module WebAssembly, et doit rendre les mêmes documents (et le même texte
 // expurgé). Un écart n'affiche que l'identifiant du cas, jamais son entrée.
@@ -24,7 +24,7 @@ const decode = (base64) => Uint8Array.from(Buffer.from(base64, 'base64'));
 
 test('le décompte natif couvre tout le corpus', () => {
   assert.equal(summary.kind, 'summary');
-  assert.equal(summary.scan, 903);
+  assert.equal(summary.scan, 930);
   assert.ok(summary.expurgate > summary.scan);
   assert.ok(summary.hidden > 0);
   const counts = { scan: 0, expurgate: 0, hidden: 0 };

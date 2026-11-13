@@ -18,6 +18,7 @@ import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from '.
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
+import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
 import { PLACEHOLDER_NOT_APPLICABLE, PUBLIC_EXAMPLE_NOT_APPLICABLE, syntheticCases } from './synthetic.ts';
 import { transpileUpstream, UPSTREAM_COMMIT } from './upstream.ts';
 
@@ -147,8 +148,17 @@ async function main(): Promise<number> {
       written.push([source.file, corpusCaseOf(source, expected)]);
       sources.push(source);
     }
+    // Mot de passe annoncé dans une phrase (v0.8.1) : jugé par la lecture de référence de `rule-pack/password-phrase.ts`.
+    const phrases: EvaluatedCase[] = [];
+    for (const source of passwordPhraseCases()) {
+      const expected = passwordPhraseExpected(engine, source);
+      phrases.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
+      written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
     problems.push(...missingPersonal.map((id) => `règle de données personnelles absente du Pack : ${id}`));
     problems.push(...personalDataCoverageProblems(personal));
+    problems.push(...passwordPhraseCoverageProblems(phrases));
     problems.push(
       ...coverageProblems({
         cases: evaluated,
