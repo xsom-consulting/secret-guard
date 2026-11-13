@@ -140,6 +140,8 @@ type rule struct {
 type Rules struct {
 	fixed  []*rule
 	engine map[string]*rule
+	// index : portes littérales des règles « motif seul » réunies (literalindex.go) ; nil : chaque règle juge sa porte.
+	index *literalIndex
 	// ids : identifiants de toutes les règles du Pack chargé (Has).
 	ids map[string]bool
 	// loaded : posé par LoadRules seul ; une valeur zéro (ou construite hors de LoadRules) n'est jamais exécutée.
@@ -193,6 +195,7 @@ func LoadRules(p *pack.Pack) (*Rules, error) {
 			return nil, refuse(family[0], RefusalIncompleteEngineFamily)
 		}
 	}
+	loaded.index = newLiteralIndex(loaded.fixed)
 	return loaded, nil
 }
 

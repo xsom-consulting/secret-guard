@@ -9,9 +9,13 @@ const (
 	// MaxInputBytes est la taille d'entrée la plus grande analysée, en octets reçus (MAX_INPUT_BYTES de Secret
 	// Guard, 1 Mio). Au-delà, rien n'est analysé, pas même un préfixe.
 	MaxInputBytes = 1 << 20
-	// MaxFindings est le nombre de constats le plus grand avant déduplication (MAX_FINDINGS de Secret Guard) ;
-	// au-delà, l'analyse est incomplète.
+	// MaxFindings est le nombre de constats le plus grand après déduplication (MAX_FINDINGS de Secret Guard, qui le
+	// compte avant) ; au-delà, l'analyse est incomplète.
 	MaxFindings = 2_048
+	// MaxRawFindings est le nombre de constats le plus grand avant déduplication (même secret vu dans plusieurs vues :
+	// texte, forme normalisée, pourcentages, échappements, base64) : borne de la mémoire de l'analyse ; au-delà,
+	// l'analyse est incomplète.
+	MaxRawFindings = 8 * MaxFindings
 
 	// MaxRules est le nombre de règles le plus grand d'un Pack (RULE_PACK_MAX_RULES).
 	MaxRules = 1_000

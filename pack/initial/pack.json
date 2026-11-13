@@ -403,6 +403,2946 @@
       "pattern": "\\b(?:[0-9]{13,19}|[0-9]{4}(?:[ -][0-9]{4}){3}|[0-9]{4}[ -][0-9]{6}[ -][0-9]{4,5})\\b",
       "minLength": 13,
       "maxLength": 19
+    },
+    {
+      "ruleId": "adafruit_io_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(aio_[0-9A-Za-z]{28})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "age_identity",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(AGE-SECRET-KEY-1[0-9A-Z]{58})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ai21_studio_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bAI21.{0,32}?\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "airbrake_user_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bAIRBRAKE.{0,32}?([\\-0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "airtable_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(PAT[0-9A-Za-zſK]{14}\\.[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aiven_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:AIVEN.{0,32}?\\b([\\+/-9=A-Za-zſK]{372})[^\\+/-9=A-Za-zſK])",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "alchemy_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bALCHEMY.{0,96}?(?:/V2/|API[\\-_]?KEY|KEY|TOKEN|SECRET|URL|ENDPOINT|RPC).{0,96}?\\b([\\-0-9A-Z_a-zſK]{24,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "algolia_admin_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:ALGOLIA.{0,32}?([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "alibaba_access_key_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bALIBABA.{0,32}?([0-9A-Za-zſK]{30}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "amplitude_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bAMPLITUDE.{0,64}?(?:API[\\-_]?KEY|SECRET[\\-_]?KEY|KEY|TOKEN|INIT).{0,32}?\\b([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "anypoint_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:ANYPOINT.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{8}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "apify_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(APIFY_API_[0-9A-Za-zſK]{34,38})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "apollo_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bAPOLLO.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{22})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "visual_studio_app_center_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:APP(?:CENTER|[\\-_]?CENTER).{0,32}?(?:API|TOKEN|KEY|SECRET).{0,16}?\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "artifactory_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:ARTIFACTORY.{0,50}\\b([0-9A-Za-zſK]{73})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "asana_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bASANA.{0,64}?\\b([0-9A-Za-zſK]{30,40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "asana_oauth_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bASANA.{0,64}?\\b([01]{1,}/[0-9A-Fa-f]{16,32}(?::[0-9A-Za-zſK]{32,64})?)\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "assemblyai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bASSEMBLYAI.{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "atlassian_cloud_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(ATATT3xFfGF0[\\-0-9A-Z_a-z]{20,200}=[0-9A-F]{8})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "authress_service_client_access_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:((?:SC|EXT|SCAUTH|AUTHRESS)_[0-9A-Za-zſK]{5,30}\\.[0-9A-Za-zſK]{4,6}\\.ACC[\\-_][\\-0-9A-Za-zſK]{10,32}\\.[\\+\\-/-9=A-Z_a-zſK]{30,120})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "amazon_mws_auth_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(AMZN\\.MWS\\.[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_appsync_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(da2-[0-9a-z]{26})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_devops_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:ADO_PAT|P(?:AT_TOKEN|ERSONAL_?ACCESS_?TOKEN)|\\$TOKEN)[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*[\"']([0-9a-z]{52})[\"']",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_devops_personal_access_token_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b([0-9A-Za-z]{76}AZDO[0-9A-Za-z]{4})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_ad_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b([\\.0-9A-Z_a-z~]{3}[0-9]Q~[\\-\\.0-9A-Z_a-z~]{31,34})",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_devops_personal_access_token_3",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b([0-9A-Za-zſK]{76}AZDO[0-9A-Za-zſK]{4,5})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_openai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bAZURE.{0,8}?OPENAI.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,8}?([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_openai_api_key_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:(?:AZURE[\\-_]?OPENAI[\\-_]?(?:API[\\-_]?)?KEY|OPENAI[\\-_]?(?:API[\\-_]?)?KEY)[\\t\\n\\f\\r ]*[:=][\\t\\n\\f\\r ]*[\"'`]?([\\+/-9A-Za-zſK]{60,100}(?:JQQJ|A(?:AAB|COGK))[\\+/-9=A-Za-zſK]{0,30})[\"'`]?)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "baremetrics_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bBAREMETRICS.{0,32}?\\b([\\-0-9A-Z_a-zſK]{25})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "baseten_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?s:\\bbaseten.{0,32}?\\b([0-9A-Za-z]{8}\\.[0-9A-Za-z]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "beamer_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bBEAMER.{0,64}?\\b(B_[\\+\\-/-9=A-Z\\\\_a-zſK]{44}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "bitly_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bBITLY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "blynk_device_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bhttps://(?:fra1\\.|lon1\\.|ny3\\.|sgp1\\.|blr1\\.)*blynk\\.cloud/external/api/[/-9A-Za-z]*\\?token=([\\-0-9A-Z_a-z]{32})&",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "blynk_organization_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bhttps://(?:fra1\\.|lon1\\.|ny3\\.|sgp1\\.|blr1\\.)*blynk\\.cloud/api/[\\t\\n\\f\\r \\-/-9A-Z\\\\_a-z]*-H[\\t\\n\\f\\r ]*\"Authorization:[\\t\\n\\f\\r ]*Bearer[\\t\\n\\f\\r ]*([\\-0-9A-Z_a-z]{40})\"",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "browserstack_access_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bBROWSERSTACK(?:).{0,64}?(?:ACCESS[\\-_]?KEY|KEY|SECRET|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "buildkite_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(BKUA_[0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cerebras_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(CSK-[0-9A-Za-zſK]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "circleci_api_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(CCIPAT_[0-9A-Za-zſK]{4}[A-Za-zſK]{5}[0-9A-Za-zſK]{3}[0-9]{3}[A-Za-zſK]{2}[A-Za-zſK]{2}[0-9]{1}[A-Za-zſK]{1}[0-9A-Za-zſK]{1}[0-9]{1}[A-Za-zſK]{1}_[0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "circleci_api_project_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCIRCLECI.{0,64}?([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cisco_meraki_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:MERAKI.{0,32}?([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "clarifai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCLARIFAI.{0,32}?\\b([0-9A-Fa-f]{32,36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "clay_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCLAY.{0,64}?\\b([0-9A-Fa-f]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "clearbit_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCLEARBIT.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Z_a-zſK]{35})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "clickhouse_cloud_secret_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(4B1D[0-9A-Za-zſK]{38})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "clojars_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(CLOJARS_[0-9A-Za-zſK]{60})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cloudflare_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCLOUDFLARE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{38,42})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cloudflare_ca_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\b(?:CLOUDFLARE|X-AUTH-USER-SERVICE-KEY).{0,64}?(V1\\.0-[\\-\\.0-9A-Z_a-zſK]{160,})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cloudinary_url_credential",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bcloudinary://[0-9]{15}:([\\-0-9A-Z_a-z]{27})@[A-Za-z][\\-0-9A-Za-z]{2,49}",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cloudsight_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCLOUDSIGHT.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20,24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "codacy_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCODACY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20,24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "codecov_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCODECOV.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Za-zſK]{36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "coderabbit_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(CR-[0-9A-Fa-f]{58})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cohere_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCOHERE.{0,16}?\\b([0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "coinbase_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCOINBASE.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([\\-0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "coinbase_cdp_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\"ID\"[\\t\\n\\f\\r ]*:[\\t\\n\\f\\r ]*\"[\\-0-9A-Fa-f]{36}\"[^\\{]*?\"PRIVATEKEY\"[\\t\\n\\f\\r ]*:[\\t\\n\\f\\r ]*\"([\\+/-9=A-Za-zſK]{88})\")",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "confluent_api_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:(?:C(?:ONFLUENT|CLOUD|PDEV)|KAFKA).{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\+/-9A-Za-zſK]{64}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "confluent_api_secret_updated_format",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(CFLT[\\+/-9A-Za-zſK]{54}[\\+/-9A-Za-zſK]{6}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contentful_delivery_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCONTENTFUL.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{43,45})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "contentful_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(CFPAT-[\\-0-9A-Z_a-z]{43})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "coveralls_personal_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCOVERALLS.{0,1}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Za-zſK]{37})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "coze_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?is:COZE.{0,32}?\\b(PAT_[0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "crates_io_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(cio[0-9A-Za-z]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cursor_integrations_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(KEY_[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "customer_io_tracking_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCUSTOMER\\.?IO.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|API[\\-_]?KEY).{0,16}?\\b([0-9A-Fa-f]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "customer_io_app_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bCUSTOMER\\.?IO.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|API).{0,16}?\\b([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "cypress_record_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:(?:CYPRESS(?:(?:)|_RECORD_KEY)|RECORD(?:_KEY|KEY)|--RECORD).{0,32}?\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "datadog_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bD(?:ATADOG.{0,64}?(?:API[\\-_]?KEY|SECRET|PRIVATE|ACCESS|TOKEN)|D[\\-_]API[\\-_]?KEY).{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "datadog_application_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bD(?:ATADOG.{0,64}?(?:APP(?:LICATION)?[\\-_]?KEY|SECRET|PRIVATE|ACCESS|TOKEN)|D[\\-_]APP(?:LICATION)?[\\-_]?KEY).{0,32}?\\b([\\-0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "data_gov_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDATA\\.GOV.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "deepgram_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDEEPGRAM.{0,32}?\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "defined_networking_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dnkey-[0-9A-Z]{26}-[0-9A-Z]{52})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "delighted_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDELIGHTED.{0,64}?(?:API[\\-_]?KEY|SECRET|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20,40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "dependency_track_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(odt_[0-9A-Za-z]{32,255})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "deviantart_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDEVIANT(?:ART|_ART).{0,64}?(?:ACCESS[\\-_]?TOKEN|TOKEN|SECRET|KEY).{0,32}?\\b([0-9A-Za-zſK]{40,80})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "deviantart_oauth_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:D(?:EVIANT(?:ART|_ART)|A_).{0,64}?(?:CLIENT[\\-_]?SECRET|OAUTH[\\-_]?SECRET).{0,32}?\\b([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "diffbot_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDIFFBOT.{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "digitalocean_application_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(DOO_V1_[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "digitalocean_refresh_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(DOR_V1_[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "discord_webhook_url",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:HTTPS://DISCORD\\.COM/API/WEBHOOKS/[0-9]{18}/([\\-0-9A-Z_a-zſK]{68})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "disqus_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDISQUS.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "docker_hub_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(dckr_pat_[\\-0-9A-Z_a-z]{27})(?:$|[^\\-0-9A-Z_a-z]))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_cli_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.ct\\.[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_personal_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.pt\\.[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_service_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.st\\.(?:[\\-0-9_a-z]{2,35}\\.)?[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_service_account_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.sa\\.[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_scim_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.scim\\.[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "doppler_audit_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(dp\\.audit\\.[0-9A-Za-z]{40,44})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "droneci_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bDRONE(?:(?:)|CI|[\\-_]).{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b(EY[\\-0-9A-Z_a-zſK]{30,}\\.[\\-0-9A-Z_a-zſK]{10,}\\.[\\-0-9A-Z_a-zſK]{10,}|[0-9A-Fa-f]{32,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "dropbox_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(sl\\.[\\-0-9A-Z_a-z]{130,152})(?:$|[^\\-0-9A-Z_a-z]))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "duffel_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(DUFFEL_(?:TEST|LIVE)_[\\-0-9=A-Z_a-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "dynatrace_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(dt0[A-Za-z]{1}[0-9]{2}\\.[0-9A-Z]{24}\\.[0-9A-Z]{64})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "easypost_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(EZ[AT]K[0-9A-Za-z]{54})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "elevenlabs_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(SK_[0-9A-Fa-f]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "endor_labs_api_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bENDOR_API_CREDENTIALS_SECRET.{0,32}?(ENDR\\+[\\-0-9A-Za-zſK]{16})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "eventbrite_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bEVENTBRITE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fastly_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFASTLY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "figma_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:FIGMA.{0,20}\\b([0-9A-Fa-f]{4}-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fileio_secret_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFILEIO.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([0-9A-Za-zſK]{20}\\.[0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "finicity_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFINICITY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "finicity_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFINICITY.{0,64}?\\b([0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "finnhub_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFINNHUB.{0,24}?\\b([0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "firebase_cloud_messaging_server_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(AAAA[\\-0-9A-Z_a-z]{7}:[\\-0-9A-Z_a-z]{140})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "firecrawl_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(fc-[0-9a-f]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fireworks_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(FW_[0-9A-Za-zſK]{24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fleetbase_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(FLB_(?:LIVE|TEST)_[0-9A-Za-zſK]{20,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "flickr_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFLICKR.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "flickr_oauth_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFLICKR.{0,32}?(?:OAUTH|ACCESS|TOKEN)?.{0,32}?([0-9A-Fa-f]{32}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fly_io_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(FlyV1[\\t\\n\\f\\r ][\\+-\\-/-9=A-Z_a-z]{100,})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "foursquare_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFOURSQUARE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([0-9A-Za-zſK]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "frame_io_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(FIO-U-[\\-0-9=A-Z_a-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "freshbooks_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFRESHBOOKS.{0,32}?\\b([0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "freshdesk_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bFRESHDESK.{0,64}?(?:API[\\-_]?KEY|SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "friendli_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(FLP_[0-9A-Za-zſK]{46})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "github_app_installation_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(ghs_[0-9]+_[\\-0-9A-Z_a-z]+\\.[\\-0-9A-Z_a-z]+\\.[\\-0-9A-Z_a-z]+)\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gitlab_runner_registration_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-m:\\b(GR1348941[\\-0-9A-Z_a-z]{20})(?:\\b|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gitlab_pipeline_trigger_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(glptt-[0-9a-f]{40})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gitter_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bGITTER.{0,24}?\\b([\\-0-9A-Z_a-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gocardless_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?is:\\bGOCARDLESS.{0,16}?\\b(LIVE_[\\-0-9=A-Z_a-zſK]{16}(?:[\\-0-9=A-Z_a-zſK]{8}){3}[\\-0-9=A-Z_a-zſK]{0,2})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "google_oauth_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(GOCSPX-[\\-0-9A-Z_a-z]{28})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "grafana_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(eyJrIjoi[\\+/-9A-Za-z]{60,400}={0,3})(?:[^\\+/-9=A-Za-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "grafana_cloud_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-m:\\b(glc_[\\+/-9A-Za-z]{32,400}={0,3})(?:[^\\+/-9=A-Za-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "grafana_service_account_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(glsa_[0-9A-Za-z]{32}_[0-9A-Fa-f]{8})(?:[^0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "groq_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(gsk_[0-9A-Za-z]{50,54})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "guardian_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bGUARDIAN.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|API).{0,32}?\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "gumroad_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bGUMROAD.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_TOKEN|OAUTH).{0,48}?\\b([0-9A-Fa-f]{64}|[\\-0-9A-Za-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "harness_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PAT\\.[0-9A-Za-zſK]{22}\\.[0-9A-Fa-f]{24}\\.[0-9A-Za-zſK]{20})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "hashicorp_vault_service_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(hvs\\.[0-9A-Za-z]{24,130})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "hashicorp_vault_batch_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(hvb\\.[\\-0-9A-Z_a-z]{24,500})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "hashicorp_vault_recovery_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(hvr\\.[0-9A-Za-z]{24,130})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "hashicorp_vault_unseal_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-ms:(?i:UNSEAL)\\b.{1,10}\\b([\\+/-9A-Za-z]{44})(?:[^\\+/-9A-Za-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "help_scout_oauth_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:HELP(?:[\\-_]?SCOUT|SCOUT).{0,32}?(?:SECRET|KEY|TOKEN|CLIENT).{0,16}?\\b([0-9A-Za-zſK]{20,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "here_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bHEREAPI.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|APIKEY).{0,32}?\\b([\\-0-9A-Z_a-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "heroku_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:HEROKU.{0,20}KEY.{0,20}\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "honeycomb_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bHONEYCOMB.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Fa-f]{32}|[0-9A-Za-zſK]{22})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "hubspot_private_app_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PAT-[0-9A-Za-zſK]{2,3}-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ibm_cloud_user_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bIBM(?:CLOUD)?.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?([\\-0-9A-Z_a-zſK]{42,44})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "imagekit_private_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?is:\\bIMAGEKIT.{0,64}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|PRIVATE_KEY).{0,64}?\\b(PRIVATE_[\\-0-9A-Z_a-zſK]{8,128})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "infracost_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(ICO-[0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "infura_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bINFURA.{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "instagram_graph_api_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(IGQVJ[\\-0-9A-Z_a-z]{50,})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "instantly_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bINSTANTLY(?:\\.AI)?.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([\\+/-9A-Za-zſK]{66}==))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "intercom_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:INTERCOM.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([\\+/-9A-Za-zſK]{59}=))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "intra42_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b(S-S4T2(?:UD|AF)-[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ionic_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(ION_[0-9A-Za-zſK]{42})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ipstack_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bIPSTACK.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b((?:[0-9A-Fa-f]{16}){2})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "iterable_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:ITERABLE.{0,32}?(?:KEY|TOKEN|SECRET|API).{0,16}?\\b([0-9A-Za-zſK]{32,36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "jina_search_foundation_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(jina_[0-9A-Za-z]{60})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "jira_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bJIRA.{0,8}?(?:SECRET|PRIVATE|ACCESS|KEY|PASSWORD|TOKEN).{0,16}?\\b([\\-0-9A-Za-zſK]{24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "jotform_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bJOTFORM.{0,64}?(?:API(?:[\\-_]?KEY|KEY)|TOKEN|SECRET|KEY).{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "jumpcloud_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bJUMPCLOUD.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "kagi_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?s-m:\\b(?:kagi|KAGI).{0,100}\\b([\\-0-9A-Z_a-z]{11}\\.[\\-0-9A-Z_a-z]{43})(?:$|[^\\-0-9A-Z_a-z]))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "keen_io_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:KEEN.{0,32}?(?:API|READ|WRITE|MASTER|KEY|SECRET|TOKEN).{0,16}?\\b([0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "kickbox_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bKICKBOX.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Z_a-zſK]+[0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "klaviyo_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?is:\\bKLAVIYO.{0,16}?\\b(PK_[0-9A-Za-zſK]{34})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "kling_ai_secret_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bKLING.{0,120}?\\bA(?:CCESS(?:[\\t\\n\\f\\r \\-_]*KEY|KEYID)|K).{0,64}?\\b([0-9A-Za-zſK]{32})\\b.{0,120}?\\b(?:SECRET[\\t\\n\\f\\r \\-_]*KEY|ACCESSKEYSECRET|SK)\\b.{0,64}?\\b[0-9A-Za-zſK]{32}\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "langsmith_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(LSV2_PT_[0-9A-Fa-f]{32}_[0-9A-Fa-f]{10})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "langsmith_service_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(LSV2_SK_[0-9A-Fa-f]{32}_[0-9A-Fa-f]{10})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "larksuite_tenant_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LARK(?:(?:)|SUITE).{0,64}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?\\b(T-[\\.0-9A-Z_a-zſK]{14,50})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "larksuite_user_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LARK(?:(?:)|SUITE).{0,64}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?\\b(U-[\\.0-9A-Z_a-zſK]{14,50})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "larksuite_app_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LARK(?:(?:)|SUITE).{0,64}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?\\b(A-[\\.0-9A-Z_a-zſK]{30,35})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "launchdarkly_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LAUNCHDARKLY.{0,32}?\\b([\\-0-9=A-Z_a-zſK]{40}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "line_messaging_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bLINE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b((?:[\\+/-9A-Za-zſK]{57}){3}=?))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "linear_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(LIN_API_(?:[0-9A-Za-zſK]{8}){5})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "linkedin_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LI(?:NKEDIN|_AT).{0,128}?)\\b(AQ[\\-0-9A-Z_a-z]{20,1000})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "lokalise_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:LOKALISE.{0,32}?(?:API|TOKEN|KEY|SECRET).{0,16}?\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "looker_client_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bLOOKER.{0,64}?\\b([0-9A-Za-zſK]{24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mailchimp_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:MAILCHIMP.{0,20}\\b([0-9A-Fa-f]{32}-US[0-9]{1,3})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mailgun_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:MAILGUN.{0,20}KEY-([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mailjetsms_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMAILJET.{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mailjet_basic_auth",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMAILJET.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{87}=))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mandrill_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMANDRILL.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{22}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mapbox_secret_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is-m:MAPBOX.{0,30}(SK\\.[\\+\\-/-9=A-Za-zſK]{32,128}\\.[\\+\\-/-9=A-Za-zſK]{20,30})(?:[^\\+\\-/-9=A-Za-zſK]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mattermost_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMATTERMOST.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|PAT|AUTH).{0,32}?\\b([0-9A-Za-zſK]{26})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mattermost_incoming_webhook_url",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(HTTPS?://[\\-\\.0-9A-Za-zſK]*M(?:ATTERMOST|M)[\\-\\.0-9A-Za-zſK]*(?::[0-9]{2,5})?/HOOKS/[0-9A-Za-zſK]{26})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "maxmind_license_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b([0-9A-Za-zſK]{6}_[0-9A-Za-zſK]{29}_MMK)\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mergify_application_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(mergify_application_key_[\\-0-9A-Z_a-z]{40,200})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "messagebird_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMESSAGE[\\-_]?BIRD.{0,32}?\\b([0-9A-Za-zſK]{25})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "microsoft_teams_webhook",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(HTTPS://OUTLOOK\\.OFFICE\\.COM/WEBHOOK/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}@[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}/INCOMINGWEBHOOK/[0-9A-Fa-f]{32}/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "microsoft_teams_webhook_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(HTTPS://[0-9A-Za-zſK]+\\.WEBHOOK\\.OFFICE\\.COM/WEBHOOKB2/[0-9A-Za-zſK]{8}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{12}@[0-9A-Za-zſK]{8}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{12}/INCOMINGWEBHOOK/[0-9A-Za-zſK]{32}/[0-9A-Za-zſK]{8}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{4}-[0-9A-Za-zſK]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mistral_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMISTRAL.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "monday_com_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bMONDAY.{0,40}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,40}?\\b(EYJ[\\-0-9A-Z_a-zſK]{10,200}\\.EYJ[\\-0-9A-Z_a-zſK]{50,1000}\\.[\\-0-9A-Z_a-zſK]{20,500})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mongodb_api_private_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:(?:\\b|[\\-\\._])(?i:(?:MONGODB|ATLAS)(?:\\b|[\\-\\._]).{0,1000}?(?:PRIV(?:ATE|(?:))|SECRET|AUTH|PASS|KEY))(?s:.{0,32}?)\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "mongodb_atlas_service_account_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(MDB_SA_SK_[\\-0-9A-Z_a-zſK]{6}[0-9A-Za-zſK]{34}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "nasa_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:\\bnasa\\.gov/.{0,200}api_key=([0-9A-Za-z]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "netlify_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:NETLIFY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Fa-f]{60,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "netlify_api_key_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bNETLIFY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{43,45})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_license_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:\\b([0-9A-Za-zſK]{6}[0-9A-Fa-f]{30}NRAL)\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_license_key_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:ASSOCIATED WITH YOUR NEW RELIC ACCOUNT\\.[\\t\\n\\f\\r ]+LICENSE_KEY:[\\t\\n\\f\\r ]*([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_api_service_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(NRAK-[0-9A-Za-zſK]{27})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_admin_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(NRAA-[0-9A-Fa-f]{27})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_insights_insert_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i-m:\\b(NRII-[\\-0-9A-Z_a-zſK]{32})(?:[^\\-0-9A-Z_a-zſK]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_insights_query_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i-m:\\b(NRIQ-[\\-0-9A-Z_a-zſK]{32})(?:[^\\-0-9A-Z_a-zſK]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_rest_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(NRRA-[0-9A-Fa-f]{42})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_pixie_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PX-API-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_relic_pixie_deploy_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PX-DEP-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ngrok_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:\\b(?i:NGROK.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN))(?is:.{0,32}?([0-9A-Za-zſK]{25,30}_[0-9][0-9A-Za-zſK]{20}|(?:CR_|AK_)[0-9A-Za-zſK]{25,30}))\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "notion_legacy_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i-s:NOTION.{0,32}?\\b(SECRET_[0-9A-Za-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "notion_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(NTN_[0-9]{11}[0-9A-Za-zſK]{35}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "notion_oauth_refresh_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i-s:NOTION.{0,32}?(NRT_[0-9A-Z_a-zſK]{40,55}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "nuget_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(oy2[0-9a-z]{43})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "nvidia_nim_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(NVAPI-[\\-0-9A-Z_a-zſK]{60,70})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "nylas_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bNYLAS.{0,64}?(?:API(?:[\\-_]?KEY|KEY)|SECRET|PRIVATE|ACCESS|TOKEN).{0,64}?\\b(NYK_[0-9A-Za-zſK]{67}|[0-9A-Za-zſK]{30})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "new_york_times_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:N(?:YTIMES|EW-?YORK-?TIMES).{0,32}?\\b([\\-0-9=A-Z_a-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "okta_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:(?:OKTA|SSWS).{0,40}\\b(00[\\-0-9A-Z_a-zſK]{39}[0-9A-Z_a-zſK])\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "ollama_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bOLLAMA.{0,32}?\\b([0-9A-Fa-f]{32}\\.[\\-0-9A-Z_a-zſK]{24}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "onepassword_service_account_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(ops_eyJ[\\-0-9A-Z_a-z]{80,500})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "onepassword_account_secret_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i:(A[0-9]-[0-9A-Za-zſK]{6}-[0-9A-Za-zſK]{6}-[0-9A-Za-zſK]{5}(?:-[0-9A-Za-zſK]{5}){3}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "openweather_map_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:(?:PYOWM|OPENWEATHER|\\bOWM\\b).{0,64}?(?:APPID=)?([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "opsgenie_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:\\b(?i:OPSGENIE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN))(?s:.{0,32}?)\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "optimizely_personal_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bOPTIMIZELY.{0,64}?\\b([\\-0-:A-Za-zſK]{54})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "owlbot_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bOWLBOT.{0,64}?(?:API[\\-_]?KEY|SECRET|PRIVATE|ACCESS|TOKEN|KEY).{0,64}?\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "packagecloud_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bPACKAGECLOUD.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|A(?:PI[\\-_]?TOKEN|UTH)).{0,32}?\\b([0-9A-Fa-f]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pagerduty_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:PAGERDUTY[\\-_]?[^0-9A-Z_a-zſK]{0,20}(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b(U\\+[\\+\\-0-9A-Z_a-zſK]{18}|[\\-0-9A-Z_a-zſK]{20}|[0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "particle_io_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bhttps://api\\.particle\\.io/v1/[\\t\\n\\f\\r \"\\-/-9\\?A-Z\\\\_a-z]*(?:access_token=|Authorization:[\\t\\n\\f\\r ]*Bearer[\\t\\n\\f\\r ]*)\\b([0-9A-Za-z]{40})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pastebin_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bPASTEBIN.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Z_a-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "paypal_oauth_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:PAYPAL.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-\\.0-9A-Z_a-zſK]{78,120})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pdflayer_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:(?:\\bPDFLAYER.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?|\\bAPI\\.PDFLAYER\\.COM/API/CONVERT\\?[^\\t\\n\\r\"'<>]*\\bACCESS_KEY[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*)\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pendo_integration_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:PENDO.{0,32}?(?:KEY|TOKEN|SECRET|INTEGRATION).{0,16}?\\b([0-9A-Za-zſK]{32,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "perplexity_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(pplx-[0-9A-Za-z]{48})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "plaid_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bPLAID.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?\\b([0-9A-Za-zſK]{30})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "plaid_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(ACCESS-PRODUCTION-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "plaid_access_token_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(ACCESS-SANDBOX-[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "planetscale_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PSCALE_TKN_[\\-0-9A-Z_a-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "posthog_personal_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(phx_[\\-0-9A-Z_a-z]{47})",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "postman_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(PMAK-[0-9A-Za-z]{24}-[0-9A-Za-z]{34})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "postmark_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:POSTMARK[\\-0-9A-Z_a-zſK]{0,20}.{0,10}\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "prefect_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(PNU_[0-9A-Za-zſK]{36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pulumi_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(pul-[0-9a-f]{40})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pypi_upload_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?-m:\\b(pypi-AgEIcHlwaS5vcmc[\\-0-9A-Z_a-z]{50,})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "rapidapi_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bRAPIDAPI.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Z_a-zſK]{50})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "readme_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(RDME_[0-9A-Za-zſK]{70})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "replicate_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(r8_[0-9A-Za-z]{37})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "resend_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(re_[0-9A-Za-z]{8}_[0-9A-Za-z]{24})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "retell_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(KEY_[0-9A-Fa-f]{28})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "retool_workflow_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\b(retool_wk_[0-9a-f]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "riot_games_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(RGAPI-[\\-0-9A-Z_a-zſK]{36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "rubygems_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(RUBYGEMS_[0-9A-Fa-f]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "runway_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(key_[0-9A-Fa-f]{128})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sauce_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-ms:SAUCE.{0,50}\\b([\\-0-9A-Fa-f]{36})(?:[^\\-0-9A-Fa-f]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "scale_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(live_[0-9a-f]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "scale_callback_auth_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(live_auth_[0-9a-f]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "scalingo_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(TK-US-[\\-0-9A-Z_a-zſK]{48})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "scraperapi_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSCRAPER(?:[\\t\\n\\f\\r \\-_]?API|API).{0,32}?(?:KEY|TOKEN|API[\\-_]?KEY).{0,16}?([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "segment_public_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(sgp_[0-9A-Za-z]{64})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sendbird_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:(?i:SENDBIRD.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN))(?s:.{0,32}?)\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sendinblue_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(XKEYSIB-[0-9A-Fa-f]{64}-[0-9A-Za-zſK]{16})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sentry_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSENTRY.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sentry_organization_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(sntrys_eyJpYXQiO[\\+/-9A-Za-z]{10,192}(?:LCJyZWdpb25fdXJs|InJlZ2lvbl91cmwi|cmVnaW9uX3VybCI6)[\\+/-9A-Za-z]{10,192}={0,2}_[\\+/-9A-Za-z]{43})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sentry_user_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(SNTRYU_[0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "shippo_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(SHIPPO_(?:LIVE|TEST)_[0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "shodan_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSHODAN.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "slack_app_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(xapp-[0-9]{12}-[\\+/-9A-Za-z]{24})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "slack_workflow_webhook",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(HTTPS://HOOKS\\.SLACK\\.COM/WORKFLOWS/[ETet][0-9A-Za-zſK]{5,14}/A[0-9A-Za-zſK]{5,14}/[0-9]{6,20}/[0-9A-Za-zſK]{8,40}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "slack_trigger_url",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(HTTPS://HOOKS\\.SLACK\\.COM/TRIGGERS/[ETet][0-9A-Za-zſK]{5,14}/[0-9]{10,16}(?:/[0-9A-Fa-f]{32})?))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "snyk_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSNYK.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?([0-9A-Za-zſK]{8}-(?:[0-9A-Za-zſK]{4}-){3}[0-9A-Za-zſK]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sonarcloud_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSONAR.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sonarqube_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:SONAR.{0,5}LOGIN.{0,5}[\\t\\n\\f\\r ]*\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sourcegraph_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(sgp_(?:[0-9A-Fa-f]{16}_|local_)?[0-9A-Fa-f]{40})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "spotify_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:SPOTIFY.{0,32}?(?:TOKEN|ACCESS|SECRET|KEY|BEARER|AUTH).{0,16}?\\b([\\-0-9A-Z_a-zſK]{100,})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "square_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(SQ0ATP-[\\-0-9A-Z_a-zſK]{22})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "square_oauth_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(SQ0CSP-[\\-0-9A-Z_a-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "sslmate_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSSLMATE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "stackhawk_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(hawk\\.[\\-0-9A-Z_a-z]{20}\\.[\\-0-9A-Z_a-z]{20})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "statuspage_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bSTATUSPAGE.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|API).{0,48}?\\b([0-9A-Fa-f]{64}|[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "supabase_management_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(SBP_[\\-0-9A-Z_a-zſK]{40}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "supabase_project_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:(SB_SECRET_[\\-0-9A-Z_a-zſK]{31}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "tailscale_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(TSKEY-[A-Za-zſK]{3,10}-[\\-0-9A-Z_a-zſK]{20,36})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "tavily_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(tvly-[0-9A-Za-z]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "telegram_bot_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-m:\\b([0-9]+:AA[\\-0-9A-Z_a-z]{32,33})(?:[^\\-0-9A-Z_a-z]|$))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "thingsboard_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bthingsboard\\.cloud/api/v1/([0-9a-z]{20})",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "thingsboard_provision_device_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\"provisionDeviceKey\"[\\t\\n\\f\\r ]*:[\\t\\n\\f\\r ]*\"([0-9a-z]{20})\"",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "thingsboard_provision_device_secret",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\"provisionDeviceSecret\"[\\t\\n\\f\\r ]*:[\\t\\n\\f\\r ]*\"([0-9a-z]{20})\"",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "together_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(TGP_V1_[\\-0-9A-Z_a-zſK]{43})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "travis_ci_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?-s:\\b(?i:TRAVIS.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN))(?s:.{0,16}?)\\b([\\-0-9A-Z_a-zſK]{22})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "truenas_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\"params\"[\\t\\n\\f\\r ]*:[\\t\\n\\f\\r ]*\\[[\\t\\n\\f\\r ]*\"([0-9]+-[0-9A-Za-z]{64})\"[\\t\\n\\f\\r ]*\\]",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "truenas_api_key_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bTRUE(?:NAS|[\\-_]NAS).{0,64}?(?:API(?:[\\-_]?KEY|[\\-_]?TOKEN)|KEY|TOKEN|SECRET|PASSWORD|AUTH).{0,32}?([0-9]+-[0-9A-Za-zſK]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "twilio_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?i-s:TWILIO.{0,20}\\b(SK[0-9A-Fa-f]{32})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "typeform_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?is:\\bTYPEFORM.{0,32}?(TFP_[\\-\\.0-9=A-Z_a-zſK]{59}))",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "vast_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bVAST(?:\\.AI)?.{0,16}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b([0-9A-Fa-f]{64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "vercel_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bVERCEL.{0,32}?\\b([0-9A-Za-zſK]{24})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "voyage_ai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(pa-[\\-0-9A-Z_a-z]{43})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "wakatime_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:WAKA(?:TIME|_TIME|TIME).{0,32}?(?:KEY|TOKEN|SECRET|API).{0,16}?\\b([0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "wakatime_prefixed_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(WAKA_[0-9A-Za-zſK]{36,})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "weights_and_biases_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:W(?:ANDB|EIGHTSANDBIASES).{0,16}?\\b([0-9A-Fa-f]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "weights_and_biases_api_key_2",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(WANDB_V1_[0-9A-Z_a-zſK]{40,200})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "wireguard_private_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bPrivateKey[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*([\\+/-9A-Za-z]{43}=)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "wireguard_preshared_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "\\bPresharedKey[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*([\\+/-9A-Za-z]{43}=)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "wpengine_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:WPENGINE.{0,32}?(?:API|KEY|SECRET|TOKEN).{0,16}?\\b([0-9A-Za-zſK]{24,64})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "xai_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(XAI-[\\-0-9A-Z_a-zſK]{70,120})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "yandex_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bYANDEX.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\.0-9A-Za-zſK]{83})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "yelp_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:\\bYELP.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-\\.0-9=A-Z\\\\_a-zſK]{128})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "zendesk_api_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 80,
+      "validator": "",
+      "pattern": "(?is:ZENDESK.{0,32}?(?:TOKEN|KEY|SECRET|API).{0,16}?\\b([0-9A-Za-zſK]{40})\\b)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "zoho_crm_api_access_token",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b(1000\\.[0-9A-Fa-f]{32}\\.[0-9A-Fa-f]{32})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "zuplo_api_key",
+      "family": "fixed_pattern",
+      "secretType": "provider_token",
+      "score": 95,
+      "validator": "",
+      "pattern": "(?i:\\b(ZPKA_[0-9A-Za-zſK]{32}_[0-9A-Fa-f]{8}))",
+      "minLength": 0,
+      "maxLength": 0
     }
   ]
 }

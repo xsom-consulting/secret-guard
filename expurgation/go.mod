@@ -2,7 +2,7 @@ module github.com/xsom-consulting/secret-guard/expurgation
 
 go 1.27.2
 
-require github.com/xsom-consulting/secret-guard v0.8.0
+require github.com/xsom-consulting/secret-guard v0.8.1
 
 require golang.org/x/text v0.43.0 // indirect
 

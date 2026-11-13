@@ -14,7 +14,7 @@ Objets fermés ; chaînes et entiers seulement.
 | `minAgentVersion` | semver `MAJEUR.MINEUR.CORRECTIF`, sans pré-version ni métadonnées : version minimale du programme qui exécute le Pack (le moteur ne la juge pas) ; `0.0.0` pour le Pack initial |
 | `packVersion` | entier de 1 à 2^53 − 1 |
 | `issuedAt` | horodatage UTC `AAAA-MM-JJTHH:MM:SS[.mmm]Z` qui existe (forme et calendrier vérifiés par `pack.Decode`) |
-| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue |
+| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (334 dans le Pack initial de la v0.8.1) |
 
 Règle :
 
@@ -57,6 +57,15 @@ Les motifs délimitent un candidat ; le validateur le juge. Il reçoit la valeur
 - `payment_card_luhn` : 13 à 19 chiffres, un seul séparateur (espace ou tiret), Luhn, pas de chiffre répété, préfixe et longueur d'un réseau : Visa (`4`, 16 ou 19), Mastercard (`51`–`55`, `2221`–`2720`, 16), American Express (`34`, `37`, 15), Discover (`6011`, `644`–`649`, `65`, 16 à 19), Diners (`300`–`305`, `3095`, `36`, `38`, `39`, 14 à 19), JCB (`3528`–`3589`, 16 à 19), UnionPay (`62`, 16 à 19), Maestro (`5018`, `5020`, `5038`, `5893`, `6304`, `6759`, `6761`–`6763`, 13 à 19). Les Visa de 13 chiffres sont écartés (forme des codes-barres EAN-13).
 
 Les validateurs ne s'exécutent pas dans un texte décodé de base64 (`allowStructured`, comme `jwt`). Les attentes du corpus viennent d'une seconde écriture indépendante des contrôles (`generator/rule-pack/personal-data.ts`, BigInt), comparée au moteur Go sur 80 cas (`vectors/detection/rules-personal-data.json`) ; la table `ibanLengths` du moteur est comparée à celle du générateur par un test.
+
+### Règles de fournisseurs (v0.8.1)
+
+294 règles « motif seul » (`fixed_pattern`, type de secret `provider_token`, sans validateur ni borne) s'ajoutent après les règles de données personnelles. Leur source est `generator/rule-pack/provider-rules.json` (une règle par ligne : identifiant, règle d'origine, libellés de Substitut, score, motif RE2, forme d'une valeur d'essai), entretenue à la main depuis la reprise des règles de Titus (UPSTREAM.md, « Règles de fournisseurs ») ; `npm run pack:initial` en écrit le Pack et la table Go des libellés (`detect/substitute_providers.go`).
+
+- Score 95 : la valeur porte un préfixe fixe du fournisseur. Score 80 : le motif exige le nom du fournisseur avant la valeur, à quelques dizaines de caractères au plus.
+- La valeur détectée est l'unique groupe capturant du motif. Un motif peut replier la casse (`(?i:…)`) et porter des drapeaux de groupe (`(?s:…)`, `(?-m:…)`).
+- Chaque règle doit avoir une porte littérale (`TestProviderRules`) : un littéral d'au moins trois octets présent dans toute correspondance. Une règle sans porte s'exécuterait sur tout texte.
+- Ajouter une règle : une ligne dans `provider-rules.json`, puis `npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout>` et les tests ; un moteur plus ancien exécute la règle (famille connue), mais écrit le libellé de repli « secret » dans ses Substituts.
 
 ### Groupes de capture
 

@@ -39,6 +39,10 @@ type detectorTask struct {
 	run      func() ([]finding, error)
 	budgeted bool
 	rank     int
+	// contextual : affectation, cookie ou « -u » ; ses constats écartent les annonces de mot de passe qu'ils chevauchent.
+	contextual bool
+	// phrases : annonces de mot de passe (passwordphrase.go), filtrées après coup par les constats contextuels de la vue.
+	phrases bool
 }
 
 // Rangs de départ : motifs d'affectation (le premier, ASSIGNMENT, est le plus long), puis les autres familles qui
@@ -117,6 +121,17 @@ func (s *scanState) parallelDetectors(v *view, entropy bool, lang language, allo
 	if s.decode.exhausted {
 		return nil, errDecodeBudgetExhausted
 	}
+	var contextual []finding
+	for i, task := range tasks {
+		if task.contextual {
+			contextual = append(contextual, results[i]...)
+		}
+	}
+	for i, task := range tasks {
+		if task.phrases {
+			results[i] = withoutOverlaps(results[i], contextual)
+		}
+	}
 	total := 0
 	for _, found := range results {
 		total += len(found)
@@ -148,13 +163,14 @@ func recovered(run func() ([]finding, error)) (found []finding, err error) {
 var detectorTasksOf = (*Rules).detectorTasks
 
 // detectorTasks rend les familles d'une vue dans l'ordre de concaténation de sequentialDetectors : clés privées,
-// règles « motif seul » dans l'ordre du Pack, URL à identifiants, motifs d'affectation, cookies, « -u », clé auth de
-// Docker, entropie. Chaque motif d'affectation et la clé auth de Docker ont leur propre contextualText : ses tables
+// règles « motif seul » dans l'ordre du Pack, URL à identifiants, motifs d'affectation, cookies, « -u », annonces de
+// mot de passe (filtrées après coup, comme dans scanContextualAssignments), clé auth de Docker, entropie. Chaque motif d'affectation et la clé auth de Docker ont leur propre contextualText : ses tables
 // sont des mémos d'un calcul sur le texte de la vue, sans effet sur les résultats.
 func (r *Rules) detectorTasks(v *view, budget *decodeBudget, entropy bool, lang language, allowStructured bool) []detectorTask {
 	tasks := []detectorTask{{run: func() ([]finding, error) { return r.scanPrivateKeys(v), nil }, rank: rankGated}}
-	for _, fixed := range r.fixed {
-		if fixed.validator != nil && !allowStructured {
+	admitted := r.admittedFixed(v.text)
+	for i, fixed := range r.fixed {
+		if fixed.validator != nil && !allowStructured || admitted != nil && !admitted.has(i) {
 			continue
 		}
 		scanRule := scanFixedPattern
@@ -173,12 +189,13 @@ func (r *Rules) detectorTasks(v *view, budget *decodeBudget, entropy bool, lang 
 			p := &assignmentPatterns[i]
 			tasks = append(tasks, detectorTask{run: func() ([]finding, error) {
 				return r.scanAssignmentPattern(v, newContextualText(v.text), p, lang, nil), nil
-			}, rank: rankAssignment})
+			}, rank: rankAssignment, contextual: true})
 		}
 	}
 	tasks = append(tasks,
-		detectorTask{run: func() ([]finding, error) { return r.scanCookieCredentials(v, nil), nil }, rank: rankFullText},
-		detectorTask{run: func() ([]finding, error) { return r.scanBasicAuthArguments(v, nil), nil }, rank: rankFullText},
+		detectorTask{run: func() ([]finding, error) { return r.scanCookieCredentials(v, nil), nil }, rank: rankFullText, contextual: true},
+		detectorTask{run: func() ([]finding, error) { return r.scanBasicAuthArguments(v, nil), nil }, rank: rankFullText, contextual: true},
+		detectorTask{run: func() ([]finding, error) { return r.scanPasswordPhrases(v, nil, nil), nil }, rank: rankFullText, phrases: true},
 	)
 	if allowStructured {
 		tasks = append(tasks, detectorTask{

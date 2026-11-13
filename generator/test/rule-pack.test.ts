@@ -11,6 +11,7 @@ import {
   translationOf,
   VALUE_BOUNDS,
 } from '../rule-pack/catalog.ts';
+import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
 import { RULE_FAMILIES, RULE_FAMILIES_WITH_PATTERN, RULE_VALIDATORS, RulePack } from '../src/rule-pack.ts';
 
 const upstreamText = readFileSync(new URL('../../pack/initial/upstream/rules.ts.txt', import.meta.url), 'utf8');
@@ -22,7 +23,11 @@ const pack = RulePack.parse(JSON.parse(packText));
 // Les 35 règles du catalogue Secret Guard, puis les règles de données personnelles ajoutées par xSOM (v0.7.0).
 const CATALOG_RULE_COUNT = 35;
 const catalogRules = pack.rules.slice(0, CATALOG_RULE_COUNT);
-const personalRules = pack.rules.slice(CATALOG_RULE_COUNT);
+// Cinq règles de données personnelles (v0.7.0), puis les règles de fournisseurs (v0.8.1).
+const PERSONAL_RULE_COUNT = 5;
+const personalRules = pack.rules.slice(CATALOG_RULE_COUNT, CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT);
+const providerRules = pack.rules.slice(CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT);
+const providerLabelsText = readFileSync(new URL('../../detect/substitute_providers.go', import.meta.url), 'utf8');
 
 /**
  * Les 35 règles du catalogue Secret Guard au commit cité, relevées à la main dans `rules.ts` (`FIXED_RULES`,
@@ -128,6 +133,30 @@ describe('Pack initial', () => {
       }
     }
     expect(Object.keys(VALUE_BOUNDS).sort()).toEqual(['basic_auth_url', 'cli_basic_auth', 'database_url_credentials', 'jwt']);
+  });
+
+  it('règles de fournisseurs : reprises de Titus, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
+    expect(providerRules).toEqual(PROVIDER_RULES);
+    expect(providerRules).toHaveLength(294);
+    expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_REPOSITORY);
+    expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_COMMIT);
+    const earlier = new Set([...catalogRules, ...personalRules].map((rule) => rule.ruleId));
+    const ids = new Set<string>();
+    for (const rule of PROVIDER_RULE_SOURCES) {
+      expect(earlier.has(rule.ruleId) || ids.has(rule.ruleId), rule.ruleId).toBe(false);
+      ids.add(rule.ruleId);
+      expect(rule.upstream, rule.ruleId).toMatch(/^(?:np|kingfisher|titus)\.[a-z0-9._-]+$/);
+      expect([80, 95], rule.ruleId).toContain(rule.score);
+      // Un seul groupe capturant (la valeur) ; aucun groupe nommé ; le motif se lit aussi en JavaScript.
+      expect((rule.pattern.match(/\((?!\?)/g) ?? []).length, rule.ruleId).toBeLessThanOrEqual(1);
+      expect(rule.pattern, rule.ruleId).not.toMatch(/\(\?P?</);
+      expect(() => new RegExp(rule.pattern), rule.ruleId).not.toThrow();
+      for (const label of [rule.labelFr, rule.labelEn]) {
+        expect(label, rule.ruleId).toMatch(/^[\p{L}\p{N}][\p{L}\p{N} .’+-]*[\p{L}\p{N}.]$/u);
+      }
+    }
+    // Le fichier Go des libellés est exactement celui du générateur.
+    expect(providerLabelsText).toBe(buildProviderLabelsGo());
   });
 
   it('validateur nommé et valeur portée par le premier groupe des règles fixes', () => {

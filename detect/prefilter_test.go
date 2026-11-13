@@ -104,9 +104,18 @@ func TestPrefilterInitialPack(t *testing.T) {
 			"jwt":                        {".eyJ"},
 			"private_key_pem":            privateKeyHeaders,
 			"private_key_pem_incomplete": privateKeyHeaders,
+			// Portes repliées (v0.8.1) : motifs dont la casse est repliée, littéraux en minuscules.
+			"database_url_credentials": {"://"},
+			"basic_auth_url":           {"://"},
+			"docker_auth":              {"auth"},
+			"fr_siren":                 {"siren"},
 		}
 		rules := loadInitialRules(t)
 		p := loadInitialPack(t)
+		providers := map[string]bool{}
+		for _, l := range providerSubstituteLabels {
+			providers[l.RuleID] = true
+		}
 		seen := 0
 		for _, spec := range p.Rules {
 			r := rules.engine[spec.RuleID]
@@ -119,11 +128,18 @@ func TestPrefilterInitialPack(t *testing.T) {
 				t.Fatalf("%s : règle non chargée", spec.RuleID)
 			}
 			seen++
+			if providers[spec.RuleID] {
+				// Règle de fournisseur (v0.8.1) : une porte, toujours (TestProviderRules le redit avec ses littéraux).
+				if r.gate == nil {
+					t.Errorf("%s : règle de fournisseur sans porte", spec.RuleID)
+				}
+				continue
+			}
 			if got := gateLiterals(r.gate); !reflect.DeepEqual(got, want[spec.RuleID]) {
 				t.Errorf("%s : littéraux %q, attendu %q", spec.RuleID, got, want[spec.RuleID])
 			}
 		}
-		if seen != len(p.Rules) || seen != 40 {
+		if seen != len(p.Rules) || seen != 40+len(providers) {
 			t.Fatalf("%d règles relues", seen)
 		}
 	})
@@ -132,10 +148,8 @@ func TestPrefilterInitialPack(t *testing.T) {
 func TestPrefilterProof(t *testing.T) {
 	t.Run("aucune porte sans littéral prouvé", func(t *testing.T) {
 		for _, pattern := range []string{
-			// Repliement de casse : « (?i) », ou classe [xX] que l'analyseur réécrit en littéral replié.
-			`(?i)\bsecret_[a-z]{8}\b`,
-			`(?i)ask_[0-9]{8}`,
-			`\b[tT]ok_[0-9]{8}\b`,
+			// Repliement de casse d'une lettre hors ASCII : il n'est pas développé.
+			`(?i)\x{00e9}t\x{00e9}_[0-9]{4}`,
 			// Alternance dont une branche n'a aucun littéral.
 			`(?:abc_|[a-z]+)[0-9]{8}`,
 			`\b(?:xyz_[0-9]{4}|[0-9]{12})\b`,
@@ -162,6 +176,11 @@ func TestPrefilterProof(t *testing.T) {
 			`(?:abc_[0-9]{3}|xyz_[a-z]{3})`:       {"abc_", "xyz_"},
 			`\x{00e9}t\x{00e9}_[0-9]{4}`:          {"été_"},
 			`.{3}needle.{3}`:                      {"needle"},
+			// Porte repliée (« (?i) », ou classe [xX] que l'analyseur réécrit en littéral replié) : minuscules ASCII.
+			`(?i)\bsecret_[a-z]{8}\b`:              {"secret_"},
+			`(?i)ASK_[0-9]{8}`:                     {"ask_"},
+			`\b[tT]ok_[0-9]{8}\b`:                  {"tok_"},
+			`(?i)(?:datadog|dd).{0,8}[a-f0-9]{32}`: nil, // « dd » : moins de 3 octets, aucune porte
 			// Produit de plus de 16 chaînes : il s'arrête et un nouveau commence au facteur qui déborde.
 			`[a-d][a-d][a-d]xyz_[0-9]+`: {"axyz_", "bxyz_", "cxyz_", "dxyz_"},
 		} {
@@ -195,8 +214,8 @@ func TestPrefilterFoldCase(t *testing.T) {
 			{`(?i)secret_[0-9]{6}`, "ſecret_123456 et SECRET_654321", ""},
 		} {
 			rules := singleRulePack(t, c.pattern)
-			if rules.fixed[0].gate != nil {
-				t.Fatalf("%s : porte sur un motif replié", c.pattern)
+			if gate := rules.fixed[0].gate; gate == nil || !gate.fold {
+				t.Fatalf("%s : porte repliée attendue", c.pattern)
 			}
 			// Une porte naïve sur le littéral, sans la casse ASCII, aurait sauté la règle.
 			if c.naive != "" && bytes.Contains(asciiLower([]byte(c.text)), []byte(c.naive)) {
@@ -315,6 +334,7 @@ func TestParallelDetectorPanic(t *testing.T) {
 			id: "injected_fault", family: familyFixedPattern, secretType: "api_key", score: 90,
 			pattern: nil, // scanFixedPattern déréférence le motif : panique dans un fil
 		}}, rules.fixed...)
+		// L'index du Pack ne décrit plus la liste : il est écarté (Rules.admittedFixed), chaque règle juge sa porte.
 		content := benchText(8<<10, true)
 		for _, workers := range []int{2, 8} {
 			result := Scan(content, &faulty, Options{Workers: workers})

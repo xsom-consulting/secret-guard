@@ -385,8 +385,9 @@ func TestRuleScoresAndReasons(t *testing.T) {
 			noPenalty: func(e Encoding) bool { return e == EncodingNormalized }},
 	}
 	p := loadInitialPack(t)
-	if len(cases) != len(p.Rules) {
-		t.Fatalf("%d règles testées, %d dans le Pack", len(cases), len(p.Rules))
+	// Les règles de fournisseurs (v0.8.1) sont éprouvées une à une par TestProviderRules et par le corpus.
+	if len(cases) != len(p.Rules)-len(providerSubstituteLabels) {
+		t.Fatalf("%d règles testées, %d dans le Pack, dont %d de fournisseurs", len(cases), len(p.Rules), len(providerSubstituteLabels))
 	}
 	for _, c := range cases {
 		t.Run("règle "+c.id+" : score, raisons et pénalité d'encodage de Secret Guard", func(t *testing.T) {
