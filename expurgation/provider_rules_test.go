@@ -15,7 +15,8 @@ import (
 // l'exécution, jamais relevées.
 func TestProviderRuleExpurgation(t *testing.T) {
 	rules := loadInitialRules(t)
-	hex := strings.Repeat("0a1b2c3d", 4)
+	// Seize caractères distincts : une clé de huit caractères répétés n'a pas la diversité qu'exige la règle (v0.10.0).
+	hex := strings.Repeat("0a1b2c3d4e5f6789", 2)
 	for _, c := range []struct{ name, before, value, after, label string }{
 		// Clé hexadécimale sans préfixe : invisible pour l'entropie, trouvée par le nom du fournisseur.
 		{"clé d'API Datadog dans un fichier .env", "DD_API" + "_KEY=", hex, "\nDD_SITE=datadoghq.eu\n", "clé d’API Datadog"},
