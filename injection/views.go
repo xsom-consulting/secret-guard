@@ -37,6 +37,11 @@ const (
 	maxViewBytes = 4 * MaxInputBytes
 	// minBase64Length est la longueur la plus courte d'un bloc base64 lu (15 octets décodés).
 	minBase64Length = 20
+	// maxUnwrapRun : au-delà de ce nombre d'octets d'espaces et de fin de ligne, une fin de ligne n'est pas dépliée.
+	// La décision de déplier ne dépend ainsi que d'octets proches, tous dans la fenêtre que view.seen compare
+	// (contextBytes octets avant une correspondance) : l'octet qui précède les espaces, et le début de la ligne
+	// suivante.
+	maxUnwrapRun = 32
 	// maxLineIndent : espaces ou tabulations admis devant une ligne de base64 rejointe, et derrière elle.
 	maxLineIndent = 8
 	// maxStrayLines : lignes d'un seul mot écartées du début d'un bloc de base64 replié qui ne se décode pas.
@@ -319,7 +324,8 @@ func endsStatement(c byte) bool {
 }
 
 // unwrapped rend le texte où une fin de ligne simple, avec les espaces qui la bordent, vaut une espace. Deux fins de
-// ligne ou plus (ligne vide) et une fin de ligne devant un début de bloc sont gardées.
+// ligne ou plus (ligne vide), une fin de ligne devant un début de bloc ou après une fin d'instruction, et une fin de
+// ligne bordée de plus de maxUnwrapRun octets d'espaces sont gardées.
 func unwrapped(v *view) (*view, bool) {
 	text := v.text
 	if bytes.IndexByte(text, '\n') < 0 {
@@ -344,7 +350,7 @@ func unwrapped(v *view) (*view, bool) {
 				break
 			}
 		}
-		if breaks == 1 && i > 0 && !endsStatement(text[i-1]) && !startsBlock(text, end) {
+		if breaks == 1 && end-i <= maxUnwrapRun && i > 0 && !endsStatement(text[i-1]) && !startsBlock(text, end) {
 			b.keep(from, i)
 			b.replace([]byte{' '}, i, end, false)
 			from = end
