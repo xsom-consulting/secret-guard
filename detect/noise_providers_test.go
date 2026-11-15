@@ -185,6 +185,38 @@ func TestPlausibility(t *testing.T) {
 		}
 	})
 
+	t.Run("Pack initial : une clé hexadécimale de 32 chiffres reste lue après le nom du fournisseur, un identifiant de code ne l'est pas", func(t *testing.T) {
+		rules := loadInitialRules(t)
+		// Huit chiffres distincts à parts égales : entropie 3,0, la plus basse d'une clé hexadécimale courante.
+		hexEight := strings.Repeat("0a1b2c3d", 4)
+		name := "dvc" + "_server_"
+		cases := []struct {
+			name, input, ruleID string
+			want                bool
+		}{
+			{"clé Datadog hexadécimale d'entropie 3,0", "datadog api" + "key " + hexEight + " fin", "datadog_api_" + "key", true},
+			{"clé Datadog faite de zéros", "datadog api" + "key " + strings.Repeat("0", 32) + " fin", "datadog_api_" + "key", false},
+			{"clé Iterable hexadécimale d'entropie 3,0", "iterable api" + "key " + hexEight + " fin", "iterable_api_" + "key", true},
+			{"clé DevCycle de 24 caractères", "id " + name + "5fbbd6p84oe7" + "ut4qrttebiwa" + " fin", "devcycle_server_sdk_" + "key", true},
+			{"clé DevCycle de 8 caractères, chiffre en dernier", "id " + name + "abcdefg" + "7" + " fin", "devcycle_server_sdk_" + "key", true},
+			{"identifiant de code à chiffre, moins de 8 caractères", "id " + name + "ipv4" + " fin", "devcycle_server_sdk_" + "key", false},
+			{"identifiant de code sans chiffre", "id " + name + "hostname" + " fin", "devcycle_server_sdk_" + "key", false},
+		}
+		for _, c := range cases {
+			result := Scan([]byte(c.input), rules, Options{})
+			if !result.Complete {
+				t.Fatalf("%s : analyse incomplète (%v)", c.name, result.Failure)
+			}
+			got := false
+			for _, f := range result.Findings {
+				got = got || f.RuleID == c.ruleID
+			}
+			if got != c.want {
+				t.Errorf("%s : constat %s %v, attendu %v", c.name, c.ruleID, got, c.want)
+			}
+		}
+	})
+
 	t.Run("analyse : la valeur sans diversité n'est plus un constat, la valeur diverse le reste", func(t *testing.T) {
 		p := clonePack(loadInitialPack(t))
 		demo := func(id string, score int, validatorName, pattern string) pack.Rule {
