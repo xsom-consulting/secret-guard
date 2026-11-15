@@ -4,6 +4,8 @@ package detect
 
 import (
 	"crypto/rand"
+	"math"
+	"strings"
 	"testing"
 )
 
@@ -44,6 +46,38 @@ func randomToken(t *testing.T, n int) string {
 	return string(raw)
 }
 
+// drawnEntropyMin : entropie de Shannon au moins, en bits, d'une suite tirée par strongDraw. Le moteur ne signale une
+// suite qu'à partir de 4,3 bits (hasStrongEntropy), et un tirage passe parfois dessous sans que les formes écartées
+// de l'entropie y soient pour rien : 4 suites alphanumériques de 32 caractères sur 100 et 12 suites de lettres sur 100
+// (mesure du 15 novembre 2026, 40 000 tirages). TestEntropyKeepsTokens échouait alors une fois sur quarante environ,
+// déjà en v0.9.0.
+const drawnEntropyMin = 4.5
+
+// strongDraw rend le premier tirage de draw dont l'entropie de Shannon atteint drawnEntropyMin et qui n'a pas la forme
+// d'un nom : un essai « un jeton reste détecté » porte sur les chemins et les noms accolés, pas sur le seuil de
+// l'entropie ni sur la forme de nom d'une suite aléatoire, que bornent TestEntropyNameRarelyMatchesTokens et
+// TestEntropyNameRarelyMatchesLetters (3 suites de 32 lettres sur 10 000).
+func strongDraw(t *testing.T, draw func() string) string {
+	t.Helper()
+	for range 1000 {
+		value := draw()
+		counts := map[rune]int{}
+		for _, c := range value {
+			counts[c]++
+		}
+		bits := 0.0
+		for _, n := range counts {
+			p := float64(n) / float64(len(value))
+			bits -= p * math.Log2(p)
+		}
+		if bits >= drawnEntropyMin && !isEntropyName([]byte(value)) {
+			return value
+		}
+	}
+	t.Fatal("aucun tirage d'entropie suffisante et sans forme de nom en 1 000 essais")
+	return ""
+}
+
 func TestEntropyIgnoresPaths(t *testing.T) {
 	rules := loadInitialRules(t)
 	project := "-Users-jdupont-Documents-PRO-02-COMPANIES-Exemple-Conseil-DEV-exemple-fleet"
@@ -61,6 +95,12 @@ func TestEntropyIgnoresPaths(t *testing.T) {
 		"chemin absolu coupé par une espace": "cd /Users/jdupont/Documents/PRO/02-COMPANIES/Exemple Conseil/DEV/exemple-fleet-wt-capture-telechargements/agent/internal/domain/hook",
 		"suite après un point":               "cat .agents/skills/bmad-retrospective/SKILL.md",
 		"mot long en majuscules":             "ls DEV/DOCUMENTATIONS/ARCHITECTURES/exemple-fleet",
+		// Identifiants publics dans le chemin d'une URL (15 novembre 2026).
+		"référence d'un article de loi":         "Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000028345220 (version en vigueur)",
+		"références d'un code et d'une section": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070719/LEGISCTA000006149839/",
+		"référence et date":                     "<a href=\"https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006149839/2026-02-02\">",
+		"numéro d'article d'un centre d'aide":   "https://aide.exemple.fr/hc/fr/articles/24373653275165-Configurer-les-restrictions-par-locataire-pour-les-applications-SaaS",
+		"identifiant de page après un titre":    "https://notes.exemple.fr/p/Politique-restreindre-le-reseau-sortant-dans-les-reglages-" + publicPageID,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if n := entropyFindings(t, rules, content); n != 0 {
@@ -73,17 +113,51 @@ func TestEntropyIgnoresPaths(t *testing.T) {
 func TestEntropyKeepsTokens(t *testing.T) {
 	rules := loadInitialRules(t)
 	for i := 0; i < 20; i++ {
-		token := randomToken(t, 40)
+		token := strongDraw(t, func() string { return randomToken(t, 40) })
 		for name, content := range map[string]string{
 			"jeton seul":                                     token,
 			"jeton dans le chemin d'URL":                     "curl https://api.exemple.fr/v1/" + token + "/status",
 			"jeton après un point":                           "valeur." + token,
 			"jeton dans un chemin relatif":                   "cp out/" + token + "/build .",
-			"jeton de lettres en casse mêlée dans un chemin": "cp out/" + randomLetters(t, 32) + "/build .",
+			"jeton de lettres en casse mêlée dans un chemin": "cp out/" + strongDraw(t, func() string { return randomLetters(t, 32) }) + "/build .",
+			"jeton après un titre dans le chemin d'URL":      "https://notes.exemple.fr/p/Politique-de-securite-" + token,
+			"jeton après un numéro dans le chemin d'URL":     "https://support.exemple.fr/hc/fr/articles/24373653275165-" + token,
+			"jeton à côté d'une référence":                   "https://www.exemple.fr/codes/LEGIARTI000028345220/" + token,
 		} {
 			if n := entropyFindings(t, rules, content); n == 0 {
 				t.Fatalf("%s : jeton aléatoire non détecté", name)
 			}
+		}
+	}
+}
+
+// publicPageID : identifiant de page synthétique, 32 chiffres hexadécimaux assemblés à l'exécution.
+var publicPageID = strings.Repeat("0a1b2c3d", 4)
+
+func TestIsPublicID(t *testing.T) {
+	for word, want := range map[string]bool{
+		"24373653275165":              true,  // numéro d'article
+		"12345678901234567890":        true,  // 20 chiffres
+		"123456789012345678901":       false, // 21 chiffres
+		"LEGIARTI000028345220":        true,  // référence : 8 majuscules, 12 chiffres
+		"JORFARTI000047915060":        true,
+		"RFC000009110":                true,
+		"A000028345220":               false, // une seule majuscule
+		"ABCDEFGHIJKLM0000":           false, // 13 majuscules
+		"LEGIARTIXXXXX123":            false, // 3 chiffres
+		"legiarti000028345220":        false, // minuscules
+		"LEGIARTI00002834522A":        false, // lettre après les chiffres
+		publicPageID:                  true,  // 32 chiffres hexadécimaux
+		strings.ToUpper(publicPageID): true,
+		publicPageID[:31] + "A":       false, // casse mêlée
+		publicPageID[:30]:             false, // 30 chiffres hexadécimaux
+		strings.Repeat("abcdefab", 4): false, // aucun chiffre décimal
+		"0a1b2c3d4e5f6071":            false, // 16 chiffres hexadécimaux : reste un candidat
+		"prodview3ao52s7pq45py":       false,
+		"Xk7Pq2Rm9Tz4Lw8Nb3Vc6H":      false,
+	} {
+		if got := isPublicID([]byte(word)); got != want {
+			t.Errorf("isPublicID(%q) = %v, attendu %v", word, got, want)
 		}
 	}
 }
@@ -104,8 +178,17 @@ func TestIsWordSlug(t *testing.T) {
 	}
 }
 
-// randomLetters tire n lettres en casse mêlée au hasard.
+// randomLetters tire n lettres en casse mêlée au hasard, avec au moins une majuscule et une minuscule après la
+// première lettre : ce n'est donc pas un tirage uniforme (uniformLetters).
 func randomLetters(t *testing.T, n int) string {
+	t.Helper()
+	raw := []byte(uniformLetters(t, n))
+	raw[1], raw[2] = 'Q', 'q'
+	return string(raw)
+}
+
+// uniformLetters tire n lettres, chacune en majuscule ou en minuscule une fois sur deux : un jeton sans aucun chiffre.
+func uniformLetters(t *testing.T, n int) string {
 	t.Helper()
 	raw := make([]byte, n)
 	if _, err := rand.Read(raw); err != nil {
@@ -118,8 +201,6 @@ func randomLetters(t *testing.T, n int) string {
 		}
 		raw[i] = c
 	}
-	// Au moins une majuscule et une minuscule après la première lettre.
-	raw[1], raw[2] = 'Q', 'q'
 	return string(raw)
 }
 
