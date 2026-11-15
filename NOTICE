@@ -62,3 +62,13 @@ unmodified, by tools/injectioncorpus from:
   commit c558c421157c546ec417cf23778ce81a3a8f35fd), Copyright 2026 Cisco Systems, Inc. and its affiliates,
   Apache License, Version 2.0.
 MIT permission notice and details: UPSTREAM.md, "Corpus de rappel du paquet injection".
+
+Rules of the injection package (v0.10.0)
+Some pattern shapes of the rules injection_role_labels, injection_system_prompt_leak and injection_filter_disable
+are taken and modified from DefenseClaw (https://github.com/cisco-ai-defense/defenseclaw,
+internal/scanner/clawshield_injection.go, commit b68373a1c842486b22f7349a2b6fc74b56e2c941) and Skill Scanner
+(https://github.com/cisco-ai-defense/skill-scanner, skill_scanner/data/packs/core/signatures/prompt_injection.yaml,
+commit c558c421157c546ec417cf23778ce81a3a8f35fd), both Copyright 2026 Cisco Systems, Inc. and its affiliates,
+Apache License, Version 2.0. The technique names come from Giskard (https://github.com/Giskard-AI/giskard-oss,
+Apache License, Version 2.0); no Giskard template, data or code is used.
+Changes: UPSTREAM.md, "Règles du paquet injection".

@@ -3,12 +3,19 @@
 // Package injection trouve, dans un texte que personne n'a écrit pour l'agent (page lue, résultat d'outil, fichier
 // cité), les consignes adressées à l'agent : « ignore les instructions précédentes », changement de rôle, demande
 // d'envoyer des secrets à une adresse, ordre de cacher quelque chose à l'utilisateur, balises de tours de parole
-// copiées dans le texte. Les formes sont reconnues en français et en anglais.
+// copiées dans le texte ; et, depuis la v0.10.0, préfixe de réponse imposé, faux historique de conversation,
+// interdiction de refuser ou d'avertir, charge découpée en morceaux à réunir, demande de révéler le message système,
+// ordre de désactiver les filtres, étiquettes de rôle. Les formes sont reconnues en français et en anglais.
 //
 // C'est un détecteur de constat : il ne modifie ni ne masque rien (le texte d'une page lue n'est pas à expurger) et ne
-// juge pas : un texte qui cite ces phrases pour les expliquer (documentation sur l'injection de prompt) est signalé comme
-// le texte qui les emploie, la décision (avertir, bloquer) revenant à l'appelant. Il ne couvre pas une consigne écrite
-// autrement que par les formes ci-dessous ; une absence de constat n'est pas une preuve d'innocuité.
+// juge pas : la décision (avertir, bloquer) revient à l'appelant. Il ne couvre pas une consigne écrite autrement que
+// par les formes ci-dessous ; une absence de constat n'est pas une preuve d'innocuité. Ce qu'il signale sur des
+// textes d'attaque publics et sur des dépôts sains est mesuré, pas promis : docs/bench.md.
+//
+// Une formule courte citée entre guillemets au milieu d'une phrase (« les attaquants écrivent “ignore all previous
+// instructions” dans une page ») est une mention : elle n'est pas signalée (context.go). Un texte qui emploie la
+// formule sans guillemets, qui la donne comme valeur (après « : » ou « = », en début de ligne) ou qui la cite sur
+// plus d'une phrase reste signalé, documentation sur l'injection de prompt comprise.
 //
 // Le texte est lu tel quel, puis normalisé et déplié (pleine chasse, espaces insécables, texte replié sur plusieurs
 // lignes), puis décodé une fois (pourcentages, échappements de chaîne, base64) : views.go. Une consigne repliée par
@@ -25,6 +32,7 @@
 package injection
 
 import (
+	"regexp"
 	"sort"
 	"unicode/utf8"
 
@@ -45,11 +53,27 @@ const (
 	Concealment Rule = "injection_concealment"
 	// MessageMarkers : balises de tours de parole ou de message système de modèles de langage dans un texte lu.
 	MessageMarkers Rule = "injection_message_markers"
+	// ForcedPrefix : ordre de commencer chaque réponse par un texte imposé.
+	ForcedPrefix Rule = "injection_forced_prefix"
+	// FakeHistory : faux tours de conversation écrits dans le texte (« User: … Assistant: … User: … »).
+	FakeHistory Rule = "injection_fake_history"
+	// RefusalSuppression : interdiction de refuser, de s'excuser ou d'avertir.
+	RefusalSuppression Rule = "injection_refusal_suppression"
+	// PayloadSplitting : ordre de réunir des morceaux puis d'exécuter ou de suivre le résultat.
+	PayloadSplitting Rule = "injection_payload_splitting"
+	// SystemPromptLeak : demande de révéler le message système ou les instructions reçues.
+	SystemPromptLeak Rule = "injection_system_prompt_leak"
+	// FilterDisable : ordre de désactiver les filtres ou d'entrer dans un mode sans restriction.
+	FilterDisable Rule = "injection_filter_disable"
+	// RoleLabels : étiquettes de rôle écrites dans le texte (ligne « system: » suivie d'un ordre d'annulation, bloc
+	// « ```system », « --- » puis « system: », jeton </s>).
+	RoleLabels Rule = "injection_role_labels"
 )
 
 // Rules sont les règles, dans l'ordre où Find les applique.
 func Rules() []Rule {
-	return []Rule{InstructionOverride, RoleSwitch, Exfiltration, Concealment, MessageMarkers}
+	return []Rule{InstructionOverride, RoleSwitch, Exfiltration, Concealment, MessageMarkers,
+		ForcedPrefix, FakeHistory, RefusalSuppression, PayloadSplitting, SystemPromptLeak, FilterDisable, RoleLabels}
 }
 
 const (
@@ -89,36 +113,85 @@ type Report struct {
 var patternSources = []struct {
 	rule   Rule
 	source string
+	// before est un motif de contexte facultatif (context.go), cherché juste avant la correspondance sur sa ligne.
+	// beforeRequired : il doit s'y trouver ; sinon il ne doit pas s'y trouver.
+	before         string
+	beforeRequired bool
 }{
 	// Annulation des instructions : verbe d'annulation, puis « précédentes / ci-dessus / toutes », puis le nom.
-	{InstructionOverride, `(?i)\b(?:ignore|disregard|forget|override|bypass)\b[^.\n]{0,40}?\b(?:previous|prior|above|earlier|preceding|all|any|your)\b[^.\n]{0,30}?\b(?:instructions?|prompts?|rules?|directions?|guidelines?|constraints?)\b`},
-	{InstructionOverride, `(?i)\b(?:do not|don't|never)\s+follow\b[^.\n]{0,40}?\b(?:instructions?|rules?|guidelines?)\b`},
-	{InstructionOverride, `(?i)\b(?:ignore[rz]?|oublie[rz]?|annule[rz]?|n[eé]glige[rz]?|contourne[rz]?|passe[rz]? outre)\b[^.\n]{0,40}?\b(?:pr[eé]c[eé]dent|ant[eé]rieur|ci-dessus|toutes?|tes|vos|les)\b[^.\n]{0,30}?\b(?:instructions?|consignes?|directives?|r[eè]gles?|prompts?|contraintes?)\b`},
-	{InstructionOverride, `(?i)\bne (?:tiens?|tenez|suis|suivez)\s+(?:pas|plus)\b[^.\n]{0,40}?\b(?:instructions?|consignes?|directives?|r[eè]gles?)\b`},
+	{rule: InstructionOverride, source: `(?i)\b(?:ignore|disregard|forget|override|bypass)\b[^.\n]{0,40}?\b(?:previous|prior|above|earlier|preceding|all|any|your)\b[^.\n]{0,30}?\b(?:instructions?|prompts?|rules?|directions?|guidelines?|constraints?)\b`},
+	{rule: InstructionOverride, source: `(?i)\b(?:do not|don't|never)\s+follow\b[^.\n]{0,40}?\b(?:instructions?|rules?|guidelines?)\b`},
+	{rule: InstructionOverride, source: `(?i)\b(?:ignore[rz]?|oublie[rz]?|annule[rz]?|n[eé]glige[rz]?|contourne[rz]?|passe[rz]? outre)\b[^.\n]{0,40}?\b(?:pr[eé]c[eé]dent|ant[eé]rieur|ci-dessus|toutes?|tes|vos|les)\b[^.\n]{0,30}?\b(?:instructions?|consignes?|directives?|r[eè]gles?|prompts?|contraintes?)\b`},
+	{rule: InstructionOverride, source: `(?i)\bne (?:tiens?|tenez|suis|suivez)\s+(?:pas|plus)\b[^.\n]{0,40}?\b(?:instructions?|consignes?|directives?|r[eè]gles?)\b`},
 
 	// Changement de rôle : nouveau rôle explicite, ou obéissance exclusive au texte lu.
-	{RoleSwitch, `(?i)\byou are now\b[^.\n]{0,20}?\b(?:an?|the|in)\b[^.\n]{0,30}?\b(?:assistant|agent|ai|model|bot|dan|unrestricted|jailbroken|developer mode)\b`},
-	{RoleSwitch, `(?i)\bfrom now on\b[^.\n]{0,12}\byou (?:will|must|shall|are to)\b[^.\n]{0,25}?\b(?:ignore|obey|follow|only|always|never|act|respond|answer|reply)\b`},
-	{RoleSwitch, `(?i)\b(?:pretend|act as if) (?:that )?you (?:are|have no|can|were)\b[^.\n]{0,40}?\b(?:unrestricted|restrictions?|rules?|limits?|filters?|jailbroken|different|another)\b`},
-	{RoleSwitch, `(?i)\b(?:new|updated|real) (?:system )?(?:instructions?|prompt)\s*:`},
-	{RoleSwitch, `(?i)\b(?:tu es|vous [eê]tes) (?:maintenant|d[eé]sormais)\b[^.\n]{0,20}?\b(?:un|une|le|la|en)\b[^.\n]{0,30}?\b(?:assistant|agent|ia|mod[eè]le|bot|dan|sans restriction|sans limite|mode d[eé]veloppeur)\b`},
-	{RoleSwitch, `(?i)\bd[eé]sormais,?\s+(?:tu|vous)\s+(?:dois|devez|vas|allez|ne dois|ne devez)\b[^.\n]{0,25}?\b(?:ignorer|ob[eé]ir|suivre|toujours|jamais|uniquement|seulement|agir|r[eé]pondre)\b`},
-	{RoleSwitch, `(?i)\b(?:fais|faites) (?:semblant|comme si)\b[^.\n]{0,40}?\b(?:sans restriction|sans limite|sans r[eè]gle|aucune restriction|aucune r[eè]gle)\b`},
-	{RoleSwitch, `(?i)\bnouvelles? (?:instructions?|consignes?)\s*:`},
+	{rule: RoleSwitch, source: `(?i)\byou are now\b[^.\n]{0,20}?\b(?:an?|the|in)\b[^.\n]{0,30}?\b(?:assistant|agent|ai|model|bot|dan|unrestricted|jailbroken|developer mode)\b`},
+	{rule: RoleSwitch, source: `(?i)\bfrom now on\b[^.\n]{0,12}\byou (?:will|must|shall|are to)\b[^.\n]{0,25}?\b(?:ignore|obey|follow|only|always|never|act|respond|answer|reply)\b`},
+	{rule: RoleSwitch, source: `(?i)\b(?:pretend|act as if) (?:that )?you (?:are|have no|can|were)\b[^.\n]{0,40}?\b(?:unrestricted|restrictions?|rules?|limits?|filters?|jailbroken|different|another)\b`},
+	{rule: RoleSwitch, source: `(?i)\b(?:new|updated|real) (?:system )?(?:instructions?|prompt)\s*:`},
+	{rule: RoleSwitch, source: `(?i)\b(?:tu es|vous [eê]tes) (?:maintenant|d[eé]sormais)\b[^.\n]{0,20}?\b(?:un|une|le|la|en)\b[^.\n]{0,30}?\b(?:assistant|agent|ia|mod[eè]le|bot|dan|sans restriction|sans limite|mode d[eé]veloppeur)\b`},
+	{rule: RoleSwitch, source: `(?i)\bd[eé]sormais,?\s+(?:tu|vous)\s+(?:dois|devez|vas|allez|ne dois|ne devez)\b[^.\n]{0,25}?\b(?:ignorer|ob[eé]ir|suivre|toujours|jamais|uniquement|seulement|agir|r[eé]pondre)\b`},
+	{rule: RoleSwitch, source: `(?i)\b(?:fais|faites) (?:semblant|comme si)\b[^.\n]{0,40}?\b(?:sans restriction|sans limite|sans r[eè]gle|aucune restriction|aucune r[eè]gle)\b`},
+	{rule: RoleSwitch, source: `(?i)\bnouvelles? (?:instructions?|consignes?)\s*:`},
 
 	// Exfiltration : verbe d'envoi, un secret, puis une adresse (URL ou courriel).
-	{Exfiltration, `(?i)\b(?:send|post|upload|forward|exfiltrate|email|e-mail|transmit|leak|curl)\b[^.\n]{0,60}?\b(?:secrets?|credentials?|passwords?|api[ _-]?keys?|access[ _-]?tokens?|tokens?|private keys?|ssh keys?|\.env)\b[^\n]{0,80}?(?:https?://|[\w.+-]+@[\w-]+\.[\w.-]+)`},
-	{Exfiltration, `(?i)\b(?:envoie[rz]?|transmets?|transmettez|poste[rz]?|exfiltre[rz]?|t[eé]l[eé]verse[rz]?|copie[rz]?)\b[^.\n]{0,60}?\b(?:secrets?|identifiants?|mots? de passe|cl[eé]s?|jetons?|\.env)\b[^\n]{0,80}?(?:https?://|[\w.+-]+@[\w-]+\.[\w.-]+)`},
+	{rule: Exfiltration, source: `(?i)\b(?:send|post|upload|forward|exfiltrate|email|e-mail|transmit|leak|curl)\b[^.\n]{0,60}?\b(?:secrets?|credentials?|passwords?|api[ _-]?keys?|access[ _-]?tokens?|tokens?|private keys?|ssh keys?|\.env)\b[^\n]{0,80}?(?:https?://|[\w.+-]+@[\w-]+\.[\w.-]+)`},
+	{rule: Exfiltration, source: `(?i)\b(?:envoie[rz]?|transmets?|transmettez|poste[rz]?|exfiltre[rz]?|t[eé]l[eé]verse[rz]?|copie[rz]?)\b[^.\n]{0,60}?\b(?:secrets?|identifiants?|mots? de passe|cl[eé]s?|jetons?|\.env)\b[^\n]{0,80}?(?:https?://|[\w.+-]+@[\w-]+\.[\w.-]+)`},
 
 	// Dissimulation à l'utilisateur.
-	{Concealment, `(?i)\b(?:do not|don't|never)\s+(?:tell|inform|mention|reveal|show|notify|alert)\b[^.\n]{0,20}?\b(?:the )?user\b`},
-	{Concealment, `(?i)\bwithout (?:telling|informing|notifying|alerting)\b[^.\n]{0,15}?\b(?:the )?user\b`},
-	{Concealment, `(?i)\bne (?:le |la |lui |en )?(?:dis|dites|dire|montre|montrez|r[eé]v[eè]le|r[eé]v[eé]lez|signale|signalez|informe|informez|pr[eé]viens|pr[eé]venez)\b[^.\n]{0,25}?\b(?:pas|jamais)\b[^.\n]{0,20}?(?:[aà] l'?utilisateur|[aà] l'?op[eé]rateur)\b`},
-	{Concealment, `(?i)\bsans (?:en )?(?:informer|pr[eé]venir|alerter|avertir)\b[^.\n]{0,15}?\bl'?utilisateur\b`},
+	{rule: Concealment, source: `(?i)\b(?:do not|don't|never)\s+(?:tell|inform|mention|reveal|show|notify|alert)\b[^.\n]{0,20}?\b(?:the )?user\b`},
+	{rule: Concealment, source: `(?i)\bwithout (?:telling|informing|notifying|alerting)\b[^.\n]{0,15}?\b(?:the )?user\b`},
+	{rule: Concealment, source: `(?i)\bne (?:le |la |lui |en )?(?:dis|dites|dire|montre|montrez|r[eé]v[eè]le|r[eé]v[eé]lez|signale|signalez|informe|informez|pr[eé]viens|pr[eé]venez)\b[^.\n]{0,25}?\b(?:pas|jamais)\b[^.\n]{0,20}?(?:[aà] l'?utilisateur|[aà] l'?op[eé]rateur)\b`},
+	{rule: Concealment, source: `(?i)\bsans (?:en )?(?:informer|pr[eé]venir|alerter|avertir)\b[^.\n]{0,15}?\bl'?utilisateur\b`},
+	{rule: Concealment, source: `(?i)\b(?:hide|conceal|withhold)\b[^.\n]{0,30}?\b(?:actions?|steps?|instructions?|operations?|activit(?:y|ies)|behaviou?rs?|changes?|commands?|requests?)\b[^.\n]{0,25}?\bfrom (?:the )?users?\b`},
+	{rule: Concealment, source: `(?i)\b(?:cache[rz]?|dissimule[rz]?|masque[rz]?)\b[^.\n]{0,30}?(?:\b(?:actions?|instructions?|op[eé]rations?|commandes?|modifications?|changements?)|[eé]tapes?)\b[^.\n]{0,25}?[aà] l'?utilisateur\b`},
 
 	// Balises de tours de parole et de message système : jetons spéciaux de modèles, jamais du texte ordinaire.
-	{MessageMarkers, `(?i)<\|(?:im_start|im_end|system|user|assistant|endoftext)\|>`},
-	{MessageMarkers, `(?i)\[/?INST\]|<<\s*/?SYS\s*>>`},
+	{rule: MessageMarkers, source: `(?i)<\|(?:im_start|im_end|system|user|assistant|endoftext)\|>`},
+	{rule: MessageMarkers, source: `(?i)\[/?INST\]|<<\s*/?SYS\s*>>`},
+
+	// Préfixe imposé : verbe d'ouverture, « ta / chaque réponse », puis « par / with ».
+	{rule: ForcedPrefix, source: `(?i)\b(?:start|begin|open|prefix|preface)\b[^.\n]{0,25}?\b(?:your|each|every|all)\b[^.\n]{0,25}?\b(?:responses?|repl(?:y|ies)|answers?|outputs?|messages?)\b[^.\n]{0,20}?\b(?:with|by)\b`},
+	{rule: ForcedPrefix, source: `(?i)\b(?:commence[rz]?|d[eé]bute[rz]?|pr[eé]fixe[rz]?)\b[^.\n]{0,25}?\b(?:ta|tes|votre|vos|chaque|chacune|toutes?)\b[^.\n]{0,25}?\br[eé]ponses?\b[^.\n]{0,20}?\b(?:par|avec)\b`},
+
+	// Faux historique : trois tours qui alternent, chacun en début de ligne.
+	{rule: FakeHistory, source: `(?im)^(?:user|human|utilisateur|humain)\s?:[^\n]{1,300}\n{1,2}(?:assistant|ai|bot|chatgpt|claude|gpt)\s?:[^\n]{1,300}\n{1,2}(?:user|human|utilisateur|humain)\s?:`},
+
+	// Suppression du refus : interdiction de refuser ou de s'excuser, réponse exigée sans avertissement.
+	{rule: RefusalSuppression, source: `(?i)\b(?:do not|don't|never|cannot|can't|can not|must not|mustn't|should not|shouldn't|will not|won't)\s+(?:ever\s+)?(?:refuse|decline|apologi[sz]e)\b`},
+	{rule: RefusalSuppression, source: `(?i)\b(?:answer|respond|reply|comply|responses?|replies|answers?)\b[^.\n]{0,40}?\bwithout (?:any |any kind of )?(?:warnings?|disclaimers?|refusing|refusals?|apolog\w+|morali\w+|censor\w+|caveats?)\b`},
+	{rule: RefusalSuppression, source: `(?i)\b(?:do not|don't|never)\s+(?:include|add|give|provide|write|mention|use)\b[^.\n]{0,20}?\b(?:warnings?|disclaimers?|caveats?|apolog(?:y|ies))\b`},
+	{rule: RefusalSuppression, source: `(?i)\bne (?:refuse[sz]?|t'excuse[sz]?|vous excusez|d[eé]cline[sz]?)\s+(?:jamais|pas|plus)\b`},
+	{rule: RefusalSuppression, source: `(?i)\b(?:r[eé]ponds?|r[eé]pondez|r[eé]pondre|r[eé]ponses?)\b[^.\n]{0,40}?\bsans (?:aucun |aucune |le moindre |la moindre )?(?:avertissement|refus|excuse|morale|censure|mise en garde)s?\b`},
+
+	// Découpage : réunir des morceaux, puis exécuter ou suivre le résultat.
+	{rule: PayloadSplitting, source: `(?i)\b(?:concatenate|combine|join|merge|assemble|put together|piece together)\b[^.\n]{0,30}?\b(?:strings?|parts?|pieces?|fragments?|chunks?|segments?)\b[^.\n]{0,40}?\b(?:and|then|to)\b[^.\n]{0,20}?\b(?:follow|execute|run|obey|perform|comply|carry out)\b`},
+	{rule: PayloadSplitting, source: `(?i)\b(?:concat[eè]ne[rz]?|assemble[rz]?|r[eé]unis(?:sez)?|r[eé]unir|recolle[rz]?|mets bout [aà] bout|mettez bout [aà] bout)\b[^.\n]{0,30}?\b(?:cha[iî]nes?|morceaux|parties?|fragments?|segments?)\b[^.\n]{0,40}?\b(?:puis|et|pour)\b[^.\n]{0,20}?\b(?:ex[eé]cute[rz]?|sui[stv]\w*|applique[rz]?|ob[eé]i[rstz]\w*)`},
+
+	// Message système : demande de le révéler. Une négation juste avant (« never reveal… », « ne révèle jamais… »)
+	// en fait une défense : la correspondance est écartée.
+	{rule: SystemPromptLeak, source: `(?i)\b(?:reveal|show|print|output|display|repeat|leak|disclose|share|recite|expose|dump|tell me|give me|write out|return)\b[^.\n]{0,25}?\b(?:your (?:system |initial |original |hidden |secret |internal |full |exact |own )?(?:system message|system prompt|prompt|instructions?)|the (?:prompt|instructions?) above|the above (?:prompt|instructions?))\b`,
+		before: `(?i)(?:\b(?:not|never|cannot|without|avoid|refuse to|don.t|doesn.t|won.t|can.t|shouldn.t|mustn.t)|n't)\s+(?:\w+\s+){0,2}$`},
+	{rule: SystemPromptLeak, source: `(?i)\bwhat (?:are|is|were|was) your (?:system |initial |original |exact |hidden )?(?:instructions?|system prompt|prompt|directives?)\b`},
+	{rule: SystemPromptLeak, source: `(?i)\b(?:repeat|print|output|write)\b[^.\n]{0,15}?\b(?:everything|all|the words?|the text)\b[^.\n]{0,15}?\b(?:above|before)\b`},
+	{rule: SystemPromptLeak, source: `(?i)\b(?:r[eé]v[eè]le[rz]?|affiche[rz]?|montre[rz]?|r[eé]p[eè]te[rz]?|donne[rz]?|imprime[rz]?|divulgue[rz]?|recopie[rz]?|cite[rz]?)\b[^.\n]{0,30}?\b(?:prompt syst[eè]me|message syst[eè]me|instructions? (?:syst[eè]me|initiales?|d'origine|cach[eé]es?)|prompt (?:initial|d'origine|cach[eé])|consignes? (?:syst[eè]me|initiales?|d'origine|cach[eé]es?))`,
+		before: `(?i)(?:\bne|\bn'|\bsans|\bjamais)\s*(?:\w+\s+){0,2}$`},
+	{rule: SystemPromptLeak, source: `(?i)\bquelles? (?:sont|est|[eé]taient) (?:tes|vos|ton|votre) (?:instructions?|consignes?|prompt)\b`},
+
+	// Filtres : ordre de les désactiver, mode sans restriction, affranchissement d'une politique de contenu.
+	{rule: FilterDisable, source: `(?i)\b(?:disable|deactivate|turn off|switch off|remove|bypass|circumvent|lift|drop)\b[^.\n]{0,25}?\b(?:safety|content|ethical|moral|moderation|censorship)\b[^.\n]{0,15}?\b(?:filters?|guidelines?|guardrails?|restrictions?|polic(?:y|ies))\b`},
+	{rule: FilterDisable, source: `(?i)\b(?:enter|enable|activate|switch to|you are in|you are now in)\b[^.\n]{0,15}?\b(?:jailbreak|unrestricted|uncensored|unfiltered|dan|god)[ -]mode\b`},
+	{rule: FilterDisable, source: `(?i)\b(?:bound by|restricted by|constrained by|abide by|adhere to|comply with)\b[^.\n]{0,25}?\b(?:content polic(?:y|ies)|safety guidelines|ethical guidelines|usage polic(?:y|ies)|openai(?:'s)? (?:polic(?:y|ies)|rules|guidelines|content))\b`,
+		before: `(?i)(?:\b(?:not|never|no longer|without having to|free to not)|n't)\s+(?:\w+\s+){0,3}$`, beforeRequired: true},
+	{rule: FilterDisable, source: `(?i)\b(?:d[eé]sactive[rz]?|coupe[rz]?|retire[rz]?|supprime[rz]?|contourne[rz]?|l[eè]ve[rz]?)\b[^.\n]{0,25}?\b(?:filtres?|garde-fous?|restrictions?|protections?|mod[eé]ration)\b[^.\n]{0,15}?(?:\b(?:de s[eé]curit[eé]|de contenu|de mod[eé]ration|morales?)|[eé]thiques?)`},
+	{rule: FilterDisable, source: `(?i)\bmode (?:sans restriction|sans filtre|sans censure|d[eé]brid[eé]|jailbreak)`},
+
+	// Étiquettes de rôle : ligne « system: » suivie d'un ordre d'annulation, bloc de code « system », fin de séquence.
+	{rule: RoleLabels, source: `(?i)system(?: (?:prompt|message|instructions?|note|override))?\]?\*{0,2}\s?:\s?\*{0,2}\s?(?:ignore|forget|override|disregard|from now on|new instructions|oublie|d[eé]sormais)`,
+		before: `^[ \t>*#\[|-]{0,8}$`, beforeRequired: true},
+	{rule: RoleLabels, source: "(?i)```\\s?system\\b"},
+	{rule: RoleLabels, source: `(?i)---[ \t]*\r?\n[ \t]*system\s?:`},
+	{rule: RoleLabels, source: `(?i)</s>`, before: `(?i)<s>[^<\n]*$`},
 }
 
 // patterns sont les motifs compilés, dans l'ordre de patternSources ; engine est leur porte littérale (gate.go).
@@ -126,7 +199,11 @@ var (
 	patterns = func() []pattern {
 		compiled := make([]pattern, 0, len(patternSources))
 		for _, p := range patternSources {
-			compiled = append(compiled, compilePattern(p.rule, p.source))
+			pattern := compilePattern(p.rule, p.source)
+			if p.before != "" {
+				pattern.before, pattern.beforeRequired = regexp.MustCompile(p.before), p.beforeRequired
+			}
+			compiled = append(compiled, pattern)
 		}
 		return compiled
 	}()
@@ -155,7 +232,7 @@ type match struct {
 }
 
 // Find rend les constats du texte, dans l'ordre du texte (à début égal, dans l'ordre des règles). Les motifs sont
-// cherchés dans le texte tel quel et dans ses autres lectures (views.go) : normalisé et déplié, décodé une fois. Une
+// cherchés dans le texte tel quel et dans ses autres lectures (views.go) : normalisé, déplié, décodé une fois. Une
 // règle ne rend qu'un constat pour des étendues qui se recouvrent, quelle que soit la lecture qui les a trouvées.
 //
 // Au-delà de MaxInputBytes octets, rien n'est lu : Complete est faux, Total vaut 0 et Findings est vide. Complete est
@@ -182,16 +259,18 @@ func find(text []byte, scanView func(patterns []pattern, v *view, yield func(pat
 			found = append(found, match{patterns[order].rule, sourceStart, sourceEnd, order, rank})
 		})
 	}
-	// read lit une vue, puis sa forme normalisée et dépliée si elle en diffère.
+	// read lit une vue, puis sa forme normalisée, puis sa forme normalisée et dépliée, quand elles en diffèrent. Les
+	// deux sont lues : une règle définie par ses lignes (faux historique, étiquette de rôle en début de ligne) ne se
+	// retrouve que dans la première, une consigne repliée que dans la seconde.
 	read := func(v *view) {
-		scan(v)
-		other, ok := folded(v)
+		forms, ok := foldedForms(v)
 		if !ok {
 			report.Complete = false
 		}
-		if other != nil {
-			other.afterDecoding = v.segs != nil
-			scan(other)
+		scan(v)
+		for _, form := range forms {
+			form.afterDecoding = v.segs != nil
+			scan(form)
 		}
 	}
 	source := &view{text: text}

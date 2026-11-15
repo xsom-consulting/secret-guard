@@ -130,8 +130,11 @@ func TestWorstCasesAreLinear(t *testing.T) {
 	inputs := map[string]string{
 		"ignore-repete":     strings.Repeat("ignore ", MaxInputBytes/7),
 		"send-token-repete": strings.Repeat("send token ", MaxInputBytes/11),
-		"inst":              strings.Repeat("[INST", MaxInputBytes/5),
-		"une-ligne":         "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),
+		// Le même, avec le signe qui fait passer la porte du motif d'exfiltration à chaque mot.
+		"send-token-arobase": strings.Repeat("send token @ ", MaxInputBytes/13),
+		"user-deux-points":   strings.Repeat("user: a\n", MaxInputBytes/8),
+		"inst":               strings.Repeat("[INST", MaxInputBytes/5),
+		"une-ligne":          "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),
 		// Lectures dérivées : une fin de ligne, un pourcentage, un échappement ou un bloc base64 à chaque mot.
 		"ignore-replie":      strings.Repeat("ignore\n", MaxInputBytes/7),
 		"ignore-pourcentage": strings.Repeat("%69gnore%20all%20", MaxInputBytes/17),

@@ -58,6 +58,9 @@ func missedByGate(text []byte) (matches int, missed []string) {
 	special := strings.ContainsAny(string(text), "ſK")
 	for order, reference := range referencePatterns {
 		for _, loc := range reference.FindAllIndex(text, -1) {
+			if !patterns[order].accept(text, loc[0], loc[1]) {
+				continue
+			}
 			matches++
 			if !found[span{order, loc[0], loc[1]}] && !special && loc[1]-loc[0] <= patterns[order].window-windowMargin {
 				missed = append(missed, patternSources[order].source)
@@ -98,7 +101,7 @@ func ungatedScan(patterns []pattern, v *view, yield func(pattern, start, end int
 			if p.lineStart && i > 0 && text[i-1] != '\n' {
 				continue
 			}
-			if loc := p.re.FindIndex(text[i:min(len(text), i+p.window)]); loc != nil {
+			if loc := p.re.FindIndex(text[i:min(len(text), i+p.window)]); loc != nil && p.accept(text, i, i+loc[1]) {
 				yield(order, i, i+loc[1])
 			}
 		}

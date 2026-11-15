@@ -54,6 +54,14 @@ type pattern struct {
 	required [][]string
 	// requiredSets sont les rangs de ces listes dans l'index de la porte.
 	requiredSets []int
+	// requiredShort : listes de même sens dont un mot a moins de minRequiredBytes octets (« @ »), cherchées dans la
+	// fenêtre.
+	requiredShort [][]string
+	// before est un motif de contexte, cherché dans les octets qui précèdent la correspondance sur sa ligne
+	// (context.go). beforeRequired : la correspondance n'est gardée que s'il s'y trouve ; sinon elle est écartée s'il
+	// s'y trouve.
+	before         *regexp.Regexp
+	beforeRequired bool
 }
 
 // compilePattern compile un motif RE2 et calcule sa porte. Un motif sans début littéral utilisable est une erreur de
@@ -92,19 +100,19 @@ func compilePattern(rule Rule, source string) pattern {
 	}
 	p.window = maxMatchBytes(body) + windowMargin
 	p.singleLine = !matchesNewline(body)
-	// Mots obligatoires de la suite du motif : chaque élément de la concaténation qui ne correspond qu'à des mots
-	// connus (une alternance de littéraux) en impose un. Le premier élément est le début littéral, déjà trouvé.
+	// Mots obligatoires de la suite du motif : chaque élément de la concaténation dont toute correspondance contient
+	// l'un de quelques mots connus en impose un. Le premier élément est le début littéral, déjà trouvé. Une liste dont
+	// un mot est trop court pour l'index est cherchée dans la fenêtre elle-même.
 	for _, sub := range subs[min(1, len(subs)):] {
-		words, exact := leadingLiterals(sub)
-		if !exact {
+		words, ok := containedLiterals(sub)
+		if !ok || len(words) == 0 || len(words) > maxAnchors {
 			continue
 		}
-		usable := len(words) > 0
-		for _, word := range words {
-			usable = usable && len(word) >= minRequiredBytes
-		}
-		if usable {
-			p.required = append(p.required, pruneContained(words))
+		words = pruneContained(words)
+		if len(words[0]) >= minRequiredBytes {
+			p.required = append(p.required, words)
+		} else {
+			p.requiredShort = append(p.requiredShort, words)
 		}
 	}
 	return p
@@ -184,6 +192,52 @@ func leadingLiterals(re *syntax.Regexp) (set []string, exact bool) {
 	default:
 		// Étoile, classe large, point, assertion : rien de sûr à partir d'ici.
 		return []string{""}, false
+	}
+}
+
+// containedLiterals rend des chaînes en minuscules dont l'une au moins figure dans toute correspondance du nœud ;
+// ok est faux quand on ne sait pas en donner.
+func containedLiterals(re *syntax.Regexp) (words []string, ok bool) {
+	switch re.Op {
+	case syntax.OpLiteral, syntax.OpCharClass:
+		words, exact := leadingLiterals(re)
+		return words, exact
+	case syntax.OpCapture, syntax.OpPlus:
+		return containedLiterals(re.Sub[0])
+	case syntax.OpRepeat:
+		if re.Min >= 1 {
+			return containedLiterals(re.Sub[0])
+		}
+		return nil, false
+	case syntax.OpConcat:
+		// Une correspondance contient celle de chaque élément : on garde la liste dont le mot le plus court est le
+		// plus long. Deux littéraux qui se suivent ne sont pas réunis.
+		best := -1
+		for _, sub := range re.Sub {
+			candidate, candidateOK := containedLiterals(sub)
+			if !candidateOK || len(candidate) == 0 {
+				continue
+			}
+			shortest := len(candidate[0])
+			for _, word := range candidate {
+				shortest = min(shortest, len(word))
+			}
+			if shortest > best {
+				best, words = shortest, candidate
+			}
+		}
+		return words, best > 0
+	case syntax.OpAlternate:
+		for _, sub := range re.Sub {
+			branch, branchOK := containedLiterals(sub)
+			if !branchOK {
+				return nil, false
+			}
+			words = append(words, branch...)
+		}
+		return words, true
+	default:
+		return nil, false
 	}
 }
 
@@ -378,6 +432,16 @@ func isWordByte(c byte) bool {
 	return c == '_' || (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
 }
 
+// containsAny dit si la fenêtre contient l'un des mots.
+func containsAny(window []byte, words []string) bool {
+	for _, word := range words {
+		if bytes.Contains(window, []byte(word)) {
+			return true
+		}
+	}
+	return false
+}
+
 // occurs dit si l'une des positions, croissantes, est dans [lo, hi).
 func occurs(positions []int32, lo, hi int) bool {
 	k := sort.Search(len(positions), func(k int) bool { return int(positions[k]) >= lo })
@@ -437,10 +501,17 @@ candidates:
 				continue candidates
 			}
 		}
-		if v.seen(i, end) {
+		for _, short := range p.requiredShort {
+			if !containsAny(folded[i:end], short) {
+				continue candidates
+			}
+		}
+		// Le contexte d'une correspondance (context.go) déborde de la fenêtre : il fait partie de ce qui doit avoir
+		// été lu à l'identique.
+		if v.seen(i-contextBytes, end+quoteTail+contextMargin) {
 			continue
 		}
-		if loc := p.re.FindIndex(text[i:end]); loc != nil {
+		if loc := p.re.FindIndex(text[i:end]); loc != nil && p.accept(text, i, i+loc[1]) {
 			yield(int(h.pattern), i, i+loc[1])
 		}
 	}

@@ -459,3 +459,37 @@ Les skills d'évaluation de Skill Scanner sont sous la licence Apache-2.0, celle
 
 Vérification : `go test ./tools/injectioncorpus ./injection`, et, avec les clones aux commits épinglés,
 `go run ./tools/injectioncorpus construire -sources <clones> -verifier`.
+
+## Règles du paquet injection (v0.10.0)
+
+Les sept règles ajoutées au paquet `injection` (`injection_forced_prefix`, `injection_fake_history`,
+`injection_refusal_suppression`, `injection_payload_splitting`, `injection_system_prompt_leak`,
+`injection_filter_disable`, `injection_role_labels`) sont écrites dans ce dépôt, en RE2 borné, en français et en
+anglais. Ce qu'elles doivent à d'autres projets :
+
+- **Familles.** Les noms des techniques (préfixe imposé, suppression du refus, faux historique, découpage de la charge)
+  viennent de la nomenclature de Giskard (`Giskard-AI/giskard-oss`, Apache-2.0, commit
+  `32fb9cf8e9344e9e2847bc22bdcf985a42f1e06c`, `libs/giskard-scan/`). Aucun gabarit, aucune donnée ni aucun code de
+  Giskard n'est repris.
+- **Formes reprises et modifiées de DefenseClaw** (`cisco-ai-defense/defenseclaw`, Apache-2.0, Copyright 2026 Cisco
+  Systems, Inc. and its affiliates, commit `b68373a1c842486b22f7349a2b6fc74b56e2c941`,
+  `internal/scanner/clawshield_injection.go`) : la ligne « system: » suivie d'un ordre d'annulation, le bloc de code
+  « system », « --- » puis « system: » et le jeton `</s>` de la règle `injection_role_labels`. Modifications : motifs
+  réécrits (début de ligne vérifié hors motif, espaces bornés, mots français, `</s>` écarté quand il ferme un texte
+  barré `<s>…</s>` sur la même ligne) ; la ligne « system: you are… » n'est pas reprise (146 fichiers signalés à la
+  mesure). Le reste de ce fichier (densité de verbes à l'impératif, décodage base64, paquet de règles ATR) n'est pas
+  repris.
+- **Formes reprises et modifiées de Skill Scanner** (`cisco-ai-defense/skill-scanner`, Apache-2.0, Copyright 2026
+  Cisco Systems, Inc. and its affiliates, commit `c558c421157c546ec417cf23778ce81a3a8f35fd`,
+  `skill_scanner/data/packs/core/signatures/prompt_injection.yaml`) : la demande de révéler le message système
+  (`injection_system_prompt_leak`) et l'ordre de désactiver les filtres ou d'entrer dans un mode sans restriction
+  (`injection_filter_disable`). Modifications : motifs réécrits avec des intervalles bornés, listes de verbes et de
+  noms propres à ce dépôt, formes françaises, négation lue avant la correspondance (« never reveal… » n'est pas
+  signalé), modes « debug », « developer » et « admin » et mot « security » non repris (courants dans une
+  documentation). L'idée d'écarter les citations entre guillemets vient de la même source, qui la mesure sur ses
+  propres données ; son motif, à assertions arrière, n'est pas repris : le contrôle est écrit en Go
+  (`injection/context.go`).
+
+Les avis de ces deux projets ne portent aucune mention qui concerne les fichiers cités (le fichier `NOTICE` de
+DefenseClaw vise ses dossiers `internal/sensor/`, non repris ; Skill Scanner n'a pas de fichier `NOTICE`). Mesures et
+critère de garde des motifs : `docs/bench.md`.

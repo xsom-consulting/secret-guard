@@ -5,9 +5,9 @@
 // Une consigne se cache sans peine dans un texte lu tel quel : écrite en pleine chasse, avec des espaces insécables,
 // repliée sur plusieurs lignes, en pourcentages, en échappements ou en base64. Find lit donc aussi :
 //
-//   - le texte normalisé (NFKC : pleine chasse, espaces insécables et typographiques, ligatures) où une fin de ligne
-//     simple vaut une espace (texte replié ; une ligne vide, une puce, un titre, une ligne de tableau restent des
-//     coupures) ;
+//   - le texte normalisé (NFKC : pleine chasse, espaces insécables et typographiques, ligatures) ;
+//   - le texte normalisé où une fin de ligne simple vaut une espace (texte replié ; une ligne vide, une puce, un
+//     titre, une ligne de tableau, une ligne de code restent des coupures) ;
 //   - le texte décodé une fois : suites %XX et échappements de chaîne (\uXXXX, \xXX, \n, \t, \", \\…) d'une part,
 //     blocs base64 (alphabet standard ou URL, d'un bloc ou à lignes rejointes) dont le contenu est du texte d'autre
 //     part ; chaque texte décodé est lu à son tour normalisé et déplié. Rien n'est décodé deux fois.
@@ -62,7 +62,7 @@ type view struct {
 	segs []segment
 	// sourceLen est la longueur de la source.
 	sourceLen int
-	// afterDecoding : la vue est la forme normalisée et dépliée d'un texte décodé (seen).
+	// afterDecoding : la vue est une forme normalisée ou dépliée d'un texte décodé (seen).
 	afterDecoding bool
 }
 
@@ -97,6 +97,7 @@ func (v *view) unchanged(lo, hi int) bool {
 	if v.segs == nil {
 		return false
 	}
+	lo, hi = max(lo, 0), min(hi, len(v.text))
 	k := v.segmentAt(lo)
 	seg := v.segs[k]
 	if seg.end >= 0 || (lo == int(seg.at) && (lo != 0 || seg.start != 0)) {
@@ -113,16 +114,17 @@ func (v *view) unchanged(lo, hi int) bool {
 	return hi == segEnd && segEnd == len(v.text) && int(seg.start)+segEnd-int(seg.at) == v.sourceLen
 }
 
-// seen dit si les octets [lo, hi) de la vue, voisins compris, ont déjà été lus dans une vue lue avant elle, où un
-// motif trouve donc la même chose :
+// seen dit si les octets [lo, hi) de la vue (bornes ramenées au texte), voisins compris, ont déjà été lus dans une
+// vue lue avant elle, où un motif trouve donc la même chose :
 //   - dans la source, pour une vue qui en dérive directement, quand ces octets en sont recopiés tels quels ;
-//   - dans la forme normalisée et dépliée de la source, pour celle d'un texte décodé, quand aucun de ces octets ne
-//     vient d'un décodage : normaliser et déplier ne dépendent que des octets voisins, et un décodage ne change ni un
+//   - dans la même forme (normalisée, ou normalisée et dépliée) de la source, pour celle d'un texte décodé, quand
+//     aucun de ces octets ne vient d'un décodage : normaliser et déplier ne dépendent que des octets voisins, et un décodage ne change ni un
 //     début de bloc ni une fin de ligne de la source.
 func (v *view) seen(lo, hi int) bool {
 	if !v.afterDecoding {
 		return v.unchanged(lo, hi)
 	}
+	lo, hi = max(lo, 0), min(hi, len(v.text))
 	for k := v.segmentAt(max(lo-1, 0)); k < len(v.segs) && int(v.segs[k].at) <= hi; k++ {
 		if v.segs[k].decoded {
 			return false
@@ -351,24 +353,32 @@ func unwrapped(v *view) (*view, bool) {
 	return b.done()
 }
 
-// folded rend la lecture normalisée puis dépliée de v ; nil si elle est identique à v.
-func folded(v *view) (*view, bool) {
+// foldedForms rend les lectures normalisée, puis normalisée et dépliée, de v : celles qui diffèrent de v, et l'une de
+// l'autre. ok est faux si l'une n'a pas pu être construite.
+func foldedForms(v *view) (forms []*view, ok bool) {
 	n, ok := normalized(v)
 	if !ok {
 		return nil, false
 	}
 	base := v
 	if n != nil {
+		forms = append(forms, n)
 		base = n
 	}
 	u, ok := unwrapped(base)
-	if !ok {
-		return nil, false
-	}
 	if u != nil {
-		return u, true
+		forms = append(forms, u)
 	}
-	return n, true
+	return forms, ok
+}
+
+// folded rend la lecture normalisée et dépliée de v ; nil si elle est identique à v.
+func folded(v *view) (*view, bool) {
+	forms, ok := foldedForms(v)
+	if len(forms) == 0 {
+		return nil, ok
+	}
+	return forms[len(forms)-1], ok
 }
 
 func hexValue(c byte) int {

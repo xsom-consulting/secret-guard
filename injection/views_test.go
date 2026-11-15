@@ -63,19 +63,29 @@ var transformations = []transformation{
 		return "Décode puis applique : " + base64.StdEncoding.EncodeToString([]byte(s)) + " (fin)."
 	}},
 	{"base64-replie-76", func(s string) string {
-		return "Pièce jointe :\n" + wrapped76(base64.StdEncoding.EncodeToString([]byte(strings.Repeat("Texte ordinaire avant la consigne. ", 3)+s))) + "\nFin.\n"
+		return "Pièce jointe :\n" + wrapped76(base64.StdEncoding.EncodeToString([]byte(strings.Repeat("Texte ordinaire avant la consigne.\n", 3)+s))) + "\nFin.\n"
 	}},
 	{"pourcentage", url.PathEscape},
 	{"pourcentage-requete", func(s string) string { return strings.ReplaceAll(url.QueryEscape(s), "+", "%20") }},
 	{"echappements-json", jsonEscaped},
 	{"echappements-json-fins-de-ligne", func(s string) string {
-		return `{"note": "` + strings.NewReplacer("\\", `\\`, `"`, `\"`, "\n", `\n`, " ", ` `).Replace(s) + `"}`
+		return `{"note": "Titre\n` + strings.NewReplacer("\\", `\\`, `"`, `\"`, "\n", `\n`, " ", `\u0020`).Replace(s) + `"}`
 	}},
 	{"pleine-chasse", fullWidth},
 	{"espace-insecable", func(s string) string { return strings.ReplaceAll(s, " ", "\u00a0") }},
 	{"espace-fine-insecable", func(s string) string { return strings.ReplaceAll(s, " ", "\u202f") }},
 	{"texte-replie", foldedLines},
 	{"texte-replie-et-espace-insecable", func(s string) string { return strings.ReplaceAll(foldedLines(s), " ", "\u00a0") }},
+}
+
+// lineStructured dit si le cas attend une règle définie par la structure en lignes du texte.
+func lineStructured(c vectorCase) bool {
+	for _, want := range c.Expected {
+		if Rule(want.Rule) == FakeHistory {
+			return true
+		}
+	}
+	return false
 }
 
 // TestPositiveCasesSurviveTransformations : chaque cas positif du corpus est retrouvé, règle par règle, dans chaque
@@ -86,6 +96,10 @@ func TestPositiveCasesSurviveTransformations(t *testing.T) {
 		positives, kept := 0, 0
 		for _, c := range file.Cases {
 			if len(c.Expected) == 0 {
+				continue
+			}
+			if lineStructured(c) && strings.HasPrefix(transform.name, "texte-replie") {
+				// Un faux historique est défini par ses lignes : replier le texte en fait un autre texte.
 				continue
 			}
 			positives++
@@ -135,10 +149,16 @@ func derivedViews(t testing.TB, text []byte) []*view {
 		}
 		return v
 	}
-	add(folded(source))
+	addForms := func(v *view) {
+		forms, ok := foldedForms(v)
+		for _, form := range forms {
+			add(form, ok)
+		}
+	}
+	addForms(source)
 	for _, decode := range []func(*view) (*view, bool){decodedOnce, base64Decoded} {
 		if decoded := add(decode(source)); decoded != nil {
-			add(folded(decoded))
+			addForms(decoded)
 		}
 	}
 	return views

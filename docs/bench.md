@@ -186,3 +186,111 @@ qui continue à la ligne suivante (journal des modifications, commentaire de doc
 première version, qui dépliait aussi les lignes de code, en ajoutait 22 : une fin de ligne après `{`, `}`, `(`, `[`,
 `;`, `=` ou `\`, ou devant `}`, `)`, `]`, n'est donc pas dépliée. La durée de la mesure entière est passée de 865 s à
 52 s de processeur.
+
+### Règles des familles manquées et citations (Story 27.48b)
+
+Sept règles s'ajoutent aux cinq d'origine, en français et en anglais : `injection_forced_prefix`,
+`injection_fake_history`, `injection_refusal_suppression`, `injection_payload_splitting`,
+`injection_system_prompt_leak`, `injection_filter_disable`, `injection_role_labels` ; `injection_concealment` reçoit la
+forme « cacher une action à l'utilisateur ». Origine des formes : UPSTREAM.md, « Règles du paquet injection ».
+
+**Rappel d'arrivée** (`TestRecallCorpus`, relevé `injection/testdata/recall.json`) :
+
+| Source | Étiquette de la source | Textes | Départ | Arrivée | Par règle à l'arrivée |
+|---|---|---:|---:|---:|---|
+| LLM Guard | injection | 49 | 21 (43 %) | 22 (45 %) | `instruction_override` 20, `role_switch` 1, `system_prompt_leak` 3 |
+| LLM Guard | sain | 11 | 0 | 0 | |
+| Promptfoo | gabarit de contournement | 106 | 25 (24 %) | 49 (46 %) | `instruction_override` 21, `role_switch` 4, `concealment` 1, `forced_prefix` 9, `refusal_suppression` 15, `filter_disable` 13 |
+| Akto | charge de test LLM | 59 | 31 (53 %) | 32 (54 %) | `instruction_override` 31, `system_prompt_leak` 1, `filter_disable` 11 |
+| Skill Scanner | consigne (`prompt_injection`) | 1 | 0 | 1 | `concealment` 1 |
+| Skill Scanner | sain | 11 | 0 | 0 | |
+| Skill Scanner | autre risque | 43 | 0 | 0 | |
+
+Ce que cela dit, et ne dit pas :
+
+- Le gain vient de trois familles : suppression du refus, préfixe imposé, désactivation des filtres. Le faux
+  historique, le découpage et toutes les formes françaises n'ont **aucun gain mesuré** : ces corpus sont en anglais et
+  n'en contiennent pas. Ces règles ne sont tenues que par les cas de `vectors/injection.json` (115 cas, dont 60
+  positifs et 55 de bruit).
+- Restent manqués : 27 textes de LLM Guard, 57 de Promptfoo, 27 d'Akto (identifiants dans le relevé). Chez Promptfoo ce
+  sont surtout des gabarits de persona (« DAN », jeu de rôle, mode développeur) : ils visent un chatbot, et aucune règle
+  ne les prend pour cible. Chez Akto, des demandes de code malveillant et des textes encodés deux fois.
+- Aucun texte tenu pour sain par sa source n'est signalé (22 textes).
+
+**Critère de garde d'un motif.** Chaque motif nouveau est mesuré seul sur les 151 392 fichiers des 34 dépôts. Il est
+gardé s'il signale au plus 75 fichiers en tout (0,05 %) et au plus 5 dans les 19 dépôts qui ne sont ni un cadre
+d'agents, ni une collection de prompts, ni un outil d'équipe rouge. Seuils posés pour cette mesure ; ils se discutent.
+
+| Motif nouveau | Fichiers | Dont hors dépôts d'agents | Gardé |
+|---|---:|---:|---|
+| Préfixe imposé, anglais | 38 | 2 | oui |
+| Préfixe imposé, français | 0 | 0 | oui |
+| Faux historique (trois tours en début de ligne) | 45 | 2 | oui |
+| Suppression du refus : « never refuse / decline / apologize » | 20 | 1 | oui |
+| Suppression du refus : « answer… without disclaimers » | 2 | 0 | oui |
+| Suppression du refus : « do not include warnings » | 6 | 2 | oui |
+| Suppression du refus, français (deux motifs) | 0 | 0 | oui |
+| Découpage, anglais ; français | 1 ; 0 | 0 | oui |
+| Message système : « reveal… your system prompt » | 46 | 0 | oui |
+| Message système : « what are your instructions », « repeat everything above » | 8 ; 5 | 0 | oui |
+| Message système, français (deux motifs) | 2 ; 0 | 0 | oui |
+| Filtres : « disable… safety filters » | 43 | 0 | oui |
+| Filtres : mode sans restriction ; « not bound by the content policy » | 1 ; 5 | 0 | oui |
+| Filtres, français (deux motifs) | 3 ; 0 | 0 | oui |
+| Étiquette « system: » suivie d'un ordre d'annulation | 2 | 0 | oui |
+| Bloc « ```system » ; « --- » puis « system: » ; `</s>` | 20 ; 39 ; 32 | 0 | oui |
+| Dissimulation : « hide this step from the user », anglais ; français | 0 ; 0 | 0 | oui |
+| Message système, première forme (« show / print / return… the system prompt ») | 271 | 1 | non : resserrée à « your… » |
+| Étiquette « system: you are… » | 146 | 0 | non |
+| Balise `<system>` | 108 | 2 | non |
+| Jetons de Llama 3 et de Gemma (`<\|start_header_id\|>`, `<start_of_turn>`…) | 332 | 0 | non |
+
+Non mesurés et non retenus : les modes « debug », « developer » et « admin » (« enable debug mode » est une phrase
+ordinaire de documentation) ; la forme large « hide… from users » (un seul fichier à la mesure, mais c'est une phrase
+courante des documentations d'interface : la forme gardée exige un objet, action, étape ou instruction).
+
+**Citations.** Une formule courte entre guillemets au milieu d'une phrase n'est plus signalée
+(`injection/context.go`, contrôle écrit en Go : RE2 n'a pas d'assertion arrière). Effet sur les 34 dépôts : 8 fichiers
+cessent d'être signalés (6 pour `injection_instruction_override`, 2 pour `injection_message_markers`) ; un fichier qui
+cite une formule en porte souvent d'autres, hors guillemets. Sur le corpus de rappel, aucune consigne signalée ne
+cesse de l'être. Limite assumée : une consigne écrite entre guillemets au milieu d'une phrase passe.
+
+**Faux positifs, par règle** (mêmes 151 392 fichiers) :
+
+| Fichiers signalés | v0.9.0 | Lectures (27.47) | Règles et citations (27.48b) |
+|---|---:|---:|---:|
+| Tous | 464 (0,306 %) | 478 (0,316 %) | 662 (0,437 %) |
+| `injection_instruction_override` | 280 | 288 | 282 |
+| `injection_role_switch` | 42 | 42 | 42 |
+| `injection_exfiltration` | 13 | 20 | 20 |
+| `injection_concealment` | 16 | 16 | 16 |
+| `injection_message_markers` | 153 | 153 | 151 |
+| `injection_forced_prefix` | | | 38 |
+| `injection_fake_history` | | | 45 |
+| `injection_refusal_suppression` | | | 25 |
+| `injection_payload_splitting` | | | 1 |
+| `injection_system_prompt_leak` | | | 53 |
+| `injection_filter_disable` | | | 51 |
+| `injection_role_labels` | | | 92 |
+
+Depuis la v0.9.0, 206 fichiers sont nouvellement signalés et 8 cessent de l'être. 189 de ces 206 sont dans les 15
+dépôts d'agents et de prompts, où ce sont des consignes employées pour de bon (prompts d'application, gabarits de
+conversation, jeux d'essai d'équipe rouge) ; 17 sont dans les 19 autres dépôts, qui passent de 37 fichiers signalés à
+54. Un Groupe qui développe des applications à base de modèles de langage verra donc ces règles plus souvent qu'un
+autre ; « avertir » reste la décision prudente.
+
+**Durée, état final** (46 motifs, toutes les lectures ; mêmes commande et texte de banc que plus haut, les deux séries
+l'une après l'autre, charge moyenne de 32 à 38 : durées indicatives, plus hautes que celles du tableau précédent pour
+la seule raison de la charge) :
+
+| Taille | Texte | Avant (v0.9.0) | État final | Gain |
+|---|---|---:|---:|---:|
+| 2 Kio | propre | 1,72 ms | 0,21 ms | ×8 |
+| 16 Kio | propre | 18,3 ms | 1,69 ms | ×11 |
+| **64 Kio** | **propre** | **75,6 ms** | **8,17 ms** | **×9** |
+| 64 Kio | consignes | 90,2 ms | 7,21 ms | ×12 |
+| 64 Kio | prose repliée | 74,5 ms | 9,33 ms | ×8 |
+
+La mesure entière des 34 dépôts prend 74 s de processeur à l'état final (865 s avant, 52 s avec les seules lectures).
+Pire cas à 1 Mio (`TestWorstCasesAreLinear`) : 3,3 s pour « send token @ » répété (charge moyenne de 26), moins de
+0,3 s pour les autres entrées.
