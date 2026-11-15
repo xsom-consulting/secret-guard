@@ -977,7 +977,8 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 			break
 		}
 	}
-	if i >= len(text) {
+	if i >= end {
+		// Rien après l'opérateur ou le mot qui précède l'expression.
 		return noiseVerdict{}, false
 	}
 	walked := func(open int) (noiseVerdict, bool) {

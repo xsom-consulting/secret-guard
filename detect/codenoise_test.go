@@ -3,6 +3,8 @@
 package detect
 
 import (
+	"encoding/json"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -558,4 +560,57 @@ func TestPGPPrivateKeyIsNotAnEnvelope(t *testing.T) {
 			t.Errorf("langage %q : aucun constat", language)
 		}
 	}
+}
+
+// FuzzCodeNoise : les filtres du code ordinaire ne font ni panique ni résultat hors du texte, et rendent deux fois le
+// même résultat, avec un contextualText partagé par les motifs (analyse séquentielle) comme avec un par motif (analyse
+// en parallèle). Graines : les cas du corpus de bruit, où chaque forme lue par ces filtres figure.
+func FuzzCodeNoise(f *testing.F) {
+	raw, err := os.ReadFile(noiseVectorsPath)
+	if err != nil {
+		f.Fatal(err)
+	}
+	var corpus noiseCorpus
+	if err := json.Unmarshal(raw, &corpus); err != nil {
+		f.Fatal(err)
+	}
+	for _, c := range corpus.Cases {
+		f.Add([]byte(c.Input), uint8(len(c.Language)))
+	}
+	// Trouvée par ce fuzz : mot qui précède une expression, sans expression (panique avant la correction).
+	f.Add([]byte("0 "+nameAPIKey+": await #"), uint8(0))
+	f.Add([]byte(nameToken+": new\t,"), uint8(1))
+	p := loadInitialPack(f)
+	rules, err := LoadRules(&p)
+	if err != nil {
+		f.Fatal(err)
+	}
+	languages := []language{{}, {id: "typescript", set: true}, {id: "python", set: true}, {id: "shellscript", set: true}, {id: "yaml", set: true}, {id: "json", set: true}, {id: "dotenv", set: true}}
+	f.Fuzz(func(t *testing.T, content []byte, choice uint8) {
+		if len(content) > 4096 {
+			return
+		}
+		lang := languages[int(choice)%len(languages)]
+		v := identityView(content)
+		shared := newContextualText(v.text)
+		var together, apart []finding
+		for i := range assignmentPatterns {
+			together = rules.scanAssignmentPattern(v, shared, &assignmentPatterns[i], lang, together)
+			apart = rules.scanAssignmentPattern(v, newContextualText(v.text), &assignmentPatterns[i], lang, apart)
+		}
+		together = rules.scanBasicAuthArguments(v, together)
+		apart = rules.scanBasicAuthArguments(v, apart)
+		if len(together) != len(apart) {
+			t.Fatalf("%d constats avec un contexte partagé, %d avec un contexte par motif", len(together), len(apart))
+		}
+		for i, found := range together {
+			if found.start < 0 || found.end > len(content) || found.start > found.end {
+				t.Fatalf("étendue [%d, %d) hors du texte (%d octets)", found.start, found.end, len(content))
+			}
+			if found.ruleID != apart[i].ruleID || found.start != apart[i].start || found.end != apart[i].end {
+				t.Fatal("résultat différent selon le partage du contexte")
+			}
+		}
+		rules.scanEntropy(v)
+	})
 }
