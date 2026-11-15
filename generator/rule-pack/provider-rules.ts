@@ -6,8 +6,9 @@
  *
  * Origine des motifs : règles de détection de Titus (praetorian-inc/titus, `pkg/rule/rules/`, Apache-2.0), elles-mêmes
  * dérivées de NoseyParker (Praetorian, identifiants `np.*`) et de Kingfisher (MongoDB, identifiants `kingfisher.*`),
- * toutes deux sous Apache-2.0 (avis dans NOTICE, détail et modifications dans UPSTREAM.md). Chaque règle garde
- * l'identifiant de sa règle d'origine (`upstream`). Les motifs sont écrits en RE2 dans `provider-rules.json`, une
+ * toutes deux sous Apache-2.0 ; depuis la v0.10.0, règles de Betterleaks (betterleaks/betterleaks, `rules/`, MIT,
+ * identifiants `betterleaks.*`), en fin de liste (avis dans NOTICE, détail et modifications dans UPSTREAM.md). Chaque
+ * règle garde l'identifiant de sa règle d'origine (`upstream`). Les motifs sont écrits en RE2 dans `provider-rules.json`, une
  * règle par ligne : ce fichier est la source, entretenue à la main depuis la reprise. Rien n'y est traduit par
  * `js-to-re2.ts`.
  *
@@ -34,7 +35,10 @@ export interface ProviderSample {
 
 export interface ProviderRule {
   readonly ruleId: string;
-  /** Identifiant de la règle d'origine dans Titus (`np.*` : NoseyParker ; `kingfisher.*` : Kingfisher ; `titus.*`). */
+  /**
+   * Identifiant de la règle d'origine : dans Titus (`np.*` : NoseyParker ; `kingfisher.*` : Kingfisher ; `titus.*`), ou
+   * dans Betterleaks (`betterleaks.<identifiant de la règle>`).
+   */
   readonly upstream: string;
   /** Type de secret écrit dans un Substitut, en français et en anglais. */
   readonly labelFr: string;
@@ -43,7 +47,8 @@ export interface ProviderRule {
   readonly score: number;
   /**
    * Validateur de vraisemblance `token_entropy_NN` (entropie minimale de la valeur, en dixièmes de bit par octet) ;
-   * absent : le seuil d'office du type (`PROVIDER_ENTROPY_FLOOR`). Porté par les règles à proximité (score 80).
+   * absent : le seuil d'office du type (`PROVIDER_ENTROPY_FLOOR`). Porté par les règles à proximité (score 80) et par
+   * les règles reprises de Betterleaks dont la règle d'origine filtre au-dessus du seuil d'office.
    */
   readonly validator?: string;
   /** Motif RE2 ; la valeur détectée est son unique groupe capturant (la correspondance entière s'il n'en a pas). */
@@ -54,6 +59,10 @@ export interface ProviderRule {
 /** Commit de Titus dont les règles sont reprises (`pkg/rule/rules/`, 318 fichiers). */
 export const PROVIDER_UPSTREAM_REPOSITORY = 'praetorian-inc/titus';
 export const PROVIDER_UPSTREAM_COMMIT = 'b3964d4352ac2f84af11d1396e864bdc772f2b92';
+
+/** Commit de Betterleaks dont les règles à préfixe sont reprises (`rules/*.go`, MIT), v0.10.0. */
+export const PROVIDER_BETTERLEAKS_REPOSITORY = 'betterleaks/betterleaks';
+export const PROVIDER_BETTERLEAKS_COMMIT = 'b4b1c4455987636400ce693bd9d8a8e2cf375ed9';
 
 export const PROVIDER_RULE_SOURCES: readonly ProviderRule[] = data as readonly ProviderRule[];
 

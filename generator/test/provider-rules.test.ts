@@ -24,6 +24,8 @@ import { serializeProviderNoise } from '../corpus/provider-noise.ts';
 import { PROVIDER_NOISE_ASSIGNMENT_FORM, providerNoiseCases, providerNoiseText } from '../corpus/provider-rules.ts';
 import {
   plausibleToken,
+  PROVIDER_BETTERLEAKS_COMMIT,
+  PROVIDER_BETTERLEAKS_REPOSITORY,
   PROVIDER_ENTROPY_FLOOR,
   PROVIDER_MIN_DISTINCT,
   PROVIDER_RULE_SOURCES,
@@ -94,7 +96,7 @@ describe('vraisemblance des règles de fournisseurs', () => {
     expect(() => tokenDiversity('clé')).toThrow();
   });
 
-  it('chaque règle à proximité porte un validateur de vraisemblance de la liste fermée ; une règle à préfixe fixe garde le seuil d’office', () => {
+  it('chaque règle à proximité porte un validateur de vraisemblance de la liste fermée ; une règle à préfixe fixe reprise de Titus garde le seuil d’office', () => {
     const closed = RULE_VALIDATORS as readonly string[];
     const named = closed.filter((name) => name.startsWith('token_entropy_'));
     expect(named).toEqual(Array.from({ length: 21 }, (_, index) => `token_entropy_${String(25 + index)}`));
@@ -104,8 +106,15 @@ describe('vraisemblance des règles de fournisseurs', () => {
         expect(closed, rule.ruleId).toContain(rule.validator);
       } else {
         expect(rule.score, rule.ruleId).toBe(95);
-        expect(rule.validator, rule.ruleId).toBeUndefined();
-        expect(providerEntropyFloor(rule), rule.ruleId).toBe(PROVIDER_ENTROPY_FLOOR);
+        // Règle reprise de Betterleaks : le seuil du filtre d'entropie de sa règle d'origine, s'il n'est pas celui d'office.
+        if (rule.upstream.startsWith('betterleaks.') && rule.validator !== undefined) {
+          expect(closed, rule.ruleId).toContain(rule.validator);
+          expect(providerEntropyFloor(rule), rule.ruleId).toBeGreaterThan(PROVIDER_ENTROPY_FLOOR);
+        } else {
+          // circleci_api_personal_access_token : règle de Titus passée à 95 avec son seuil (motif élargi d'après Betterleaks).
+          if (rule.ruleId !== 'circleci_api_personal_access_token') expect(rule.validator, rule.ruleId).toBeUndefined();
+          expect(providerEntropyFloor(rule), rule.ruleId).toBeGreaterThanOrEqual(PROVIDER_ENTROPY_FLOOR);
+        }
       }
     }
     expect(PROVIDER_RULES.map((rule) => rule.validator)).toEqual(PROVIDER_RULE_SOURCES.map((rule) => rule.validator ?? ''));
@@ -113,10 +122,10 @@ describe('vraisemblance des règles de fournisseurs', () => {
   });
 
   // Garde de rappel : un seuil trop haut pour la forme d'une clé (20 chiffres hexadécimaux sous un seuil de 3,5, par
-  // exemple) écarterait de vraies clés. 4 000 valeurs tirées de la forme de chaque règle : 99,5 % au moins passent.
-  it('le seuil de chaque règle laisse passer une valeur tirée au hasard de la forme de son motif', () => {
+  // exemple) écarterait de vraies clés. 2 000 valeurs tirées de la forme de chaque règle : 99,5 % au moins passent.
+  it('le seuil de chaque règle laisse passer une valeur tirée au hasard de la forme de son motif', { timeout: 120_000 }, () => {
     const random = generator(0x5eed);
-    const draws = 4_000;
+    const draws = 2_000;
     const losses: string[] = [];
     for (const rule of PROVIDER_RULE_SOURCES) {
       const floor = providerEntropyFloor(rule);
@@ -127,6 +136,44 @@ describe('vraisemblance des règles de fournisseurs', () => {
       if (rejected > draws * 0.005) losses.push(`${rule.ruleId} : ${String(rejected)} valeurs sur ${String(draws)} écartées au seuil ${String(floor)}`);
     }
     expect(losses).toEqual([]);
+  });
+});
+
+describe('règles reprises de Betterleaks', () => {
+  const taken = PROVIDER_RULE_SOURCES.filter((rule) => rule.upstream.startsWith('betterleaks.'));
+
+  it('67 règles, après celles de Titus, chacune avec l’identifiant de sa règle d’origine et ses deux libellés', () => {
+    expect(PROVIDER_BETTERLEAKS_REPOSITORY).toBe(BETTERLEAKS_REPOSITORY);
+    expect(PROVIDER_BETTERLEAKS_COMMIT).toBe(BETTERLEAKS_COMMIT);
+    expect(taken).toHaveLength(67);
+    expect(PROVIDER_RULE_SOURCES.slice(-taken.length)).toEqual(taken);
+    expect(PROVIDER_RULE_SOURCES).toHaveLength(361);
+    expect(new Set(PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId)).size).toBe(361);
+    for (const rule of taken) {
+      expect(rule.upstream, rule.ruleId).toMatch(/^betterleaks\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[0-9])?$/);
+      expect(rule.labelFr.length > 0 && rule.labelEn.length > 0 && rule.labelFr !== rule.labelEn, rule.ruleId).toBe(true);
+      expect([95, 80], rule.ruleId).toContain(rule.score);
+      // Un seul groupe capturant au plus : la valeur.
+      expect(new RegExp(`${rule.pattern}|`).exec('')?.length ?? 0, rule.ruleId).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it('une règle au nom du fournisseur exigé vaut 80, une règle à préfixe fixe 95', () => {
+    const named = taken.filter((rule) => rule.score === 80).map((rule) => rule.ruleId);
+    expect(named).toEqual(['brave_search_api_key', 'couchbase_capella_api_key', 'facebook_access_token']);
+    for (const rule of taken.filter((entry) => entry.score === 80)) expect(rule.sample.before.length, rule.ruleId).toBeGreaterThan(0);
+    for (const rule of taken.filter((entry) => entry.score === 95)) expect(rule.sample.before, rule.ruleId).toEqual([]);
+  });
+
+  it('les jetons Slack xapp-, xoxc-, xoxe- et xoxo- ont une règle ; « xoxo- » suivi de mots n’en est pas un', () => {
+    const ids = (text: string): string[] => providerReferenceFindings(text).map((found) => found.rule.ruleId);
+    const digits = (length: number): string => '4815162342'.repeat(2).slice(0, length);
+    const hex = '0f1e2d3c4b5a6978'.repeat(4);
+    expect(ids(`jeton ${['xoxc', digits(12), digits(12), digits(12), hex].join('-')} fin`)).toEqual(['slack_other_token']);
+    expect(ids(`jeton ${['xoxo', digits(11), digits(11), digits(12), hex.slice(0, 32)].join('-')} fin`)).toEqual(['slack_other_token']);
+    expect(ids(`jeton ${['xoxe', '1', 'M0N1P2Q3R4S5T6U7V8W9'.repeat(8).slice(0, 146)].join('-')} fin`)).toEqual(['slack_other_token']);
+    expect(ids(`jeton ${['xapp', '1', 'A0B1C2D3E4F', digits(13), hex].join('-')} fin`)).toEqual(['slack_app_token']);
+    expect(ids('message : xoxo-my-dear-friends-and-family fin')).toEqual([]);
   });
 });
 

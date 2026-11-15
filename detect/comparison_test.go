@@ -51,14 +51,14 @@ type comparisonFigures struct {
 	LowDiversity int
 }
 
-// comparisonBefore : chiffres mesurés avant les stories 27.10 et 27.9 (moteur v0.9.0, 345 règles), gardés pour la
-// lecture du journal du test.
+// comparisonBefore : chiffres mesurés avant la vraisemblance et les règles reprises (moteur v0.9.0, 345 règles),
+// gardés pour la lecture du journal du test.
 var comparisonBefore = comparisonFigures{Positives: 867, Found: 818, Dedicated: 397, Blocked: 725, LowDiversity: 62}
 
 // comparisonFloor : chiffres de la version courante. Le test refuse une baisse du rappel, de la part par règle
 // dédiée ou de la part bloquée, et une hausse des constats sans diversité. Une hausse d'un des trois premiers est
 // permise : relever alors le plancher ici, avec la raison dans le message de commit.
-var comparisonFloor = comparisonFigures{Positives: 867, Found: 818, Dedicated: 396, Blocked: 725, LowDiversity: 19}
+var comparisonFloor = comparisonFigures{Positives: 867, Found: 826, Dedicated: 561, Blocked: 775, LowDiversity: 19}
 
 // lowDiversity : seconde écriture, pour la mesure seulement, du contrôle de vraisemblance du moteur (validators.go).
 func lowDiversity(value []byte) bool {

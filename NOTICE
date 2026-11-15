@@ -34,6 +34,20 @@ Composants tiers / third-party components:
   Provider rules of the initial Pack, since v0.8.1: patterns taken and modified from the detection rules of
   Titus (Praetorian Security, Inc., Apache-2.0), themselves derived from NoseyParker (Praetorian Security, Inc.,
   Apache-2.0) and Kingfisher (MongoDB, Inc., Apache-2.0). Changes: UPSTREAM.md, "Règles de fournisseurs".
+  Depuis la v0.10.0, les seuils d'entropie minimale de ces règles (champ min_entropy, même commit) sont repris et
+  modifiés. Since v0.10.0, the minimum entropy thresholds of these rules (min_entropy, same commit) are taken and
+  modified.
+- Règles de fournisseurs reprises de Betterleaks, depuis la v0.10.0 (67 règles de pack/initial/pack.json et de
+  generator/rule-pack/provider-rules.json, champ upstream « betterleaks.* » ; 8 règles antérieures complétées), et
+  banc de comparaison vectors/comparison/betterleaks.json (cas d'essai des règles, repris tels quels) : motifs,
+  seuils d'entropie et cas d'essai de Betterleaks (https://github.com/betterleaks/betterleaks, rules/,
+  commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9), Copyright (c) 2026 Zachary Rice, licence MIT.
+  Modifications et texte de la licence : UPSTREAM.md, « Règles reprises de Betterleaks, vraisemblance et banc de
+  comparaison ».
+  Provider rules taken from Betterleaks, since v0.10.0 (67 rules, 8 earlier rules completed), and comparison bench
+  vectors/comparison/betterleaks.json (rule test cases, verbatim): patterns, entropy thresholds and test cases of
+  Betterleaks (betterleaks/betterleaks, rules/, commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9),
+  Copyright (c) 2026 Zachary Rice, MIT License. Changes and license text: UPSTREAM.md.
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.
 - Données Unicode / Unicode data (Unicode License v3), Copyright (c) 1991-2026 Unicode, Inc.
