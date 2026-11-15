@@ -10,6 +10,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/xsom-consulting/secret-guard/detect"
@@ -79,7 +80,24 @@ func expurgateVectorInputs() []expurgateVectorInput {
 		{"langue/anglais-jeton-github", "export TOKEN=" + token, "", 2, detect.SubstituteEnglish},
 		{"langue/anglais-gabarits", "API_KEY=" + token + "\nDB_PASSWORD=" + password + "\n" + basicAuthCommand() + password + " https://x", "dotenv", 1, detect.SubstituteEnglish},
 		{"langue/francais-explicite", "export TOKEN=" + token, "", 1, detect.SubstituteFrench},
+		// Vue UTF-16 (v0.10.0) : sans marque d'ordre et en ASCII, les octets sont de l'UTF-8 valide et le Substitut
+		// remplace exactement les octets du jeton ; avec une marque d'ordre, l'entrée n'est pas de l'UTF-8 et
+		// l'expurgation la refuse, comme toute entrée hors UTF-8 (ErrEncoding).
+		{"utf16/petit-boutien-sans-marque", utf16LittleEndian("jeton : "+token+" ; fin\r\n", false), "", 1, ""},
+		{"utf16/petit-boutien-marque-refuse", utf16LittleEndian("jeton : "+token+" ; fin\r\n", true), "", 1, ""},
 	}
+}
+
+// utf16LittleEndian écrit text en UTF-16 petit-boutien, avec ou sans marque d'ordre d'octets.
+func utf16LittleEndian(text string, mark bool) string {
+	var out []byte
+	if mark {
+		out = append(out, 0xFF, 0xFE)
+	}
+	for _, unit := range utf16.Encode([]rune(text)) {
+		out = append(out, byte(unit), byte(unit>>8))
+	}
+	return string(out)
 }
 
 type expurgateVectorSubstitution struct {

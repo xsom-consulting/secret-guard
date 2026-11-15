@@ -34,6 +34,38 @@ Composants tiers / third-party components:
   Provider rules of the initial Pack, since v0.8.1: patterns taken and modified from the detection rules of
   Titus (Praetorian Security, Inc., Apache-2.0), themselves derived from NoseyParker (Praetorian Security, Inc.,
   Apache-2.0) and Kingfisher (MongoDB, Inc., Apache-2.0). Changes: UPSTREAM.md, "Règles de fournisseurs".
+  Depuis la v0.10.0, les seuils d'entropie minimale de ces règles (champ min_entropy, même commit) sont repris et
+  modifiés. Since v0.10.0, the minimum entropy thresholds of these rules (min_entropy, same commit) are taken and
+  modified.
+- Règles de fournisseurs reprises de Betterleaks, depuis la v0.10.0 (66 règles de pack/initial/pack.json et de
+  generator/rule-pack/provider-rules.json, champ upstream « betterleaks.* » ; 8 règles antérieures complétées), et
+  banc de comparaison vectors/comparison/betterleaks.json (cas d'essai des règles, repris tels quels) : motifs,
+  seuils d'entropie et cas d'essai de Betterleaks (https://github.com/betterleaks/betterleaks, rules/,
+  commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9), Copyright (c) 2026 Zachary Rice, licence MIT.
+  Modifications et texte de la licence : UPSTREAM.md, « Règles reprises de Betterleaks, vraisemblance et banc de
+  comparaison ».
+  Provider rules taken from Betterleaks, since v0.10.0 (66 rules, 8 earlier rules completed), and comparison bench
+  vectors/comparison/betterleaks.json (rule test cases, verbatim): patterns, entropy thresholds and test cases of
+  Betterleaks (betterleaks/betterleaks, rules/, commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9),
+  Copyright (c) 2026 Zachary Rice, MIT License. Changes and license text: UPSTREAM.md.
+- Valeurs publiques connues et valeurs chiffrées (detect/publicvalues.go, detect/codenoise.go), depuis la v0.10.0 :
+  liste de formes de clés publiques et de clés d'essai reprise de Betterleaks
+  (https://github.com/betterleaks/betterleaks, rules/generic/filter.go, commit
+  b4b1c4455987636400ce693bd9d8a8e2cf375ed9), et formes d'enveloppes chiffrées reprises de
+  rules/generic/password.go du même commit, Copyright (c) 2026 Zachary Rice, licence MIT.
+  Modifications : UPSTREAM.md, « Code ordinaire » ; texte de la licence : UPSTREAM.md, « Licence de Betterleaks ».
+  Known public values and encrypted values, since v0.10.0: list of public and test key shapes taken from
+  Betterleaks (rules/generic/filter.go), and encrypted envelope shapes taken from rules/generic/password.go of the
+  same commit, Copyright (c) 2026 Zachary Rice, MIT License. Changes: UPSTREAM.md, "Code ordinaire"; license text:
+  UPSTREAM.md, "Licence de Betterleaks".
+- Cas d'essai du décodeur (detect/encoding_test.go, TestBetterleaksDecoderCases), depuis la v0.10.0 : noms et textes
+  attendus des 18 cas de TestDecode de Betterleaks (https://github.com/betterleaks/betterleaks,
+  internal/codec/decoder_test.go, commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9), Copyright (c) 2026 Zachary Rice,
+  licence MIT. Modifications : UPSTREAM.md, « Décodage à plusieurs couches et vue UTF-16 » ; texte de la licence :
+  UPSTREAM.md, « Licence de Betterleaks ».
+  Decoder test cases, since v0.10.0: names and expected texts of the 18 cases of Betterleaks' TestDecode
+  (internal/codec/decoder_test.go, same commit), Copyright (c) 2026 Zachary Rice, MIT License. Changes: UPSTREAM.md,
+  "Décodage à plusieurs couches et vue UTF-16"; license text: UPSTREAM.md, "Licence de Betterleaks".
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.
 - Données Unicode / Unicode data (Unicode License v3), Copyright (c) 1991-2026 Unicode, Inc.
@@ -46,3 +78,40 @@ Context-keyword technique (detect, v0.9.0)
 The idea of requiring a context keyword near a value comes from Akto
 (https://github.com/akto-api-security/akto), distributed under the MIT License.
 No pattern, keyword list or code was copied: the rules are written in this module.
+
+Recall corpus of the injection package (v0.10.0)
+vectors/injection-recall.json is test data only: it is not part of the shipped engine. Its texts are copied,
+unmodified, by tools/injectioncorpus from:
+- LLM Guard (https://github.com/protectai/llm-guard, tests/input_scanners/test_prompt_injection.py,
+  commit 168c1034ffdb33837e7ae6fd6a16b80567c1be03), Copyright (c) Protect AI. All rights reserved., MIT License;
+- Promptfoo (https://github.com/promptfoo/promptfoo, src/redteam/strategies/promptInjections/data.ts,
+  commit 5fac53eefdd26141a45c52ab77f533a7d30884e3), Copyright (c) Promptfoo 2025, MIT License; part of these
+  texts is modified from LLM Guard (MIT License, Copyright (c) Protect AI);
+- Akto (https://github.com/akto-api-security/akto,
+  apps/dashboard/src/main/resources/inbuilt_llm_test_yaml_files/, commit f69427472ebf57cac9dd1b70bbcfb542ba2189d8),
+  Copyright (c) 2023 Akto.io., MIT License;
+- Skill Scanner (https://github.com/cisco-ai-defense/skill-scanner, evals/skills/,
+  commit c558c421157c546ec417cf23778ce81a3a8f35fd), Copyright 2026 Cisco Systems, Inc. and its affiliates,
+  Apache License, Version 2.0.
+MIT permission notice and details: UPSTREAM.md, "Corpus de rappel du paquet injection".
+
+Rules of the injection package (v0.10.0)
+Some pattern shapes of the rules injection_role_labels, injection_system_prompt_leak and injection_filter_disable
+are taken and modified from DefenseClaw (https://github.com/cisco-ai-defense/defenseclaw,
+internal/scanner/clawshield_injection.go, commit b68373a1c842486b22f7349a2b6fc74b56e2c941) and Skill Scanner
+(https://github.com/cisco-ai-defense/skill-scanner, skill_scanner/data/packs/core/signatures/prompt_injection.yaml,
+commit c558c421157c546ec417cf23778ce81a3a8f35fd), both Copyright 2026 Cisco Systems, Inc. and its affiliates,
+Apache License, Version 2.0. The technique names come from Giskard (https://github.com/Giskard-AI/giskard-oss,
+Apache License, Version 2.0); no Giskard template, data or code is used.
+Changes: UPSTREAM.md, "Règles du paquet injection".
+
+European identifiers with a check key (detect, v0.10.0)
+The value shapes, check-key algorithms and native context words of the rules es_nif, es_nie, it_fiscal_code, it_vat,
+de_tax_id, de_vat, pl_pesel, uk_nhs, se_personnummer and fi_personal_identity_code, and the list of the 76 countries
+of the IBAN length table, are taken and modified from Presidio (https://github.com/data-privacy-stack/presidio,
+presidio-analyzer/presidio_analyzer/predefined_recognizers, commit fd78e974fbf9e15dad1f90de4fc125db39ef4200),
+Copyright (c) Presidio Contributors, MIT License. Patterns are rewritten for RE2, the context keyword and the check key
+are mandatory, and the IBAN lengths follow the ISO 13616 registry.
+The idea of a compound rule (an AWS access key ID and its secret key in the same window) comes from TruffleHog
+(https://github.com/trufflesecurity/trufflehog, AGPL-3.0): no line, pattern, threshold or list of TruffleHog is used.
+MIT permission notice and changes: UPSTREAM.md, "Identifiants européens et français, règle composée AWS".

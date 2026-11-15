@@ -17,3 +17,11 @@ paths = ['''^vectors/detection/(?:rules|views|edge|limits|upstream)(?:-[a-z0-9]+
 [[allowlists]]
 description = "Vecteurs du masquage : entrées synthétiques écrites par generator/redact/ (qui reste analysé) et textes masqués, dont ceux où un secret synthétique subsiste (issue residual). Ce seul fichier ; test : generator/test/redact-vectors.test.ts."
 paths = ['''^vectors/redact\.json$''']
+
+[[allowlists]]
+description = "Banc de comparaison Betterleaks : cas d'essai publics lus dans les sources de Betterleaks (MIT) par generator/corpus/betterleaks.ts (qui reste analysé). Ce seul fichier ; test : generator/test/provider-rules.test.ts."
+paths = ['''^vectors/comparison/betterleaks\.json$''']
+
+[[allowlists]]
+description = "Bruit des règles de fournisseurs : formes de jeton à un seul caractère répété, écrites par generator/corpus/provider-noise.ts (qui reste analysé) ; aucune n'est un secret. Ce seul fichier ; test : generator/test/provider-rules.test.ts."
+paths = ['''^vectors/noise-providers\.json$''']

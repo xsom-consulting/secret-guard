@@ -173,10 +173,7 @@ func (r *Rules) detectorTasks(v *view, budget *decodeBudget, entropy bool, lang 
 		if fixed.validator != nil && !allowStructured || admitted != nil && !admitted.has(i) {
 			continue
 		}
-		scanRule := scanFixedPattern
-		if fixed.id == ruleJWT {
-			scanRule = scanJWT
-		}
+		scanRule := fixedScanOf(fixed)
 		tasks = append(tasks, detectorTask{
 			run:      func() ([]finding, error) { return scanRule(v, fixed, budget, nil) },
 			budgeted: fixed.validator != nil,

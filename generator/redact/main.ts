@@ -15,10 +15,14 @@ import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { decodeInput } from '../corpus/bytes.ts';
+import { expectedFor } from '../corpus/corpus.ts';
 import { testImport } from '../corpus/harness.ts';
+import { CODE_NOISE_FILE } from '../corpus/code-noise.ts';
+import { ENCODINGS_FILE } from '../corpus/encodings.ts';
 import { CONTEXT_DATA_FILE } from '../corpus/context-data.ts';
 import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { PASSWORD_PHRASE_FILE } from '../corpus/password-phrase.ts';
+import { LAYERED_UPSTREAM_CASES } from '../corpus/layered.ts';
 import { PROVIDER_RULES_FILE } from '../corpus/provider-rules.ts';
 import { MANIFEST_FILE, type CorpusCase } from '../corpus/model.ts';
 import { readScanResult, transpileUpstream, UPSTREAM_COMMIT, UpstreamError } from '../corpus/upstream.ts';
@@ -26,10 +30,12 @@ import { intentProblem, redactSources, spanSources } from './cases.ts';
 import { DECISION_FILE, REDACT_FILE, REDACT_FORMAT_VERSION, type RedactCase, type RedactVectors } from './model.ts';
 import {
   decisionVectors,
+  describeText,
   redactExpectedFor,
   serializeDecisionVectors,
   serializeRedactVectors,
   spanCaseOf,
+  utf16OffsetOf,
   type RedactEngine,
   type RiskEngine,
   type Utf16Finding,
@@ -142,7 +148,20 @@ async function main(): Promise<number> {
     for (const { file, value } of committedCorpus()) {
       // Règles de données personnelles (v0.7.0) et annonces de mot de passe (v0.8.1) : absentes du moteur d'origine,
       // son masquage ne les connaît pas.
-      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || !corpusCaseSelected(value)) continue;
+      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || file === CODE_NOISE_FILE || file === ENCODINGS_FILE || !corpusCaseSelected(value)) continue;
+      if (LAYERED_UPSTREAM_CASES.has(value.id)) {
+        // Décodage à plusieurs couches (v0.10.0) : l'analyse d'origine ne lit qu'une couche de ces deux cas. Leur
+        // texte masqué est celui de `redact` d'origine sur les constats du corpus (seconde écriture de
+        // `corpus/layered.ts`), que l'origine analyse ensuite : aucun constat ne doit rester.
+        const bytes = corpusInput(value);
+        const decoded = decodeInput(bytes);
+        const findings = value.expected.findings.map((f) => ({ ruleId: f.ruleId, score: f.score, start: utf16OffsetOf(decoded, f.byteStart), end: utf16OffsetOf(decoded, f.byteEnd) }));
+        const out = new TextEncoder().encode(engine.redact(decoded.text, findings));
+        const final = expectedFor(upstream.engine, out, value.languageId);
+        if (!final.complete || final.findings.length > 0) problems.push(`${value.id} : constat après le masquage du cas rejugé`);
+        cases.push({ id: value.id, corpusFile: file, expected: { failure: 'none', redacted: describeText(out), final } });
+        continue;
+      }
       const { initial, ...expected } = redactExpectedFor(upstream.engine, engine, corpusInput(value), value.languageId).expected;
       if (JSON.stringify(initial) !== JSON.stringify(value.expected)) problems.push(`${value.id} : analyse initiale différente du corpus`);
       cases.push({ id: value.id, corpusFile: file, expected });

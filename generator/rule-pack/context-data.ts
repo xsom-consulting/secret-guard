@@ -6,8 +6,9 @@
  * ressources AWS : ARN, bucket S3, point d'accès RDS, point d'accès DynamoDB). Extension propre à ce dépôt, sans
  * origine dans Secret Guard : ces règles viennent après les règles de fournisseurs.
  *
- * Chaque règle est une règle « motif seul » (`fixed_pattern`), sans validateur : le moteur l'exécute telle que le Pack
- * la décrit, la valeur détectée est son unique groupe capturant (la correspondance entière s'il n'en a pas).
+ * Chaque règle est une règle « motif seul » (`fixed_pattern`) : le moteur l'exécute telle que le Pack la décrit, la
+ * valeur détectée est son unique groupe capturant (la correspondance entière s'il n'en a pas). Les règles de la
+ * v0.9.0 n'ont pas de validateur ; les identifiants à somme de contrôle de la v0.10.0 en ont un.
  *
  * Technique : une forme générique (une adresse, dix chiffres, trois chiffres…) n'est un constat que si un mot-clé de
  * contexte la précède de près, sur la même ligne. C'est la technique des motifs de données personnelles d'Akto
@@ -23,13 +24,25 @@
  *
  * Ce fichier tient aussi la lecture de référence du corpus (`corpus/context-data.ts`) : chaque motif exécuté par le
  * moteur d'expressions de JavaScript, sans RE2 ni le moteur Go.
+ *
+ * Depuis la v0.10.0, il porte aussi les identifiants européens et français à somme de contrôle (motif, mot-clé de
+ * contexte obligatoire, validateur nommé du moteur) et la règle composée AWS, décrits plus bas.
  */
-import type { RulePackRule, RuleSecretType } from '../src/rule-pack.ts';
+import type { RulePackRule, RuleSecretType, RuleValidator } from '../src/rule-pack.ts';
+import { REFERENCE_VALIDATORS } from './personal-data.ts';
 
 /** Dépôt, commit et fichier d'Akto dont la technique du mot-clé de contexte est reprise (MIT). */
 export const CONTEXT_UPSTREAM_REPOSITORY = 'akto-api-security/akto';
 export const CONTEXT_UPSTREAM_COMMIT = '6b7de940c28037d726776bc5f201fd9e572133a3';
 export const CONTEXT_UPSTREAM_PATH = 'apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java';
+
+/**
+ * Dépôt, commit et dossier de Presidio (MIT, « Copyright (c) Presidio Contributors ») dont les reconnaissances
+ * européennes sont portées : forme de la valeur et somme de contrôle (v0.10.0).
+ */
+export const PRESIDIO_UPSTREAM_REPOSITORY = 'data-privacy-stack/presidio';
+export const PRESIDIO_UPSTREAM_COMMIT = 'fd78e974fbf9e15dad1f90de4fc125db39ef4200';
+export const PRESIDIO_UPSTREAM_PATH = 'presidio-analyzer/presidio_analyzer/predefined_recognizers';
 
 /** Espaces d'une ligne : espace, tabulation, espace insécable, espace fine insécable (typographie française). */
 const SP = '[ \\t\u00a0\u202f]';
@@ -127,6 +140,160 @@ const AWS_RDS_PATTERN = String.raw`\b[a-z0-9][a-z0-9-]{0,62}\.[a-z0-9-]{6,40}\.$
 /** Point d'accès DynamoDB d'une région : `dynamodb.région.amazonaws.com`. */
 const AWS_DYNAMODB_PATTERN = String.raw`\b(?:streams\.)?dynamodb\.${AWS_REGION}\.amazonaws\.com(?:\.cn)?\b`;
 
+// ---------------------------------------------------------------------------------------------------------------
+// Identifiants européens et français à somme de contrôle (v0.10.0), règle composée AWS.
+//
+// Les identifiants européens reprennent les reconnaissances par pays de Presidio (MIT : avis dans NOTICE, détail dans
+// UPSTREAM.md) : forme de la valeur et contrôle. Les motifs sont réécrits ici en RE2 (ceux de Presidio à anticipation
+// ne se copient pas), et deux choses changent : le mot-clé de contexte, qui n'ajoute chez Presidio qu'un bonus de
+// score, est ici obligatoire, en français, en anglais et dans la langue du pays ; le contrôle est un validateur nommé
+// du moteur (`detect/personaldata.go`), sans lequel il n'y a pas de constat. Les identifiants français (TVA
+// intracommunautaire, RIB, plaque d'immatriculation, adresse postale) n'existent pas chez Presidio.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Nom facultatif après le mot-clé : « number », « numéro », « Nummer », « no », « nr », « n° », « # », « id », « code ». */
+const NUM = String.raw`(?:[ \t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\.?`;
+
+/** Mot-clé, nom facultatif, liaison, valeur : corps d'une règle d'identifiant annoncé (`folded`). */
+const announced = (keywords: string, value: string): string => `(?:${keywords})${NUM}${LINK}${value}`;
+
+/**
+ * NIF (DNI) espagnol : 7 ou 8 chiffres et une lettre, tiret admis. Un mot-clé court est écrit entre deux « \b » : sans
+ * eux, l'analyseur de RE2 mettrait sa première lettre en facteur avec la branche voisine et retirerait la porte.
+ */
+const ES_NIF_BODY = announced(
+  String.raw`\bdni\b|\bnif\b|documento nacional de identidad|carte d.identit. espagnole|spanish (?:id|identity) card`,
+  String.raw`([0-9]{7,8}-?[a-z])`,
+);
+
+/** NIE espagnol (étranger) : X, Y ou Z, 7 chiffres, une lettre. */
+const ES_NIE_BODY = announced(
+  String.raw`\bnie\b|n.mero de identidad de extranjero|num.ro d.identit. d..tranger|foreigner (?:identity|identification|id) number`,
+  String.raw`([xyz]-?[0-9]{7}-?[a-z])`,
+);
+
+/**
+ * Code fiscal italien : 6 lettres (nom, prénom), année, lettre du mois, jour, lettre et 3 chiffres de la commune,
+ * lettre de contrôle ; les chiffres peuvent être remplacés par les lettres L à V (homonymes).
+ */
+const IT_FISCAL_CODE_BODY = announced(
+  String.raw`codice fiscale|code fiscal italien|italian (?:fiscal|tax) code`,
+  String.raw`([a-z]{6}[0-9lmnp-v]{2}[a-ehlmpr-t][0-9lmnp-v]{2}[a-z][0-9lmnp-v]{3}[a-z])`,
+);
+
+/** Numéro de TVA italien (partita IVA) : 11 chiffres, « IT » admis devant. */
+const IT_VAT_BODY = announced(String.raw`partita iva|\bp\.? ?iva|tva italienne|italian vat`, String.raw`(?:it)?([0-9]{11})`);
+
+/** Identifiant fiscal allemand (Steuer-ID, IdNr) : 11 chiffres, écrits d'un bloc ou « 12 345 678 901 ». */
+const DE_TAX_ID_BODY = announced(
+  String.raw`steuer-?id(?:nr)?|steueridentifikationsnummer|steuerliche identifikationsnummer|\bidnr|identifiant fiscal allemand|german tax id(?:entification)?`,
+  String.raw`([1-9][0-9](?: ?[0-9]{3}){3})`,
+);
+
+/** Numéro de TVA allemand (USt-IdNr.) : « DE » et 9 chiffres. */
+const DE_VAT_BODY = announced(
+  String.raw`ust-?id(?:nr)?|umsatzsteuer-?id(?:entifikationsnummer)?|tva allemande|german vat`,
+  String.raw`(de ?[0-9]{9})`,
+);
+
+/** PESEL polonais : 11 chiffres ; le mot « PESEL » est le même en français et en anglais. */
+const PL_PESEL_BODY = announced(String.raw`\bpesel`, String.raw`([0-9]{11})`);
+
+/** Numéro NHS britannique : 10 chiffres, écrits d'un bloc ou 3-3-4. */
+const UK_NHS_BODY = announced(String.raw`\bnhs\b|national health service`, String.raw`([0-9]{3}[ -]?[0-9]{3}[ -]?[0-9]{4})`);
+
+/** Personnummer (ou samordningsnummer) suédois : 10 ou 12 chiffres, « - » ou « + » avant les quatre derniers. */
+const SE_PERSONNUMMER_BODY = announced(
+  String.raw`personnummer|samordningsnummer|personal identity number|num.ro personnel su.dois|swedish personal (?:identity|id) number`,
+  String.raw`((?:[0-9]{2})?[0-9]{6}[-+]?[0-9]{4})`,
+);
+
+/** Identifiant personnel finlandais (henkilötunnus) : date, séparateur du siècle, 3 chiffres, caractère de contrôle. */
+const FI_HETU_BODY = announced(
+  String.raw`\bhetu\b|henkil.tunnus|personbeteckning|personal identity code|identifiant personnel finlandais|finnish personal (?:identity|id) code`,
+  String.raw`([0-9]{6}[-+a-fu-y][0-9]{3}[0-9a-y])`,
+);
+
+/**
+ * Numéro de TVA intracommunautaire français : « FR », clé de deux chiffres, SIREN ; espaces admis après la clé et entre
+ * les groupes du SIREN. Sans mot-clé : le préfixe et les deux contrôles (clé, Luhn du SIREN) suffisent. Une clé à
+ * lettres (numéros récents) ne se calcule pas : elle n'est pas reconnue. Le premier chiffre de la clé est écrit à part :
+ * la porte littérale est « FR0 » à « FR9 ».
+ */
+const FR_VAT_PATTERN = String.raw`\bFR[0-9][0-9] ?[0-9]{3} ?[0-9]{3} ?[0-9]{3}\b`;
+
+/** RIB : après « RIB », « relevé d'identité bancaire », « coordonnées bancaires » ou « bank account details » ; banque, guichet, compte, clé. */
+const FR_RIB_BODY =
+  String.raw`(?:\brib\b|relev. d.identit. bancaire|coordonn.es bancaires|bank account details)${LINK}` +
+  String.raw`([0-9]{5}[ -]?[0-9]{5}[ -]?[0-9a-z]{11}[ -]?[0-9]{2})`;
+
+/**
+ * Plaque d'immatriculation française (format de 2009 : deux lettres, trois chiffres, deux lettres, sans I, O ni U),
+ * en majuscules, après « immatricul… », « plaque », « plate » ou « registration » à 30 caractères au plus sans
+ * chiffre. Aucune clé de contrôle n'existe : le contexte seul la distingue d'une référence. Casses écrites une à une
+ * (le motif ne replie pas la casse : « de 100 km » n'est pas une plaque).
+ */
+const FR_LICENSE_PLATE_PATTERN =
+  String.raw`\b(?:Immatricul|Plaque|Plate|Registration|immatricul|plaque|plate|registration|IMMATRICUL|PLAQUE|PLATE|REGISTRATION)[^\n0-9]{0,30}?` +
+  String.raw`\b([A-HJ-NP-TV-Z]{2}[ -]?[0-9]{3}[ -]?[A-HJ-NP-TV-Z]{2})\b`;
+
+/** Un mot en toute casse, lettre par lettre (« [rR][uU][eE] ») : écriture de la lecture de référence en JavaScript. */
+const anyCase = (word: string): string => [...word].map((c) => (/[a-z]/.test(c) ? `[${c}${c.toUpperCase()}]` : c)).join('');
+
+/** Types de voie d'une adresse postale française (liste fermée ; « all.e » : allée). */
+const STREET_TYPES = ['rue', 'avenue', 'boulevard', 'chemin', 'impasse', 'all.e', 'place', 'quai', 'route', 'cours', 'square', 'passage', 'faubourg', 'sentier'];
+
+/** Mot d'un nom de commune : majuscule initiale, lettres, apostrophe, tiret (« Choisy-le-Roi », « L'Haÿ-les-Roses »). */
+const TOWN_WORD = String.raw`[A-ZÀ-Ý][A-Za-zà-ÿ'’-]+`;
+
+/**
+ * Adresse postale française : numéro (« bis », « ter » admis), type de voie en liste fermée, nom de la voie, puis code
+ * postal à cinq chiffres et commune, sur la même ligne ou la suivante. Règle « à activer ». Seuls « bis », « ter » et
+ * le type de voie replient la casse (la commune garde sa majuscule) : `(?i:…)` pour RE2, dont la porte littérale est
+ * alors la liste des types de voie ; lettre par lettre pour JavaScript (`anyCase`), où une classe « [sS] » ne retirerait
+ * rien, mais que RE2 ne lit pas comme un littéral replié (« s » se replie aussi sur U+017F).
+ */
+const postalAddress = (fold: (words: readonly string[]) => string): string =>
+  String.raw`\b([0-9]{1,4}(?: ?${fold(['bis', 'ter'])})?,? ${fold(STREET_TYPES)} [^\n]{1,60}?,?[ \n]` +
+  String.raw`[0-9]{5} ${TOWN_WORD}(?:[ -]${TOWN_WORD}){0,3})`;
+const FR_POSTAL_ADDRESS: ContextPattern = {
+  pattern: postalAddress((words) => `(?i:${words.join('|')})`),
+  reference: { source: postalAddress((words) => `(?:${words.map(anyCase).join('|')})`), flags: 'dg' },
+};
+
+/** Fenêtre, en octets, entre un identifiant de clé d'accès AWS et la valeur de 40 caractères qui l'accompagne. */
+export const AWS_PAIR_WINDOW_BYTES = 200;
+
+/**
+ * Règle composée AWS : un identifiant de clé d'accès (AKIA, ASIA) et, dans la fenêtre, une valeur de 40 caractères de
+ * base64. Le motif du Pack décrit la forme « identifiant, puis valeur » ; le moteur Go exécute à sa place une famille
+ * qui lui est propre (`detect/awspair.go`) : les deux ordres, valeur bornée, ni empreinte hexadécimale ni valeur sans
+ * minuscule, majuscule et chiffre. Idée du secret en plusieurs parties de TruffleHog (AGPL-3.0) : aucune ligne
+ * reprise, détail dans UPSTREAM.md.
+ */
+const AWS_PAIR_PATTERN = String.raw`\b((?:AKIA|ASIA)[A-Z2-7]{16}\b(?:.|\n){0,199}?[^A-Za-z0-9+/][A-Za-z0-9+/]{40})(?:[^A-Za-z0-9+/]|$)`;
+
+/**
+ * Lecture de référence de la règle composée AWS (seconde écriture, indépendante de `detect/awspair.go`) : étendues
+ * [début, fin) en unités UTF-16, de l'identifiant à la valeur. Pour chaque identifiant, la valeur la plus proche qui
+ * le suit dans la fenêtre, sinon la plus proche qui le précède.
+ */
+export function awsPairSpans(text: string): [number, number][] {
+  const distance = (from: number, to: number): number => Buffer.byteLength(text.slice(from, to), 'utf8');
+  const secrets = [...text.matchAll(/[A-Za-z0-9+/]+/g)]
+    .filter(([run]) => run.length === 40 && !/^[0-9A-Fa-f]+$/.test(run) && /[a-z]/.test(run) && /[A-Z]/.test(run) && /[0-9]/.test(run))
+    .map((match): [number, number] => [match.index, match.index + 40]);
+  const spans: [number, number][] = [];
+  for (const id of text.matchAll(/\b(?:AKIA|ASIA)[A-Z2-7]{16}\b/g)) {
+    const [start, end] = [id.index, id.index + id[0].length];
+    const after = secrets.find((secret) => secret[0] >= end && distance(end, secret[0]) <= AWS_PAIR_WINDOW_BYTES);
+    const before = secrets.findLast((secret) => secret[1] <= start && distance(secret[1], start) <= AWS_PAIR_WINDOW_BYTES);
+    if (after !== undefined) spans.push([start, after[1]]);
+    else if (before !== undefined) spans.push([before[0], end]);
+  }
+  return spans;
+}
+
 /** Règle de données à contexte : règle du Pack, libellé de Substitut (français, anglais), activation. */
 export interface ContextRule {
   readonly rule: RulePackRule;
@@ -139,6 +306,11 @@ export interface ContextRule {
   readonly optIn: boolean;
   /** Le même motif pour le moteur d'expressions de JavaScript (lecture de référence) : source et drapeaux. */
   readonly reference: { readonly source: string; readonly flags: string };
+  /**
+   * Lecture de référence écrite à la main, à la place de l'exécution du motif : règle dont le moteur Go porte la
+   * logique (règle composée AWS). Étendues [début, fin) en unités UTF-16.
+   */
+  readonly scan?: (text: string) => readonly (readonly [number, number])[];
 }
 
 /** Motif d'une règle et son écriture pour la lecture de référence. */
@@ -164,14 +336,30 @@ function contextRule(
   labelFr: string,
   labelEn: string,
   optIn = false,
+  validator: RuleValidator = '',
+  scan?: ContextRule['scan'],
 ): ContextRule {
   return {
-    rule: { ruleId, family: 'fixed_pattern', secretType, score, validator: '', pattern: pattern.pattern, minLength: 0, maxLength: 0 },
+    rule: { ruleId, family: 'fixed_pattern', secretType, score, validator, pattern: pattern.pattern, minLength: 0, maxLength: 0 },
     labelFr,
     labelEn,
     optIn,
     reference: pattern.reference,
+    ...(scan === undefined ? {} : { scan }),
   };
+}
+
+/** Règle d'identifiant à somme de contrôle : règle de données à contexte dont la valeur passe un validateur nommé. */
+function checkedRule(
+  ruleId: string,
+  secretType: RuleSecretType,
+  score: number,
+  pattern: ContextPattern,
+  validator: RuleValidator,
+  labelFr: string,
+  labelEn: string,
+): ContextRule {
+  return contextRule(ruleId, secretType, score, pattern, labelFr, labelEn, false, validator);
 }
 
 /**
@@ -196,6 +384,28 @@ export const CONTEXT_RULE_SOURCES: readonly ContextRule[] = [
   contextRule('aws_s3_bucket', 'cloud_resource_address', 30, exact(AWS_S3_PATTERN), 'adresse de bucket S3', 'S3 bucket address'),
   contextRule('aws_rds_endpoint', 'cloud_resource_address', 30, exact(AWS_RDS_PATTERN), 'adresse de base RDS', 'RDS endpoint'),
   contextRule('aws_dynamodb_endpoint', 'cloud_resource_address', 25, exact(AWS_DYNAMODB_PATTERN), 'adresse DynamoDB', 'DynamoDB endpoint'),
+  // Identifiants européens à somme de contrôle (v0.10.0), portés de Presidio : identifiant d'une personne 60 (HIGH,
+  // comme le NIR), numéro de TVA d'une entreprise 35 (MEDIUM, donnée publique, comme le SIRET).
+  checkedRule('es_nif', 'national_identifier', 60, folded(ES_NIF_BODY), 'es_nif_mod23', 'numéro d’identité espagnol', 'Spanish identity number'),
+  checkedRule('es_nie', 'national_identifier', 60, folded(ES_NIE_BODY), 'es_nie_mod23', 'numéro d’étranger espagnol', 'Spanish foreigner identity number'),
+  checkedRule('it_fiscal_code', 'national_identifier', 60, folded(IT_FISCAL_CODE_BODY), 'it_fiscal_code_check', 'code fiscal italien', 'Italian fiscal code'),
+  checkedRule('it_vat', 'vat_number', 35, folded(IT_VAT_BODY), 'it_vat_luhn', 'numéro de TVA italien', 'Italian VAT number'),
+  checkedRule('de_tax_id', 'national_identifier', 60, folded(DE_TAX_ID_BODY), 'de_tax_id_iso7064', 'identifiant fiscal allemand', 'German tax identification number'),
+  checkedRule('de_vat', 'vat_number', 35, folded(DE_VAT_BODY), 'de_vat_iso7064', 'numéro de TVA allemand', 'German VAT number'),
+  checkedRule('pl_pesel', 'national_identifier', 60, folded(PL_PESEL_BODY), 'pl_pesel_check', 'numéro PESEL', 'PESEL number'),
+  checkedRule('uk_nhs', 'national_identifier', 60, folded(UK_NHS_BODY), 'uk_nhs_mod11', 'numéro NHS', 'NHS number'),
+  checkedRule('se_personnummer', 'national_identifier', 60, folded(SE_PERSONNUMMER_BODY), 'se_personnummer_luhn', 'numéro personnel suédois', 'Swedish personal identity number'),
+  checkedRule('fi_personal_identity_code', 'national_identifier', 60, folded(FI_HETU_BODY), 'fi_hetu_mod31', 'identifiant personnel finlandais', 'Finnish personal identity code'),
+  // Identifiants français absents de Presidio (v0.10.0) : TVA 35 (donnée publique), RIB 45 (comme l'IBAN), plaque et
+  // adresse postale 30. L'adresse postale est « à activer » : une adresse d'entreprise est courante dans un pied de
+  // page, une facture ou un jeu d'essai.
+  checkedRule('fr_vat', 'vat_number', 35, exact(FR_VAT_PATTERN), 'fr_vat_key', 'numéro de TVA intracommunautaire', 'French VAT number'),
+  checkedRule('fr_rib', 'bank_account_number', 45, folded(FR_RIB_BODY), 'fr_rib_key', 'relevé d’identité bancaire', 'French bank account details'),
+  contextRule('fr_license_plate', 'vehicle_registration_plate', 30, exact(FR_LICENSE_PLATE_PATTERN), 'plaque d’immatriculation', 'vehicle registration plate'),
+  contextRule('fr_postal_address', 'postal_address', 30, FR_POSTAL_ADDRESS, 'adresse postale', 'postal address', true),
+  // Règle composée (v0.10.0) : identifiant de clé AWS et valeur de 40 caractères dans la même fenêtre, 95 (CRITICAL).
+  // L'identifiant seul reste à `aws_access_key_id`, 45 (MEDIUM).
+  contextRule('aws_access_key_pair', 'cloud_credential', 95, exact(AWS_PAIR_PATTERN), 'paire de clés d’accès AWS', 'AWS access key pair', false, '', awsPairSpans),
 ];
 
 /** Règles « à activer », dans l'ordre du Pack (`detect.OptInRuleIDs`). */
@@ -220,10 +430,17 @@ export interface ContextMatch {
  */
 export function contextReferenceFindings(text: string): ContextMatch[] {
   const found: ContextMatch[] = [];
-  for (const { rule, reference } of CONTEXT_RULE_SOURCES) {
+  for (const { rule, reference, scan } of CONTEXT_RULE_SOURCES) {
+    if (scan !== undefined) {
+      for (const [start, end] of scan(text)) found.push({ rule, start, end });
+      continue;
+    }
+    // Validateur nommé (v0.10.0) : seconde écriture de `personal-data.ts`, appliquée à la valeur.
+    const check = rule.validator === '' ? undefined : REFERENCE_VALIDATORS[rule.validator];
+    if (rule.validator !== '' && check === undefined) throw new Error(`validateur de référence absent : ${rule.validator}`);
     for (const match of text.matchAll(new RegExp(reference.source, reference.flags))) {
       const [start, end] = match.indices?.[1] ?? match.indices?.[0] ?? [0, 0];
-      if (end > start) found.push({ rule, start, end });
+      if (end > start && (check === undefined || check(text.slice(start, end)))) found.push({ rule, start, end });
     }
   }
   return found;
@@ -246,8 +463,9 @@ export function buildContextRulesGo(): string {
     '',
     'package detect',
     '',
-    '// contextSubstituteLabels : types de secret des règles de données à contexte du Pack initial (v0.9.0), dans',
-    "// l'ordre du Pack. Source : generator/rule-pack/context-data.ts.",
+    '// contextSubstituteLabels : types de secret des règles de données à contexte du Pack initial (v0.9.0, puis',
+    "// identifiants européens et français et règle composée AWS de la v0.10.0), dans l'ordre du Pack. Source :",
+    '// generator/rule-pack/context-data.ts.',
     'var contextSubstituteLabels = []SubstituteLabel{',
     ...lines,
     '}',

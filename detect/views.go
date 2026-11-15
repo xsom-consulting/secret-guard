@@ -120,6 +120,9 @@ type view struct {
 	// lone liste, par position croissante, les substituts isolés de text.
 	lone     []loneSurrogate
 	encoding Encoding
+	// extraLayers compte les couches de pourcentage au-delà de la première (transformedTextViews) : chacune coûte
+	// layerPenalty au score des constats de la vue (scanState.layered).
+	extraLayers int
 }
 
 // identityView est la source telle quelle.
@@ -708,7 +711,11 @@ func buildTextViews(content []byte, budget *viewBudget) (*textViews, error) {
 	if len(content) > maxViewBytes || len(content) > math.MaxInt32 {
 		return nil, errViewBudgetExhausted
 	}
-	identity := identityView(content)
+	return textViewsOf(identityView(content), budget)
+}
+
+// textViewsOf construit les vues d'un texte déjà en vue : la source (identityView) ou sa vue UTF-16 (utf16View).
+func textViewsOf(identity *view, budget *viewBudget) (*textViews, error) {
 	normalized, err := normalizedView(identity, budget)
 	if err != nil {
 		return nil, err
@@ -727,7 +734,7 @@ func buildTextViews(content []byte, budget *viewBudget) (*textViews, error) {
 // transformedTextViews applique au plus une couche de pourcentage et une couche JSON, dans les deux ordres, chaque
 // vue étant ensuite canonicalisée (transformedTextViews de Secret Guard).
 func transformedTextViews(canonical *view, budget *viewBudget) ([]*view, error) {
-	var transformed []*view
+	var transformed, deeper []*view
 	percent, err := percentDecodedView(canonical, budget)
 	if err != nil {
 		return nil, err
@@ -742,6 +749,10 @@ func transformedTextViews(canonical *view, budget *viewBudget) ([]*view, error) 
 			return nil, err
 		}
 		transformed = append(transformed, canonicalPercent)
+		deeper, err = deeperPercentViews(canonicalPercent, budget)
+		if err != nil {
+			return nil, err
+		}
 		jsonAfterPercent, err := jsonEscapedView(canonicalPercent, budget)
 		if err != nil {
 			return nil, err
@@ -772,7 +783,29 @@ func transformedTextViews(canonical *view, budget *viewBudget) ([]*view, error) 
 			transformed = append(transformed, canonicalPercentAfterJSON)
 		}
 	}
-	return transformed, nil
+	// Couches de pourcentage suivantes en dernier : l'ordre des vues de Secret Guard est gardé.
+	return append(transformed, deeper...), nil
+}
+
+// deeperPercentViews rend les vues des couches de pourcentage qui suivent la première (« %2541 », puis « %41 », puis
+// « A »), jusqu'à maxDecodeLayers couches en tout, chacune canonicalisée. Écart avec Secret Guard, qui décode une
+// couche. Chaque vue est débitée du budget de vues ; un texte sans échappement restant n'en coûte aucune.
+func deeperPercentViews(first *view, budget *viewBudget) ([]*view, error) {
+	var views []*view
+	for previous, layer := first, 1; layer < maxDecodeLayers; layer++ {
+		decoded, err := percentDecodedView(previous, budget)
+		if err != nil || decoded == nil {
+			return views, err
+		}
+		next, err := canonicalizedView(decoded, budget)
+		if err != nil {
+			return nil, err
+		}
+		next.extraLayers = layer
+		views = append(views, next)
+		previous = next
+	}
+	return views, nil
 }
 
 // isBase64Character suit isBase64Character de Secret Guard (alphabets standard et URL).

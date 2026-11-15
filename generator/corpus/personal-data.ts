@@ -129,6 +129,10 @@ function ibanDrafts(): Draft[] {
   const gb = makeIban('GB', `${'NWBK'}${digits('iban/gb', 14)}`);
   const nl = makeIban('NL', `ABNA${digits('iban/nl', 10)}`);
   const br = makeIban('BR', bban('br', 25));
+  // Table à 76 pays (v0.10.0) : le Brésil y est entré (29 caractères) ; le Salvador n'y est pas (aucune longueur
+  // imposée) ; un IBAN du Qatar de 25 caractères, longueur que lui donne Presidio, n'a pas les 29 du registre.
+  const sv = makeIban('SV', bban('sv', 24));
+  const qaBadLength = makeIban('QA', bban('qa', 21));
   const frBadLength = makeIban('FR', digits('iban/fr-short', 22));
   const frBadCheck = groupBy4(breakLastDigit(fr));
   return [
@@ -141,11 +145,13 @@ function ibanDrafts(): Draft[] {
     positive('iban', 'spaced-de', `${groupBy4(de)}\n`),
     positive('iban', 'lowercase-gb', `iban ${groupBy4(gb).toLowerCase()} ok\n`),
     positive('iban', 'nl-compact-in-quotes', `payer = "${nl}";\n`),
-    positive('iban', 'country-not-in-table', `IBAN ${groupBy4(br)} (Brésil)\n`),
+    positive('iban', 'brazil-29-characters', `IBAN ${groupBy4(br)} (Brésil)\n`),
+    positive('iban', 'country-without-known-length', `IBAN ${groupBy4(sv)} (Salvador)\n`),
     positive('iban', 'json-field', `{"iban":"${groupBy4(fr)}","amount":12}\n`),
     positive('iban', 'two-in-one-line', `de ${groupBy4(fr)} vers ${groupBy4(de)}\n`),
     negative('iban', 'wrong-check-digits', `IBAN ${frBadCheck}\n`),
     negative('iban', 'wrong-length-for-country', `IBAN ${groupBy4(frBadLength)}\n`),
+    negative('iban', 'wrong-length-for-added-country', `IBAN ${groupBy4(qaBadLength)}\n`),
     negative('iban', 'product-reference', 'Réf. RT50 1234 5678 9012 3456\n'),
     negative('iban', 'too-short', 'FR76 3000 6000\n'),
     negative('iban', 'phone-and-order-numbers', 'tél 01 23 45 67 89, commande FR123456, dossier 2026-0042\n'),

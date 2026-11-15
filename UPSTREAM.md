@@ -72,13 +72,13 @@ Portage en Go, sans copie de code d'origine dans le dépôt (la copie figée `pa
 
 **Liens de ressources de claude.ai (v0.7.0)** : l'entropie écarte la fin d'un lien `https://claude.ai/[code/]{artifact,chat,project}/<identifiant>` (`detect/entropylinks.go`, `isKnownResourceLink`) : l'identifiant d'une ressource qui exige une session n'est pas un secret (faux positif relevé sur un Poste réel le 10 novembre 2026). Les liens de partage public (`/share/`), les autres hôtes, un identifiant de connexion ou `http://` restent détectés (`TestEntropyIgnoresClaudeResourceLinks`).
 
-**Règles de données personnelles (v0.7.0), sans origine dans Secret Guard** : `iban`, `fr_nir`, `fr_siret`, `fr_siren` et `payment_card` s'ajoutent aux 35 règles du catalogue d'origine dans le Pack initial (`generator/rule-pack/personal-data.ts`, après l'extraction de `rules.ts`) ; leurs validateurs sont dans `detect/personaldata.go`, avec le raccourcissement de la correspondance de l'IBAN (`trimmers`, `scanFixedPattern`). Ce sont les seules règles du Pack initial dont le résultat attendu ne vient pas du moteur d'origine : le corpus les éprouve dans `vectors/detection/rules-personal-data.json` (80 cas), dont les attentes viennent d'une seconde écriture indépendante des contrôles et des positions (le moteur d'origine doit ne rien trouver dans ces textes), jamais du moteur Go. Les 823 cas du moteur d'origine, les vecteurs du masquage hors de ces règles et ceux du Pack du client sont inchangés. Types de Substituts : un par règle (`SubstituteLabels()`).
+**Règles de données personnelles (v0.7.0), sans origine dans Secret Guard** : `iban`, `fr_nir`, `fr_siret`, `fr_siren` et `payment_card` s'ajoutent aux 35 règles du catalogue d'origine dans le Pack initial (`generator/rule-pack/personal-data.ts`, après l'extraction de `rules.ts`) ; leurs validateurs sont dans `detect/personaldata.go`, avec le raccourcissement de la correspondance de l'IBAN (`trimmers`, `scanFixedPattern`). Ce sont les seules règles du Pack initial dont le résultat attendu ne vient pas du moteur d'origine : le corpus les éprouve dans `vectors/detection/rules-personal-data.json` (82 cas), dont les attentes viennent d'une seconde écriture indépendante des contrôles et des positions (le moteur d'origine doit ne rien trouver dans ces textes), jamais du moteur Go. Les 823 cas du moteur d'origine, les vecteurs du masquage hors de ces règles et ceux du Pack du client sont inchangés. Types de Substituts : un par règle (`SubstituteLabels()`).
 
 **Vérification des règles de données personnelles** : `TestPersonalDataValidators` (49 numéros connus ou calculés), `TestIBANEveryCountry` (un IBAN calculé pour chacun des 52 pays de la table, par groupes et d'un bloc, seul ou suivi d'un mot, d'un nombre ou d'une ponctuation), `TestIBANPrefixLength`, `TestPersonalDataScan`, `TestPersonalDataNoFalsePositives`, `TestPersonalDataViews`, `TestPersonalDataRedaction`, `TestPersonalDataSubstitutes`, `TestRuleCorpus` (cas `<ruleId>/…` du corpus), `TestRuleScoresAndReasons` (score, raisons et pénalité d'encodage), pires cas de 1 Mio (`TestWorstCases`, `TestScanWorstCases` : têtes d'IBAN, groupes de chiffres, suite de chiffres, IBAN valide répété, mot SIREN répété) ; côté générateur, `test/personal-data.test.ts` (exemples connus, table des pays comparée à celle du moteur Go, types et validateurs comparés au schéma) et la régénération `npm run vectors:detection -- --upstream <checkout> --check`.
 
 ## Règles de fournisseurs (v0.8.1)
 
-**Origine.** Les 294 règles de fournisseurs du Pack initial (`generator/rule-pack/provider-rules.json`, puis `pack/initial/pack.json`) reprennent des motifs des règles de détection de Titus : dépôt `praetorian-inc/titus`, dossier `pkg/rule/rules/` (318 fichiers YAML), commit `b3964d4352ac2f84af11d1396e864bdc772f2b92` du 12 novembre 2026, Apache License, Version 2.0. Ces règles sont elles-mêmes dérivées de NoseyParker (`praetorian-inc/noseyparker`, identifiants `np.*`) et de Kingfisher (`mongodb/kingfisher`, identifiants `kingfisher.*`), sous la même licence ; avis reproduits dans `NOTICE`. Chaque règle du Pack garde l'identifiant de sa règle d'origine (champ `upstream` de `provider-rules.json`). Seuls les motifs (et, pour en tirer des valeurs d'essai, leur forme) sont repris : ni les exemples publiés avec les règles, ni leurs appels de validation, ni leur code.
+**Origine.** Les 294 premières règles de fournisseurs du Pack initial (`generator/rule-pack/provider-rules.json`, puis `pack/initial/pack.json` ; les 66 suivantes, depuis la v0.10.0, viennent de Betterleaks : dernière section de ce fichier) reprennent des motifs des règles de détection de Titus : dépôt `praetorian-inc/titus`, dossier `pkg/rule/rules/` (318 fichiers YAML), commit `b3964d4352ac2f84af11d1396e864bdc772f2b92` du 12 novembre 2026, Apache License, Version 2.0. Ces règles sont elles-mêmes dérivées de NoseyParker (`praetorian-inc/noseyparker`, identifiants `np.*`) et de Kingfisher (`mongodb/kingfisher`, identifiants `kingfisher.*`), sous la même licence ; avis reproduits dans `NOTICE`. Chaque règle du Pack garde l'identifiant de sa règle d'origine (champ `upstream` de `provider-rules.json`). Seuls les motifs (et, pour en tirer des valeurs d'essai, leur forme) sont repris : ni les exemples publiés avec les règles, ni leurs appels de validation, ni leur code.
 
 **Sélection.** Des 508 règles d'origine qui ont un motif et un exemple, 294 sont retenues. Sont écartées : 54 dont RE2 ne lit pas le motif (regards avant ou arrière, répétitions de plus de 1 000) ; 48 dont chaque exemple est déjà trouvé par une règle dédiée du Pack (GitHub, GitLab, OpenAI, Slack, Stripe, SendGrid, npm, Hugging Face, Shopify, DigitalOcean, Google, URL à identifiants, clés privées, cartes bancaires…) ; 92 par liste : clés publiques, identifiants et valeurs non secrètes (clé publiable Stripe, jeton public Mapbox, clé de projet PostHog, clés PubNub, DSN Sentry, identifiants de client, de compte ou de clé, variable chiffrée Travis CI…), règles génériques et constructions de code que les affectations du moteur lisent déjà (`np.generic.*`, en-têtes HTTP, chaînes de connexion, appels de connexion à une base, fichiers de configuration), doublons entre règles d'origine et mots-clés trop faibles (`lob`, `exa`) ; 20 dont aucune valeur d'essai ne pouvait être construite depuis le motif.
 
@@ -88,7 +88,7 @@ Portage en Go, sans copie de code d'origine dans le dépôt (la copie figée `pa
 - *Limite de mot de tête* ajoutée devant un préfixe quand les exemples d'origine la tiennent (`apify_api_…`, `sbp_…`, `pa-…`) : un préfixe au milieu d'un mot n'est pas une clé.
 - *Alias de moins de trois lettres retirés* du nom du fournisseur (`dd`, `pd`, `ic`, `zd`, `mg`, `mc`, `cio`, `bx`, `mm`, `tn`, `wpe`), sources de bruit et sans porte littérale possible ; pour Datadog, `dd` reste admis dans `DD_API_KEY` et `DD_APP_KEY` (ou `DD_APPLICATION_KEY`).
 - *Préfixe de 1Password* (`ops_eyJ`) : casse du jeton réel.
-- *Aucun contrôle hors motif.* Les règles d'origine portent une entropie minimale, des exigences de classes de caractères et un appel de validation au fournisseur : rien de cela n'est repris (le moteur n'ouvre aucune connexion ; le schéma `RulePack` n'a pas ces champs).
+- *Aucun contrôle hors motif* jusqu'à la v0.9.0. Les règles d'origine portent une entropie minimale, des exigences de classes de caractères et un appel de validation au fournisseur : rien de cela n'était repris (le moteur n'ouvre aucune connexion ; le schéma `RulePack` n'a pas ces champs). Depuis la v0.10.0, l'entropie minimale est reprise par un validateur nommé, sans changement du schéma (« Vraisemblance des règles de fournisseurs », dernière section).
 - *Scores* : 95 pour les 113 règles à préfixe fixe, 80 pour les 181 règles qui exigent le nom du fournisseur à proximité de la valeur. *Type de secret* `provider_token`. *Identifiants* et *libellés de Substitut* (français, anglais) écrits pour ce dépôt.
 
 **Écarts d'analyse du moteur ajoutés avec ces règles, sans effet sur le corpus d'origine** (`detect/prefilter.go`, `detect/literalindex.go`) :
@@ -155,6 +155,13 @@ Comportement d'origine gardé tel quel, à connaître : une valeur d'affectation
 **Aucune origine dans Secret Guard** : `expurgation/expurgate.go` (`Expurgate`, `ExpurgateAndRescan`, `Substitution`, `Options`, `SanitizeOrdinal`, `ErrIncomplete`, `ErrSpan`, `ErrEncoding`, `ErrOrdinal`, `ErrLanguage` ; avant la v0.6.0, `detect/expurgate.go`), `detect/secretrange.go` (`SecretRange`, `Rules.FirstLineSecretEnd`) et `detect/substitute.go` (`SubstitutePrefixes`, `SubstituteLabels`, `SubstituteLanguage`, `FindSubstitutes`, `SubstituteSpan`, `SubstituteText`, grammaire des Substituts, `ErrSubstituteOrdinal`, `ErrSubstituteLanguage`) sont écrits pour ce module, sans code ni test d'origine, et `vectors/expurgate.json` est produit par un test Go de ce module (`TestExpurgateVectors`, option `-update`), pas par le générateur TypeScript. Ils réutilisent la fusion des étendues de `Redact` (portée de `redact`, section « Masquage et décisions »), que `Redact` et `RedactAndRescan` gardent inchangée (`TestRedactParity`).
 
 **Fin de ligne gardée, sans effet sur la détection** : un constat d'une règle à format fixe dont l'étendue, fusionnée par `dedupeOverlaps` avec la vue des lignes jointes (`lineWrappedFixedViews`), prend le premier mot de la ligne suivante (`export A=<jeton>\nexport B=x`, fichier `.env`) est, dans l'expurgation seulement, ramené à sa première ligne si elle est à elle seule une valeur exacte de la règle et que l'étendue s'arrête devant `=`, `:`, une espace ou une tabulation, ou (depuis la v0.5.2) que ce qu'elle prend après la fin de ligne n'a pas la forme d'une fin de jeton (`looksLikeWrappedTail` : ni chiffre, ni `+` ou `/`, moins de trois changements de casse hors majuscule initiale, moins de 24 caractères ; `fi`, `done`, `EOF`, `end` seuls sur leur ligne disparaissaient du texte expurgé) (`firstLineSecretEnd`) ; sinon (jeton réellement coupé) l'étendue entière est remplacée. Les étendues des constats, le corpus de parité et les vecteurs du masquage et de la détection sont inchangés. Avec une clé, l'Empreinte locale de chaque `Substitution` est celle des octets d'origine qu'elle remplace exactement (étendue rétrécie, fusionnée ou élargie) ; `Expurgate`, sans clé, ne garde l'Empreinte locale d'un constat que pour son étendue exacte et refuse sinon (`ErrExpurgateSpan`).
+
+**Écarts d'analyse ajoutés (v0.10.0), sans effet sur le corpus** : bruit d'entropie réduit sur du code, mesuré par le banc de bruit `tools/bruit` (`docs/bench.md`, « Bruit sur du code ») sur le dépôt xSOM Fleet à un commit épinglé (4 614 fichiers) : `high_entropy` passe de 868 constats à 371, dont 272 sont le base64 d'images embarquées dans deux pages HTML ; les quatre dépôts ouverts du banc baissent aussi, aucun ne monte. Corpus de bruit `vectors/noise-entropy.json` (19 lignes de code et liens ordinaires : 19 signalés par la v0.9.0, 0 après ; `TestNoiseEntropyCorpus`). Les 299 constats `high_entropy` attendus par le corpus de parité sont inchangés (`TestParity`, 1 639 cas, 0 en écart).
+
+- *Cause établie : pourquoi `isEntropyName` laissait passer des identifiants en casse de chameau.* `isEntropyName` n'admet un mot que si `nameTokenLetters` (`detect/base64words.go`) le reconnaît et que `hasAcronymHump` ne l'écarte pas. Or (1) `isCamelLetters` n'admet une bosse d'une seule minuscule qu'en tête de mot : « Ai », « Id », « Is », « Le » au milieu d'un nom le font refuser (`…ElemAiServiceMistralLeChat`, `…OfferIdChatgptPlus`, `…ListenerIsExclusive`) ; (2) un seul sigle par mot, et `hasAcronymHump` écarte de l'entropie tout mot qui en porte un, même final (`…CurrencyEUR`, `TestFR16…`) ; (3) un chiffre n'est admis qu'entre la fin d'une bosse et le début d'une autre, un ou deux à la fois, ou en fin de mot : « FR16 » (après un sigle), « Ed25519 » (cinq chiffres après une bosse courte) et « A2K » (lettre, chiffre, lettre en fin de mot) le font refuser. Les noms de types générés depuis un schéma et les noms d'essais portent presque toujours l'un de ces morceaux : 486 des 868 constats d'entropie du dépôt mesuré. Les trois identifiants reproduits (une constante générée à bosses courtes, un nom d'essai à sigle et chiffres, une constante à suffixe « A2K ») échouent chacun sur une de ces trois règles.
+- *Identifiants générés longs* (`detect/entropynames.go`, `isGeneratedIdentifier`, `generatedWords`) : `nameTokenLetters` et `hasAcronymHump` ne changent pas (les candidats base64 et les mots courts gardent leur règle) ; `isEntropyName` admet en plus un mot fait de mots réguliers (une majuscule puis deux minuscules au moins, ou trois minuscules en tête) et de morceaux irréguliers bornés : bosse courte, sigle de 2 à 5 majuscules, majuscule seule, suite de 1 à 5 chiffres après une lettre. Quatre mots réguliers au moins ; un morceau irrégulier au plus pour deux mots réguliers de 6 lettres en moyenne, ou pour trois de 5 lettres, de 4,5 lettres à partir de sept mots, de 4 lettres à partir de huit. Mesure sur 10 millions de jetons alphanumériques aléatoires par longueur : aucun de 20 ni de 48 caractères n'a cette forme sans avoir déjà celle d'un nom, 16 de 32 caractères (5 pour la forme d'avant ; mesure refaite à la relecture sur 50 millions de suites : 113 et 46, soit 3 pour un million en tout) ; `TestEntropyNameRarelyMatchesTokens` (500 000 tirages de trois suites par longueur) garde les bornes de 1 pour 1 000 à 20 caractères et de 1 pour 100 000 à 32, et borne à 1 pour un million à 48 caractères ce qui était « aucune sur 150 000 ». Restent signalés : les noms de moins de quatre mots réguliers à sigles (`TestFR13HookIPCNearDeadline`), les sigles de plus de 5 majuscules. Pertes acceptées : comme en v0.8.1, l'avertissement d'entropie d'une phrase de passe en casse de chameau, ici d'au moins quatre mots, sans nom sensible devant elle ; et celui d'un jeton aléatoire fait de lettres seules en casse mêlée, sans aucun chiffre, qui a cette forme 3 fois sur 10 000 à 32 et à 40 caractères, où la forme d'avant en laissait passer 31 puis 2 pour un million (1,1 pour 1 000 à 24 caractères, 1,4 pour 10 000 à 48 ; mesure de la relecture sur 5 millions de suites par longueur, bornée par `TestEntropyNameRarelyMatchesLetters`). Un jeton alphanumérique de 40 caractères n'a aucun chiffre qu'une fois sur 1 100 environ, et le seuil de 4,3 bits écarte déjà 12 suites de 32 lettres sur 100. Les branches à sept et à huit mots font plus de la moitié de cette perte à 40 caractères et au-delà, pour 22 des 349 mots d'identifiants réels admis dans le banc : les retirer est une décision ouverte. Essais : `TestGeneratedWords`, `TestIsGeneratedIdentifier`, `TestEntropyIgnoresNames`, `TestEntropyKeepsTokensBesideNames`, `TestEntropyNameRarelyMatchesLetters`.
+- *Identifiants publics dans un chemin d'URL* (`detect/entropypath.go`, `isPublicID`, appelé par `isShortWords`) : dans `https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI…`, la suite d'entropie commence après le dernier point de l'hôte ; un mot de plus de 12 caractères d'un segment n'était admis que fait de lettres seules. Sont admis en plus : des chiffres seuls, 20 au plus (numéro d'article d'un centre d'aide) ; une référence faite de 2 à 12 majuscules puis de 4 à 20 chiffres (référence d'un texte de loi) ; 32, 40 ou 64 chiffres hexadécimaux d'une même casse accolés à un titre en tirets (identifiant de page), longueurs que `entropyExcluded` écarte déjà quand le segment entier en est fait. Un jeton qui mêle majuscules, minuscules et chiffres reste détecté dans le chemin d'une URL, seul ou accolé à un titre, à un numéro ou à une référence (`TestEntropyKeepsTokens`). Ce qui n'est plus signalé : un secret fait de chiffres seuls dans un chemin, et une clé hexadécimale de 32, 40 ou 64 chiffres accolée à des mots par un tiret ou un souligné. Restent signalés, parce que rien ne les distingue d'un jeton : les identifiants alphanumériques opaques de 13 caractères et plus (fiche d'une place de marché, document partagé, fichier d'un réseau de diffusion). Essais : `TestIsPublicID`, `TestEntropyIgnoresPaths`.
+- *Non traité, mesuré* : le base64 d'une image embarquée (`data:image/…;base64,`) donne un constat par tranche de 512 caractères (272 des 371 constats d'entropie restants du dépôt mesuré, dans deux fichiers), et un alphabet écrit en clair (`ABC…XYZabc…xyz0123456789`, une quinzaine de constats) reste signalé hors de la valeur exacte `base64Alphabet`.
 
 **Écart d'analyse ajouté (v0.8.1)** : mot de passe annoncé dans une phrase (`detect/passwordphrase.go`). Un indice (« mdp », « mot de passe », « mot-de-passe », « code d'accès », « pass », et les noms anglais que `typeForSensitiveKey` classe « password »), une liaison facultative sur la même ligne (« est », « is », « c'est », « : » ou « = » après un indice que l'affectation ordinaire ne connaît pas), puis un seul mot de 8 à 256 points de code qui mêle trois classes de caractères : constat de `contextual_password` sur la valeur seule. Relevé sur un Poste réel le 2026-11-12 : « … avec mon mdp <valeur> » passait sans constat (affectation ordinaire limitée aux noms anglais reliés par « = » ou « : », entropie limitée à 20 caractères de la classe base64). Un constat qui chevauche un constat de l'affectation ordinaire, des cookies ou de « -u » de la même vue n'est pas ajouté (chemin séquentiel et chemin parallèle, `detectors.go`) : les 823 cas tirés de l'origine sont inchangés. Cas nouveaux : `vectors/detection/rules-password-phrase.json` (27 cas), résultat attendu tiré de la seconde écriture `generator/rule-pack/password-phrase.ts`, le moteur d'origine ne trouvant rien dans ces textes ; exclus des vecteurs du masquage comme les données personnelles. Vérification : `TestPasswordPhraseFindsAnnouncedValue` (en échec avant), `TestPasswordPhraseIgnoresOrdinarySentences`, `TestPasswordPhraseLeavesAssignmentsToOrigin`, `TestPasswordPhraseHintsFollowSensitiveKeys`, `TestPasswordPhraseRedaction`, `TestPasswordPhraseWorstCases`, `TestPasswordPhraseExpurgation` (module `expurgation`) ; `TestParity`, `TestParityWorkers`, `TestRedactParity`, `TestDecisionParity`.
 
@@ -387,6 +394,852 @@ Le `LICENSE` de `secret-guard/packages/core`, copié dans `pack/initial/upstream
 La technique du mot-clé de contexte obligatoire (une règle ne se déclenche que si un mot qui annonce la donnée est
 proche de la valeur) vient du projet Akto (`https://github.com/akto-api-security/akto`, licence MIT), lue au commit
 `6b7de940c28037d726776bc5f201fd9e572133a3` dans
-`apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
+`apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de la v0.9.0 de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
 cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP interne, ARN, bucket S3, RDS, DynamoDB) sont
 écrites ici en RE2, sans copie de motif, de mot-clé ni de code d'Akto.
+
+## Sortie SARIF (v0.10.0)
+
+`secret-guard scan --format sarif` (`cmd/secret-guard/sarif.go`) écrit le résultat d'une analyse en SARIF 2.1.0 : un résultat par constat, avec la règle, le fichier tel qu'il est nommé sur la ligne de commande, les lignes et colonnes de début et de fin (colonnes en points de code, `columnKind`), l'étendue en octets et le niveau (`error` pour CRITICAL et HIGH, `warning` pour MEDIUM, `note` pour LOW). Extension de ce module, sans origine dans Secret Guard, hors du moteur (la commande seule : `detect` et le module WebAssembly ne changent pas).
+
+- **Idée lue dans ggshield** (GitGuardian, licence MIT, clone de lecture au commit `f3377d9`) : l'outil a une sortie SARIF pour ses constats. Seule l'existence de cette sortie est reprise : son fichier n'a pas été ouvert pour écrire celle-ci, aucune ligne, aucune structure ni aucun texte n'en vient, donc aucun avis dans `NOTICE`. La forme est écrite d'après la spécification OASIS « Static Analysis Results Interchange Format (SARIF) Version 2.1.0 ».
+- **Jamais la valeur ni un extrait** : aucune région n'a de `snippet` ni de `contextRegion`, aucun message ne cite le texte analysé ; la liste des propriétés écrites est fermée (`sarifKeys`, `TestScanSARIF`, `TestSARIFNeverCarriesContent`). L'Empreinte locale, quand une clé est donnée, va dans `partialFingerprints` (HMAC sous la clé de l'appelant, comme `localFingerprint` de la sortie JSON).
+- **Analyse incomplète** : aucun résultat, `executionSuccessful` faux et une notification d'erreur qui porte l'issue (`scan_limit`, `scan_error`…) ; le code de sortie reste 2. Elle ne se lit jamais comme « rien trouvé ».
+- **Limite** : la forme est vérifiée par des essais (document strict, propriétés fermées, contraintes de la norme sur ce qui est écrit), pas par le schéma JSON officiel, que le dépôt n'embarque pas.
+
+## Corpus de rappel du paquet injection (v0.10.0)
+
+`vectors/injection-recall.json` est une donnée d'essai : il n'entre dans aucun programme livré. Il sert à mesurer ce
+que `injection.Find` signale (`TestRecallCorpus`, relevé `injection/testdata/recall.json`, chiffres dans
+`docs/bench.md`). Ses textes sont copiés sans retouche par `go run ./tools/injectioncorpus construire`, qui épingle
+pour chaque source le commit, l'empreinte du fichier de licence et celle des fichiers lus (`tools/injectioncorpus/sources.go`),
+et refuse d'écrire au moindre écart. Ce sont des consignes piégées écrites par d'autres : des données, jamais des
+instructions ; aucun outil du dépôt n'en affiche le texte.
+
+| Source | Dépôt et commit | Chemin | Licence et droits | Cas |
+|---|---|---|---|---:|
+| LLM Guard | `protectai/llm-guard`, `168c1034ffdb33837e7ae6fd6a16b80567c1be03` (projet archivé) | `tests/input_scanners/test_prompt_injection.py` | MIT, Copyright (c) Protect AI. All rights reserved. | 60 |
+| Promptfoo | `promptfoo/promptfoo`, `5fac53eefdd26141a45c52ab77f533a7d30884e3` | `src/redteam/strategies/promptInjections/data.ts` | MIT, Copyright (c) Promptfoo 2025 ; une partie de ces gabarits est reprise de LLM Guard (MIT, Copyright (c) Protect AI), d'après le `README.md` du même dossier | 106 |
+| Akto | `akto-api-security/akto`, `f69427472ebf57cac9dd1b70bbcfb542ba2189d8` | `apps/dashboard/src/main/resources/inbuilt_llm_test_yaml_files/` (55 fichiers) | MIT, Copyright (c) 2023 Akto.io. | 59 |
+| Skill Scanner | `cisco-ai-defense/skill-scanner`, `c558c421157c546ec417cf23778ce81a3a8f35fd` | `evals/skills/` | Apache-2.0, Copyright 2026 Cisco Systems, Inc. and its affiliates ; chaque `_expected.json` déclare sa fixture « first-party », Apache-2.0 (vérifié à la construction) ; le dépôt n'a pas de fichier `NOTICE` | 55 |
+
+**Ce qui est copié, et comment.**
+
+- *LLM Guard* : les 60 textes du jeu d'essai du détecteur d'injection, avec l'étiquette de leur auteur (49 injections,
+  11 textes sains). Les littéraux Python sont lus sans exécuter le fichier.
+- *Promptfoo* : les 106 littéraux du tableau, décodés sans exécuter le fichier. Ce sont des gabarits de
+  contournement (jailbreak) qui visent un chatbot, pas un agent de code.
+- *Akto* : la charge de chaque gabarit de test LLM embarqué (ligne en pourcentages), décodée. 45 des 55 gabarits
+  citent garak (`leondz/garak`, Apache-2.0) en référence. Beaucoup de ces charges demandent du code malveillant et ne
+  sont pas des injections. Deux charges sur 61 ne sont pas copiées : elles portent une signature d'essai d'antivirus
+  ou d'antispam, qui ferait signaler le corpus, et le module, par les outils de sécurité des postes. Les gabarits du
+  dépôt séparé `tests-library` d'Akto ne sont pas repris.
+- *Skill Scanner* : chaque fichier des skills d'évaluation (hors `_expected.json`), étiqueté d'après le résultat
+  attendu : « consigne » si le résultat porte `prompt_injection` (1 cas), « sain » si le paquet est tenu pour bénin
+  (11), « autre » sinon (43 : risques de code ou de dépendance, hors du périmètre du paquet `injection`). La
+  catégorie `hardcoded-secrets` n'est pas copiée (une valeur à forme de secret n'a pas sa place dans ce corpus).
+
+**Ce qui n'est pas repris** : les jeux de données que Skill Scanner référence sans les embarquer (dont
+MaliciousSkillBench), le paquet de règles ATR de DefenseClaw, les jeux que Giskard charge à l'exécution (dont un sous
+licence non commerciale), le classifieur et les modèles de LLM Guard, et tout code de ces projets : aucun motif, aucune
+règle, aucune ligne de code du moteur n'en vient.
+
+**Format.** Le fichier est écrit en ASCII seul (tout autre caractère en `\uXXXX`) : il ne porte en clair ni
+caractère invisible ni contrôle bidirectionnel, quoi que contiennent les textes. `TestCommittedCorpusIsToolOutput`
+vérifie qu'il est, octet pour octet, la sortie de la commande ; `gitleaks` l'analyse comme le reste du dépôt, sans
+exception.
+
+**Avis de la licence MIT** (LLM Guard, Promptfoo, Akto ; lignes de droits d'auteur ci-dessus) :
+
+```text
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Les skills d'évaluation de Skill Scanner sont sous la licence Apache-2.0, celle du fichier `LICENSE` de ce dépôt.
+
+Vérification : `go test ./tools/injectioncorpus ./injection`, et, avec les clones aux commits épinglés,
+`go run ./tools/injectioncorpus construire -sources <clones> -verifier`.
+
+## Règles du paquet injection (v0.10.0)
+
+Les sept règles ajoutées au paquet `injection` (`injection_forced_prefix`, `injection_fake_history`,
+`injection_refusal_suppression`, `injection_payload_splitting`, `injection_system_prompt_leak`,
+`injection_filter_disable`, `injection_role_labels`) sont écrites dans ce dépôt, en RE2 borné, en français et en
+anglais. Ce qu'elles doivent à d'autres projets :
+
+- **Familles.** Les noms des techniques (préfixe imposé, suppression du refus, faux historique, découpage de la charge)
+  viennent de la nomenclature de Giskard (`Giskard-AI/giskard-oss`, Apache-2.0, commit
+  `32fb9cf8e9344e9e2847bc22bdcf985a42f1e06c`, `libs/giskard-scan/`). Aucun gabarit, aucune donnée ni aucun code de
+  Giskard n'est repris.
+- **Formes reprises et modifiées de DefenseClaw** (`cisco-ai-defense/defenseclaw`, Apache-2.0, Copyright 2026 Cisco
+  Systems, Inc. and its affiliates, commit `b68373a1c842486b22f7349a2b6fc74b56e2c941`,
+  `internal/scanner/clawshield_injection.go`) : la ligne « system: » suivie d'un ordre d'annulation, le bloc de code
+  « system », « --- » puis « system: » et le jeton `</s>` de la règle `injection_role_labels`. Modifications : motifs
+  réécrits (début de ligne vérifié hors motif, espaces bornés, mots français, `</s>` écarté quand il ferme un texte
+  barré `<s>…</s>` sur la même ligne) ; la ligne « system: you are… » n'est pas reprise (146 fichiers signalés à la
+  mesure). Le reste de ce fichier (densité de verbes à l'impératif, décodage base64, paquet de règles ATR) n'est pas
+  repris.
+- **Formes reprises et modifiées de Skill Scanner** (`cisco-ai-defense/skill-scanner`, Apache-2.0, Copyright 2026
+  Cisco Systems, Inc. and its affiliates, commit `c558c421157c546ec417cf23778ce81a3a8f35fd`,
+  `skill_scanner/data/packs/core/signatures/prompt_injection.yaml`) : la demande de révéler le message système
+  (`injection_system_prompt_leak`) et l'ordre de désactiver les filtres ou d'entrer dans un mode sans restriction
+  (`injection_filter_disable`). Modifications : motifs réécrits avec des intervalles bornés, listes de verbes et de
+  noms propres à ce dépôt, formes françaises, négation lue avant la correspondance (« never reveal… » n'est pas
+  signalé), modes « debug », « developer » et « admin » et mot « security » non repris (courants dans une
+  documentation). L'idée d'écarter les citations entre guillemets vient de la même source, qui la mesure sur ses
+  propres données ; son motif, à assertions arrière, n'est pas repris : le contrôle est écrit en Go
+  (`injection/context.go`).
+
+Les avis de ces deux projets ne portent aucune mention qui concerne les fichiers cités (le fichier `NOTICE` de
+DefenseClaw vise ses dossiers `internal/sensor/`, non repris ; Skill Scanner n'a pas de fichier `NOTICE`). Mesures et
+critère de garde des motifs : `docs/bench.md`.
+
+## Règles reprises de Betterleaks, vraisemblance et banc de comparaison (v0.10.0)
+
+Trois ajouts de la v0.10.0, aucun dans le moteur d'origine : un contrôle de vraisemblance des valeurs que les règles de fournisseurs signalent, 66 règles reprises de Betterleaks, et un banc de comparaison rejoué à chaque version. Le corpus d'origine (`upstream-*.json`) et les règles du catalogue d'origine ne changent pas.
+
+**Origine.** Betterleaks : dépôt `betterleaks/betterleaks`, commit `b4b1c4455987636400ce693bd9d8a8e2cf375ed9` du 13 novembre 2026, licence MIT, « Copyright (c) 2026 Zachary Rice » (texte reproduit à la fin de cette section, avis dans `NOTICE`). Deux choses en sont reprises : des motifs de règles (`rules/*.go`, champ `Regex`, et le seuil de leur filtre d'entropie), et les cas d'essai que chaque règle porte dans son fichier source (`vectors/comparison/betterleaks.json`). Le code de Betterleaks n'est ni copié, ni compilé, ni exécuté. Les seuils d'entropie des règles reprises de Titus viennent du champ `min_entropy` de ces règles (même commit de Titus que la section « Règles de fournisseurs », Apache-2.0).
+
+### Vraisemblance des règles de fournisseurs
+
+Une règle de fournisseur reconnaît une forme. Une valeur faite d'une lettre répétée, de zéros ou de « X » a la forme et n'est pas un jeton : sur les 931 cas négatifs de Betterleaks, les règles de fournisseurs de la v0.9.0 rendaient 62 constats sur de telles valeurs.
+
+- *Contrôle d'office* (`detect/validators.go`, `plausibleToken`, appliqué par `scanFixedPattern` et par la lecture des jetons finis par un tiret). Pour une règle « motif seul » de type `provider_token` hors du catalogue d'origine, une valeur de moins de 6 octets distincts, ou d'entropie de Shannon inférieure à 3,0 bits par octet, n'est pas un constat. Le contrôle vaut pour les règles de fournisseurs du Pack initial et pour toute règle de ce type ajoutée par un Pack.
+- *Règles du catalogue d'origine* (`originCatalogRules` : `github_token`, `github_fine_grained_pat`, `gitlab_pat`, `openrouter_key`, `anthropic_key`, `openai_key`, `stripe_secret_key`, `slack_token`, `slack_webhook`, `sendgrid_key`, `npm_token`, `huggingface_token`, `databricks_pat`, `digitalocean_token`, `shopify_token`) : le contrôle ne s'y applique pas. Les essais du moteur d'origine attendent un constat sur des valeurs sans diversité (un préfixe suivi d'une lettre répétée) : les y soumettre casserait la parité. Il en reste 19 constats sur les négatifs de Betterleaks.
+- *Validateurs nommés.* La liste fermée des validateurs reçoit `token_entropy_25` à `token_entropy_45` : au moins 6 octets distincts et une entropie d'au moins NN dixièmes de bit par octet. Le schéma `RulePack` ne change pas (le champ `validator` est une chaîne, la liste est tenue en code). Le contrôle ne décode rien et ne débite aucun budget : à la différence des validateurs à clé de contrôle, il s'exécute aussi dans un texte décodé de base64. Un moteur antérieur à la v0.10.0 refuse en entier un Pack qui porte l'un de ces noms (`unknown_validator`).
+- *Seuils du Pack initial.* Les 181 règles à proximité de la v0.9.0 portent un validateur. 79 gardent le seuil `min_entropy` de leur règle de Titus (3,2 à 4,0). 67 portent 3,0 : leur règle de Titus n'a pas de seuil, ou un seuil de 3,0 ou moins. 35 portent un seuil plus bas, pour l'une de deux raisons. *Forme du motif* (22 règles) : le plus haut seuil que 99,95 % de 60 000 valeurs tirées au hasard de la forme du motif passent (alphabet hexadécimal tiré dans une seule casse). Sans ce plafond, un seuil de 3,5 écarterait 19 % des clés de 32 chiffres hexadécimaux, et celui de 4,0 toute clé de 40 chiffres hexadécimaux. Seuils abaissés : `alibaba_access_key_secret` 4,2 → 3,9 ; `asana_oauth_personal_access_token` 3,5 → 2,6 ; `azure_openai_api_key` 3,5 → 3,0 ; `circleci_api_project_token` 3,3 → 3,2 ; `cisco_meraki_api_key` 3,3 → 3,2 ; `clay_api_key` 3 → 2,6 ; `codacy_api_key` 3,5 → 3,4 ; `customer_io_tracking_api_key` 3 → 2,6 ; `deepgram_api_key` 3,5 → 3,2 ; `eventbrite_api_key` 3,5 → 3,4 ; `finicity_api_token` 3,5 → 3,0 ; `finicity_client_secret` 3,5 → 3,4 ; `guardian_api_key` 3,5 → 3,2 ; `honeycomb_api_key` 3,5 → 3,0 ; `larksuite_tenant_access_token` 3,2 → 3,1 ; `mattermost_access_token` 4 → 3,7 ; `mongodb_api_private_key` 3,3 → 3,2 ; `opsgenie_api_key` 3,5 → 3,2 ; `owlbot_api_key` 3,5 → 3,2 ; `packagecloud_api_key` 3,5 → 3,3 ; `sendbird_api_token` 4 → 3,2 ; `weights_and_biases_api_key` 3,5 → 3,2. *Clé publiée hexadécimale* (13 règles, dont deux déjà abaissées de 3,5 à 3,4 pour la forme de leur motif) : le motif admet tout l'alphabet alphanumérique, mais un exemple publié avec la règle de Titus est une clé hexadécimale (après un préfixe littéral pour la clé d'autorité d'origine Cloudflare) ; la forme est alors tirée en hexadécimal, et le seuil plafonné de la même façon. Le seuil d'avant écartait de 0,5 % à 55 % des clés hexadécimales de ces formes (19 % de celles de 32 chiffres au seuil de 3,5), que la v0.9.0 trouvait. Seuils : `baremetrics_api_key` 3,3 → 2,8 ; `cloudflare_ca_key` 4 → 3,9 ; `cloudsight_api_key` 3,5 → 2,6 ; `codecov_access_token` 3,5 → 3,1 ; `datadog_api_key` 3,3 → 3,0 ; `finnhub_api_token` 3 → 2,6 ; `iterable_api_key` 3,5 → 3,0 ; `openweather_map_api_key` 3,5 → 3,0 ; `pagerduty_api_key` 3,5 → 2,8 ; `pdflayer_api_key` 3,5 → 3,0 ; `scraperapi_key` 3,5 → 3,0 ; `snyk_api_key` 3,5 → 3,2 ; `wpengine_api_key` sans seuil → 2,8. Les exemples ne sont pas repris ; la liste des règles est tenue dans `HEX_KEY_RULES` (`generator/test/provider-rules.test.ts`), qui rejoue le tirage. Huit règles descendent ainsi sous le seuil d'office (2,6 à 2,8 : valeurs de 18 à 25 caractères, dont 3 % de celles de 20 chiffres hexadécimaux ont une entropie inférieure à 3,0) ; elles gardent les six octets distincts.
+- *Mesure sur les exemples de Titus.* Sur 385 exemples publiés que nos motifs lisent, 13 (10 règles) ont une valeur dont l'entropie est sous le seuil de leur propre règle : c'est ce qui a fait plafonner les seuils plutôt que les reprendre tels quels.
+- *Corpus.* `vectors/detection/rules-providers.json` : le résultat attendu vient de la lecture de référence en JavaScript, qui applique une seconde écriture du contrôle (`generator/rule-pack/provider-rules.ts`, `plausibleToken`, même ordre de somme et même logarithme que le moteur Go). Seul le cas positif de `github_app_installation_token` change : sa forme d'essai minimale (un caractère par segment) n'avait pas la diversité d'un jeton. `vectors/noise-providers.json` (`generator/corpus/provider-noise.ts`, `TestNoiseProviders`) : pour chaque règle, la forme de sa valeur où chaque suite de caractères est un seul caractère répété ; le motif la reconnaît, l'analyse ne rend aucun constat. 352 cas pour 360 règles : cinq règles n'en ont pas parce que le texte de leur cas est aussi une affectation à un nom sensible, trois (`slack_workflow_webhook`, `slack_trigger_url`, `devcycle_server_sdk_key`) parce que les littéraux de la valeur portent à eux seuls la diversité exigée.
+- *Limites.* Le contrôle porte sur la valeur entière, préfixe compris : un préfixe long et varié suffit à passer le seuil d'office. Il n'écarte pas une valeur d'exemple variée (`abcdef0123456789…`). Les autres règles à proximité dont le motif admet tout l'alphabet alphanumérique gardent le seuil de Titus, qui sépare une clé à casse mêlée d'une empreinte hexadécimale voisine (somme de contrôle d'un fichier de verrouillage, identifiant de commit) : si la clé réelle d'un de ces fournisseurs est hexadécimale sans qu'un exemple publié le montre, un seuil de 3,5 en écarte jusqu'à 19 % (32 chiffres). À revoir fournisseur par fournisseur, sur sa documentation.
+
+### Règles reprises de Betterleaks
+
+Betterleaks a 91 règles « jeton à préfixe » sans règle dédiée complète dans le Pack de la v0.9.0 (mesure du banc, ci-dessous). 83 sont reprises : par 66 règles nouvelles, ajoutées à la fin de `generator/rule-pack/provider-rules.json` (champ `upstream` : `betterleaks.<identifiant>`), et par 8 règles existantes dont le motif est élargi. 8 ne le sont pas.
+
+**Modifications par rapport aux motifs de Betterleaks.**
+
+- *Fin du jeton.* Le délimiteur de fin de Betterleaks (guillemet, espace, `;`, `)`, fin de texte) est remplacé par une limite de mot, ou par « pas un caractère du jeton, ou fin de texte » quand la dernière classe admet autre chose qu'un caractère de mot : un jeton suivi d'une virgule ou d'un point, dans une phrase, est lu.
+- *Casse.* Les drapeaux `(?i)` sont retirés : classes écrites dans les deux casses, préfixe dans la casse du jeton réel.
+- *Un seul groupe capturant*, la valeur ; porte littérale d'au moins trois octets prouvée pour chaque règle (`TestProviderRules`). `buildkite_service_token` : les sept préfixes et les six longueurs de Betterleaks, sans lier chaque longueur à son préfixe (la porte ne se prouve pas autrement).
+- *Nom du fournisseur exigé* (score 80) pour trois règles dont le préfixe est trop court ou absent : `brave_search_api_key` (préfixe `BSA`, exigé après « brave » ou l'en-tête `X-Subscription-Token`), `facebook_access_token` (identifiant d'application, `|`, secret : aucun préfixe), `couchbase_capella_api_key` (comme chez Betterleaks). Les 63 autres sont à préfixe fixe (score 95).
+- *Règles réunies.* `vercel_token` lit les cinq préfixes de Vercel (`vck_`, `vca_`, `vcr_`, `vci_`, `vcp_`), `settlemint_access_token` les trois de SettleMint, `slack_other_token` les jetons `xoxc-`, `xoxe-` et `xoxo-`.
+- *Complétées.* `datastax_astra_token` lit aussi la seconde moitié du jeton (64 chiffres hexadécimaux après « : »), que le motif d'origine laisse hors de la valeur.
+- *Vraisemblance.* Le seuil du filtre d'entropie de la règle d'origine devient le validateur de la règle (`token_entropy_35` pour 45 règles, `token_entropy_40` pour 4, `token_entropy_32` pour une) ; 16 règles gardent le seuil d'office. Quatre règles s'écartent du seuil d'origine : `datastax_astra_token` (4,0 dans Betterleaks, 3,5 ici : 0,13 % des valeurs de la forme la plus courte du motif sont sous 4,0), `square_access_token_eaaa` (2,0, 3,5 ici : le préfixe « EAAA » est court et se lit aussi dans du base64, sans le rapport de jetons de Betterleaks), `slack_other_token` (3,5, seuil d'office ici : 0,6 % des jetons « xoxo- » de la forme la plus courte, des groupes de chiffres puis seize chiffres hexadécimaux, sont sous 3,5) et `huggingface_organization_token` (2,0, seuil d'office ici).
+- *Resserrées contre les identifiants de code.* Betterleaks écarte les valeurs faites de mots par un rapport de jetons (`tokenRatio`) que ce moteur n'a pas. Quatre préfixes sont aussi des débuts d'identifiants (`tss_`, `prf_`, `lip_`, `persona_production_`) : la suite du jeton n'y admet pas « _ », et un nom comme `prf_hmac_sha256_expand_label` n'est pas signalé. `devcycle_server_sdk_key` exige un chiffre dans la suite du préfixe, longue de huit caractères au moins comme dans la règle d'origine (`dvc_server_hostname` et `dvc_server_ipv4` ne sont pas des clés). Ces cinq règles ne lisent donc pas un jeton qui porterait un « _ », ou aucun chiffre : sept positifs de Betterleaks, tous de valeurs d'essai à « _ », en sortent.
+- *Non repris* : les mots-clés de préfiltre (la porte est déduite du motif), le rapport de jetons (`tokenRatio`), les filtres de forme écrits en expressions (`matchesAny`), les appels de validation au fournisseur, les règles composées.
+
+**Règles existantes complétées** (leur champ `upstream` reste celui de Titus) : `tailscale_api_key` (segment de type facultatif, 20 à 70 caractères : lit les six formes de clé Tailscale) ; `hashicorp_vault_service_token` (`-` et `_` admis après `hvs.`) ; `circleci_api_personal_access_token` (22 à 24 caractères quelconques après `CCIPAT_`, score porté de 80 à 95 : le préfixe est fixe) ; `buildkite_api_key` (40 ou 53 caractères) ; `posthog_personal_api_key` (41 à 49 caractères) ; `nuget_api_key` (structure de la clé : alphabet base32 et bits fixes, dans les deux casses ; le motif d'avant admettait 43 caractères quelconques) ; `scalingo_api_token` (jeton fini par un tiret) ; `slack_app_token` (forme `xapp-1-…-…-…` des jetons actuels, en plus de la forme d'avant). `nylas_api_key` garde son motif ; son cas du corpus devient sa seconde forme (30 caractères après le nom), la forme `nyk_` étant lue par `nylas_api_key_v3`.
+
+**Slack.** Le critère « `slack_token` couvre `xapp-`, `xoxo-`, `xoxc-`, `xoxe-` » est tenu par deux règles de fournisseurs, `slack_other_token` et `slack_app_token`, pas par `slack_token` : cette règle vient du catalogue d'origine, son motif est figé par `rules.ts` et la parité. `xoxo-` suivi de mots ou d'une date (« xoxo-my-dear-… ») n'est pas signalé : la règle reprend les formes exactes de Betterleaks, des groupes de chiffres puis une suite hexadécimale ou alphanumérique. Le cookie de session `xoxd-` et les adresses de webhook que `slack_webhook` ne lit pas ne sont pas repris.
+
+**Correspondance** (règle de Betterleaks, règle du Pack) :
+
+| Betterleaks | Pack initial | Périmètre |
+|---|---|---|
+| `adobe-client-secret` | `adobe_client_secret` (nouvelle) | liste des 91 |
+| `aikido-ci-token` | `aikido_ci_token` (nouvelle) | liste des 91 |
+| `atlassian-api-token` | `atlassian_api_token` (nouvelle) | liste des 91 |
+| `aws-amazon-bedrock-api-key-long-lived` | `aws_bedrock_api_key` (nouvelle) | liste des 91 |
+| `bitbucket-data-center-token` | `bitbucket_data_center_token` (nouvelle) | liste des 91 |
+| `brave-search-api-key` | `brave_search_api_key` (nouvelle) | liste des 91 |
+| `buildkite-service-token` | `buildkite_service_token` (nouvelle) | liste des 91 |
+| `buildkite-user-access-token` | `buildkite_api_key` (complétée) | liste des 91 |
+| `cartesia-api-key.1` | `cartesia_api_key` (nouvelle) | liste des 91 |
+| `circleci-personal-token` | `circleci_api_personal_access_token` (complétée) | liste des 91 |
+| `cloudflare-api-key.2` | `cloudflare_user_api_token` (nouvelle) | liste des 91 |
+| `cloudsmith-api-key` | `cloudsmith_api_key` (nouvelle) | liste des 91 |
+| `cockroachlabs-cloud-api-key` | `cockroachdb_cloud_api_key` (nouvelle) | liste des 91 |
+| `configcat-sdk-key-extended` | `configcat_sdk_key` (nouvelle) | liste des 91 |
+| `couchbase-capella-api-key` | `couchbase_capella_api_key` (nouvelle) | liste des 91 |
+| `datastax-astra-application-token` | `datastax_astra_token` (nouvelle) | liste des 91 |
+| `deno-account-token` | `deno_deploy_token` (nouvelle) | liste des 91 |
+| `devcycle-server-sdk-key` | `devcycle_server_sdk_key` (nouvelle) | liste des 91 |
+| `devin-personal-api-key` | `devin_personal_api_key` (nouvelle) | liste des 91 |
+| `devin-service-api-key` | `devin_service_api_key` (nouvelle) | liste des 91 |
+| `devin-service-user-token` | `devin_service_user_token` (nouvelle) | liste des 91 |
+| `docker-swarm-join-token` | `docker_swarm_join_token` (nouvelle) | liste des 91 |
+| `docker-swarm-unlock-key` | `docker_swarm_unlock_key` (nouvelle) | liste des 91 |
+| `dockerhub-organization-access-token` | `docker_hub_organization_access_token` (nouvelle) | liste des 91 |
+| `elastic-cloud-api-key` | `elastic_cloud_api_key` (nouvelle) | liste des 91 |
+| `facebook-access-token` | `facebook_access_token` (nouvelle) | liste des 91 |
+| `facebook-page-access-token` | `facebook_page_access_token` (nouvelle) | liste des 91 |
+| `figma-personal-access-token` | `figma_pat` (nouvelle) | liste des 91 |
+| `gcp-gemini-api` | `google_gemini_api_key` (nouvelle) | liste des 91 |
+| `heroku-api-key-v2` | `heroku_api_key_v2` (nouvelle) | liste des 91 |
+| `huggingface-organization-api-token` | `huggingface_organization_token` (nouvelle) | liste des 91 |
+| `labelbox-api-key` | `labelbox_api_key` (nouvelle) | liste des 91 |
+| `labelbox-recursion-api-key` | `labelbox_recursion_api_key` (nouvelle) | liste des 91 |
+| `lichess-personal-access-token` | `lichess_personal_access_token` (nouvelle) | liste des 91 |
+| `llama-cloud-api-key.1` | `llama_cloud_api_key` (nouvelle) | liste des 91 |
+| `mailersend-api-token` | `mailersend_api_token` (nouvelle) | liste des 91 |
+| `mapbox-secret-token` | `mapbox_secret_token` (nouvelle) | liste des 91 |
+| `mercury-production-api-token` | `mercury_production_api_token` (nouvelle) | liste des 91 |
+| `miro-access-token` | `miro_access_token` (nouvelle) | liste des 91 |
+| `neon-api-key` | `neon_api_key` (nouvelle) | liste des 91 |
+| `nuget-api-key` | `nuget_api_key` (complétée) | liste des 91 |
+| `nylas-api-key.1` | `nylas_api_key_v3` (nouvelle) | liste des 91 |
+| `octopus-deploy-api-key` | `octopus_deploy_api_key` (nouvelle) | liste des 91 |
+| `onesignal-rich-authentication-token` | `onesignal_rich_authentication_token` (nouvelle) | liste des 91 |
+| `openshift-user-token` | `openshift_user_token` (nouvelle) | liste des 91 |
+| `paddle-live-api-key` | `paddle_live_api_key` (nouvelle) | liste des 91 |
+| `persona-production-api-key` | `persona_production_api_key` (nouvelle) | liste des 91 |
+| `pinecone-api-key.2` | `pinecone_api_key_pcsk` (nouvelle) | liste des 91 |
+| `pinterest-access-token` | `pinterest_access_token` (nouvelle) | liste des 91 |
+| `planetscale-oauth-token` | `planetscale_oauth_token` (nouvelle) | liste des 91 |
+| `planetscale-password` | `planetscale_password` (nouvelle) | liste des 91 |
+| `polar-oauth-access-token` | `polar_oauth_access_token` (nouvelle) | liste des 91 |
+| `polar-organization-access-token` | `polar_organization_access_token` (nouvelle) | liste des 91 |
+| `polar-personal-access-token` | `polar_personal_access_token` (nouvelle) | liste des 91 |
+| `posthog-personal-api-key` | `posthog_personal_api_key` (complétée) | liste des 91 |
+| `proof-full-access-api-key` | `proof_api_key` (nouvelle) | liste des 91 |
+| `redirect-pizza-api-token.1` | `redirect_pizza_api_token` (nouvelle) | liste des 91 |
+| `render-api-key` | `render_api_key` (nouvelle) | liste des 91 |
+| `rootly-api-key.1` | `rootly_api_key` (nouvelle) | liste des 91 |
+| `runpod-api-key.1` | `runpod_api_key` (nouvelle) | liste des 91 |
+| `samsara-api-token.1` | `samsara_api_token` (nouvelle) | liste des 91 |
+| `scalingo-api-token` | `scalingo_api_token` (complétée) | liste des 91 |
+| `settlemint-application-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `settlemint-personal-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `settlemint-service-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `slack-app-token` | `slack_app_token` (complétée) | Slack |
+| `slack-config-refresh-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-legacy-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-session-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-user-token` | `slack_other_token` (nouvelle) | Slack |
+| `square-access-token` | `square_access_token_eaaa` (nouvelle) | liste des 91 |
+| `tailscale-api-key.1` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-auth-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-oauth-client-secret` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-scim-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-webhook-secret` | `tailscale_api_key` (complétée) | liste des 91 |
+| `thunderstore-api-token.1` | `thunderstore_api_token` (nouvelle) | liste des 91 |
+| `unkey-root-key.1` | `unkey_root_key` (nouvelle) | liste des 91 |
+| `upcloud-api-token` | `upcloud_api_token` (nouvelle) | liste des 91 |
+| `val-town-api-token.1` | `val_town_api_token` (nouvelle) | liste des 91 |
+| `vault-service-token` | `hashicorp_vault_service_token` (complétée) | liste des 91 |
+| `vercel-ai-gateway-key` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-app-access-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-app-refresh-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-integration-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-personal-access-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `xendit-production-api-key.1` | `xendit_production_api_key` (nouvelle) | liste des 91 |
+
+**Non reprises** (8 des 91) :
+
+| Betterleaks | Raison |
+|---|---|
+| `aws-access-token` | identifiant de clé, pas un secret : la règle aws_access_key_id du catalogue d’origine le signale à 45 (avertissement) |
+| `jwt` | le cas manqué est un JWT sans signature (algorithme « none ») ; la règle jwt du catalogue d’origine est figée |
+| `sendgrid-api-token` | le cas d’essai n’a pas la forme d’une clé SendGrid (22 puis 43 caractères) que lit sendgrid_key |
+| `mapbox-api-token` | jeton public par construction (pk.), écarté comme en v0.8.1 |
+| `posthog-project-api-key` | clé de projet publique par construction (phc_), écartée comme en v0.8.1 |
+| `devcycle-client-sdk-key` | clé publique par construction (SDK client) |
+| `devcycle-mobile-sdk-key` | clé publique par construction (SDK mobile) |
+| `stripe-access-token` | les formes live et test sont lues par stripe_secret_key ; la forme « _prod_ », seule manquante, n’est pas un format documenté de Stripe et son motif signalerait des identifiants (rk_prod_environment) |
+
+`vault-service-token` est reprise pour sa forme `hvs.` seulement. Sa forme historique (`s.` et 24 caractères) ne l'est pas : Betterleaks l'entoure d'un filtre « pas que des lettres » que le Pack ne sait pas exprimer, et sans lui la règle signale des appels de méthode (quatre négatifs de Betterleaks sur quatre, à l'essai).
+
+**Corpus.** `vectors/detection/rules-providers.json` : 720 cas (un positif et un presque positif pour chacune des 360 règles), formes minimales des motifs, valeurs synthétiques tirées de SHA-256. Aucune valeur d'essai de Betterleaks n'entre dans le corpus de parité. Le 15 novembre 2026, `npm run vectors:detection -- --upstream <checkout> --check` rend « Corpus identique : 1771 cas, 16 fichiers ».
+
+**Mesures du 15 novembre 2026** (indicatives). Bruit : sur 560 855 lignes de code Go et JavaScript et de prose française et anglaise (25 Mo, 390 morceaux de 64 Kio, dont 8 que l'analyse ne finit pas, avant comme après), les règles de fournisseurs ne rendent aucun constat, avant comme après, et le nombre total de constats ne change pas (1 647). Sur les 931 cas négatifs de Betterleaks, 576 rendent au moins un constat (595 en v0.9.0) et 476 un constat bloquant (485) ; les règles nouvelles ou complétées s'y déclenchent 19 fois (7 fois en v0.9.0 pour les règles complétées), sur des jetons d'une forme voisine : un jeton Vercel d'un autre préfixe, une clé RunPod lue par la règle de redirect.pizza et l'inverse, des jetons Mapbox au contenu mal formé, que Betterleaks écarte par un filtre.
+
+### Banc de comparaison Betterleaks
+
+`vectors/comparison/betterleaks.json` : les 1 880 cas d'essai littéraux des règles de Betterleaks (867 positifs, 858 négatifs, 82 positifs et 73 négatifs de règles « composant »), 464 règles. `generator/corpus/betterleaks.ts` les lit dans le texte des fichiers `rules/*.go` et `rules/generic/*.go` d'un clone (appels `rulebuilder.Match`, `NoMatch`, `MatchComponent`, `NoMatchComponent` dont chaque argument est un littéral de chaîne, ou plusieurs joints par `+`) ; 17 appels à argument non littéral sont comptés, pas repris. Le clone doit être au commit épinglé : l'empreinte SHA-256 de la liste des fichiers lus et de leurs empreintes est vérifiée (`BETTERLEAKS_RULES_DIGEST`), sans exécuter git. Régénération : `node corpus/betterleaks.ts --clone <clone> [--check]` dans `generator/`.
+
+C'est un banc, pas un corpus de parité : le fichier ne porte aucun résultat attendu de ce moteur, et un négatif de Betterleaks veut dire « cette règle de Betterleaks ne doit pas se déclencher ici », pas « rien à signaler ». `TestComparisonBetterleaks` (`detect/comparison_test.go`) mesure quatre chiffres avec les règles que `LoadRules` exécute, et refuse une baisse des trois premiers ou une hausse du quatrième :
+
+| Chiffre | v0.9.0 | Après la vraisemblance | v0.10.0 |
+|---|---:|---:|---:|
+| Rappel : positifs dont un constat recouvre la valeur attendue | 818 / 867 (94,3 %) | 818 (94,3 %) | 823 (94,9 %) |
+| Positifs trouvés par une règle dédiée (ni affectation, ni entropie) | 397 (45,8 %) | 396 (45,7 %) | 554 (63,9 %) |
+| Positifs recouverts par un constat que le préréglage bloque | 725 (83,6 %) | 725 (83,6 %) | 772 (89,0 %) |
+| Constats de règles `provider_token` sur des négatifs sans diversité | 62 | 19 | 19 |
+
+Le positif perdu par la vraisemblance est la clé age d'essai de Betterleaks, faite de 58 fois la même lettre. Les règles reprises donnaient seules 826 positifs trouvés (95,3 %) et 774 bloqués (89,3 %) ; les valeurs publiques connues (section « Code ordinaire ») en retirent trois, à dessein : un jeton public Mapbox (`mapbox-api-token/1`) et deux clés de projet PostHog (`posthog-project-api-key/1` et `/3`), publics par nature, que seules une affectation ou l'entropie signalaient. Les 41 autres positifs manqués sont hors de ce lot : mots de passe de la règle générique de Betterleaks (9), variables Sidekiq (8), jeton SonarQube (6), identifiant et mot de passe de `curl -u` (4), identifiant Sumo Logic (4), et dix autres dans huit règles. Les 82 cas « composant » (identifiant de client, nom d'utilisateur) ne sont pas mesurés : ce ne sont pas des secrets seuls.
+
+Le fichier du banc porte des jetons d'essai publics : il est exempté de la recherche de secrets par son chemin exact (`.gitleaks.toml`), comme `vectors/noise-providers.json`, dont quatre formes à caractère répété déclenchent une règle de gitleaks ; le générateur, lui, reste analysé.
+
+Vérification : `TestPlausibility`, `TestNoiseProviders`, `TestProviderRules`, `TestComparisonBetterleaks`, `TestParity` (1 862 cas depuis le corpus du code ordinaire), `generator/test/provider-rules.test.ts` (dont la garde de rappel : 99,5 % au moins de 2 000 valeurs tirées de la forme de chaque règle passent son seuil, et de même 2 000 valeurs hexadécimales pour les treize règles à clé publiée hexadécimale).
+
+### Licence de Betterleaks
+
+```text
+MIT License
+
+Copyright (c) 2026 Zachary Rice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+## Code ordinaire (v0.10.0)
+
+Écarts d'analyse ajoutés en v0.10.0 pour que du code ordinaire ne soit plus bloqué (`detect/codenoise.go`,
+`detect/publicvalues.go`). Cette section est celle du lot « les affectations ne bloquent plus le code ordinaire ».
+Aucun de ces écarts n'a d'origine dans Secret Guard ; le précédent suivi est celui de la v0.8.1 (section
+« Expurgation », écarts « sans effet sur le corpus ») : le corpus d'origine ne bouge pas, chaque faux positif relevé
+entre dans `vectors/noise.json`, un essai nommé le prouve.
+
+### Ce qui était lu, et ce qui change
+
+Après un nom sensible, l'origine tient pour une valeur à protéger tout ce qui suit le signe deux-points ou le signe
+égal, fins de ligne comprises, sauf une liste courte d'exceptions. Relevé sur des Postes réels (xSOM Fleet,
+novembre 2026) : un script shell qui passe une variable à une option, une expression de CI, un tableau, un objet, un
+appel, un type, la ligne qui suit une clé de section YAML donnaient chacun un constat de score 70, donc un blocage.
+Les filtres de `detect/codenoise.go` (`assignmentNoise`) jugent la valeur lue, après les filtres d'origine et avant la
+création du constat.
+
+**Palier 1, quel que soit le langage : la valeur n'est pas un littéral.**
+
+- *Référence* (`referenceAt`, `interpolation`) : variable ou paramètre de shell (`$NOM`, `$1`, `$@`), expansion
+  (`${NOM}`, `${NOM:?message}`, `${NOM:-$AUTRE}`), substitution de commande (`$(…)`, accents graves dans une ligne de
+  shell), expression de CI (`${{ … }}`), gabarit (`{{ … }}`, `#{…}`, `%{…}`), champ de format (`%s`), expression d'un
+  gabarit de code (`${f(x)}`, champ `{nom}` d'une chaîne Python `f"…"` ou C# `$"…"`), et chaîne entre guillemets faite
+  de références. Suivie d'une autre option de la commande, la référence reste une référence, et la suite de la ligne
+  est relue pour elle-même. Partout, dotenv compris.
+- *Structure de code* (`structureNoise`, `walkStructure`) : tableau et objet partout hors affectation nue
+  d'environnement ; appel, expression entre parenthèses, fonction, type générique, type d'un paramètre, accès indexé à
+  une propriété là où l'origine admet déjà une référence de code (`referenceEligible`, dernière condition de
+  `safeContextualValue`). La structure est **parcourue**, pas écartée en bloc. Un littéral crédible sur sa première
+  ligne garde le constat d'origine, à son étendue d'origine : une chaîne, le seul mot nu de la structure, ou, hors
+  d'un code reconnu (au sens du palier 2), tout mot nu de forme stricte d'une liste ou d'un objet, jusqu'à sa
+  fermeture, qui n'est ni le nom d'un champ ni un chemin d'identifiants (`i18n.French`) : en YAML, `[a, b]` porte des
+  littéraux ; dans du code, des identifiants. Chaque littéral crédible des
+  lignes suivantes, jusqu'à la
+  fermeture de la structure, a son propre constat, sur son étendue exacte. La recherche d'affectations reprend juste
+  après l'ouverture, et un champ au nom sensible est lu pour lui-même. Un littéral est crédible (`credibleLiteral`)
+  par une forte entropie, ou par 8 unités au moins sans espace avec un chiffre et trois classes de caractères ; pour un
+  mot de passe porté par un tableau ou un objet, 8 unités sans espace suffisent (le corpus d'origine garde l'objet JSON
+  qui porte un mot de passe fait de mots) ; pour un mot de passe passé en argument d'un appel ou écrit dans un gabarit,
+  8 unités sans espace qui mêlent lettres et chiffres (le défaut d'une lecture d'environnement) ; jamais une adresse
+  sans identifiants, un nom de constante ni une date.
+- *Valeur sans guillemets lue à la ligne suivante* : écartée si aucun mot de la ligne n'a la forme décrite au palier 2 ;
+  la ligne suivante est relue pour elle-même. Sous un nom de mot de passe, seule une ligne qui est elle-même un champ
+  (un nom suivi du signe deux-points) est écartée : un scalaire YAML peut s'écrire à la ligne suivante.
+
+**Palier 2, dans du code seulement** (langage de code déclaré, ou, sans langage, ligne qui porte un mot-clé de
+déclaration parmi `const`, `let`, `var`, `return`, `readonly`, `public`, `private`, `protected`, `type`, `interface`,
+`enum`). Pour une clé d'API, un jeton ou un secret générique, une valeur dont aucun mot n'a la forme attendue
+(`secretShaped`) n'est pas un constat. Cette forme demande 8 unités au moins sans espace, et l'une de ces propriétés :
+trois classes de caractères ; des lettres et deux chiffres sur 10 unités ; une forte entropie ; une suite de 12 lettres
+et chiffres qui n'est pas un mot de nom (`nameTokenLetters`) ; plus de 15 lettres d'une seule casse.
+
+**Option d'utilisateur** (`basicAuthNoise`, dans `scanBasicAuthArguments`). Deux nombres (identifiants d'utilisateur et
+de groupe de `docker run`) ou un format de date (signe plus et pourcentage en tête, commande `date` en temps universel)
+ne sont pas un couple utilisateur et mot de passe. Le motif `cli_basic_auth` du Pack ne change pas.
+
+**Valeur chiffrée** (`isEncryptedEnvelope`, `isEncryptedBlock`) et **valeur publique connue** (`isPublicValue`,
+`detect/publicvalues.go`) : voir « Reprise de Betterleaks » ci-dessous. La valeur publique est aussi écartée de
+l'entropie, par un seul appel ajouté à la fin de la condition de `scanEntropy`.
+
+**Garde-fous**, chacun avec son essai (`TestAssignmentNoiseGuards`, `TestCodeValueGuards`,
+`TestEncryptedEnvelopeGuards`, `TestBasicAuthKeepsCredentials`) :
+
+- aucun filtre de structure ni palier 2 dans un fichier dotenv ou sur une affectation nue d'environnement
+  (`isBareEnvironmentAssignment`) ;
+- le défaut littéral d'une expansion de shell reste signalé ;
+- le mot de passe, la clé privée, l'identifiant de nuage et l'URL de base ne sont jamais jugés sur leur forme ;
+- sous un nom de mot de passe, une chaîne à références ne tombe que si ce qui reste hors références ne porte ni lettre
+  ni chiffre, et une variable collée à une lettre (un dollar au milieu d'un mot) n'est pas une référence ;
+- une référence prolongée par une concaténation ou un texte collé garde son constat ;
+- une valeur qui commence par un Substitut n'est pas un tableau (vecteur `residu/bloc-yaml` de
+  `vectors/expurgate.json` : sans cette exclusion, `TestExpurgateVectors` échoue) ;
+- une structure fermée sur la ligne et suivie d'un texte collé n'est pas une structure ; une ouverture jamais fermée
+  suivie d'un seul mot (`[Xy7…`), un mot-clé de fonction collé à un autre signe (`async-…`), un chevron jamais fermé ou
+  suivi d'un texte collé (`Abc<def`, `Abc<def>ghi`) non plus ;
+- au palier 2, une chaîne à forme de secret dans la suite de l'expression que couvre le constat d'origine garde ce
+  constat (`"essai" if debug else "…"`) ;
+- une marque de chiffrement sans texte chiffré derrière elle garde son constat : moins de 64 caractères après
+  `{cipher}`, moins de 40 après `vault:vN:` (les plus courts textes que Spring et Vault écrivent), étiquette `!vault`
+  suivie d'un autre texte qu'un indicateur de bloc, en-tête `$ANSIBLE_VAULT;` sans numéro de version ;
+- aucun marqueur de contournement n'est lu dans le texte.
+
+**Travail borné.** Chaque motif d'affectation dispose, par vue, d'un budget d'octets à relire (`spend`, huit fois la
+longueur de la vue plus 64 Kio) et une structure de plus de 4 096 octets n'est pas parcourue. Budget épuisé ou borne
+dépassée, le filtre ne s'applique plus et le constat d'origine est gardé ; ce n'est jamais une analyse incomplète
+(`TestCodeNoiseWorstCases`, `FuzzCodeNoise`). Le budget est rendu au début de chaque motif : le résultat est le même en
+analyse séquentielle et en parallèle (`TestParityWorkers`).
+
+### Corpus
+
+- **Corpus d'origine inchangé** : les 1 771 cas des 16 fichiers antérieurs sont identiques octet pour octet
+  (`npm run vectors:detection -- --upstream <checkout> --check`), et le moteur les passe tous (`TestParity`). Les
+  vecteurs du masquage et de l'expurgation ne sont pas régénérés (`vectors:redact --check` : identiques ;
+  `TestExpurgateVectors`).
+- **`vectors/noise.json`** : 157 cas « vecu/ » ajoutés (212 au total), chacun sans langage puis avec le langage de son
+  fichier. Sur le code de v0.9.0, 104 d'entre eux donnent un constat ; `TestNoiseCorpus` passe à la fin du lot.
+- **`vectors/detection/rules-code-noise.json`** : 91 cas, par voisins, la forme écartée (46 cas sans constat, que le
+  moteur d'origine signale tous) et la même forme qui porte un littéral (45 cas dont un constat reste). Le résultat
+  attendu vient d'une seconde écriture des filtres en TypeScript (`generator/corpus/code-noise.ts`), qui part des
+  constats du moteur d'origine, juge chacun, et fait relire par le moteur d'origine la suite d'une étendue écartée ;
+  une forme qu'elle ne lit pas arrête le générateur. Cette seconde écriture a relevé un défaut de la première (le
+  palier 2 retirait une structure qui porte un littéral), corrigé avant la fin du lot. Comme les autres lectures
+  absentes du moteur d'origine, ces cas restent hors des vecteurs du masquage. Total du corpus : 1 730 cas, 17 fichiers.
+- **Relecture indépendante du lot** : quatorze cas ajoutés (liste et objet YAML en ligne à mots nus, identifiants et
+  chemin d'identifiants, mot de la suite de la ligne, ouverture jamais fermée, défaut d'un mot de passe en argument
+  d'un appel, mot-clé de fonction collé, chevron jamais fermé, suite de l'expression au palier 2, marques de
+  chiffrement suivies d'un texte court), et les deux cas de texte chiffré portés à la longueur des vrais. Le cas du chiffrement de transit, à longueur réelle, a montré ce que les textes courts
+  cachaient : le constat d'affectation tombe, l'avertissement d'entropie reste (cas
+  `chiffre/transit-de-vault-avertissement-d-entropie`).
+
+### Mesures du 15 novembre 2026
+
+Indicatives, sur une seule machine (Apple M2 Pro). Constats d'affectation (`contextual_*`) sur les fichiers suivis par
+git de cinq dépôts (code et documentation, corpus et vecteurs écartés), moteur v0.9.0 puis moteur de ce lot, sans
+langage (ce que fait xSOM Fleet aujourd'hui) puis avec le langage tiré de l'extension de chaque fichier :
+
+| Dépôt | Fichiers | v0.9.0 sans langage | Ce lot sans langage | v0.9.0 avec langage | Ce lot avec langage |
+|---|---:|---:|---:|---:|---:|
+| xSOM Fleet | 4 648 | 896 | 354 | 844 | 186 |
+| Promptfoo (commit `5fac53e`, échantillon) | 2 498 | 2 933 | 2 456 | 2 788 | 425 |
+| LiteLLM (commit `09ce4f50`, échantillon) | 2 496 | 6 022 | 5 110 | 5 793 | 766 |
+| ggshield (commit `f3377d9`) | 568 | 471 | 286 | 459 | 119 |
+| Gitleaks (commit `5f6ec56`) | 225 | 171 | 145 | 173 | 76 |
+
+Sur xSOM Fleet, `cli_basic_auth` passe de 7 constats à 1. Contrôle de ce qui a été retiré : sur xSOM Fleet
+(550 constats retirés sans langage, 665 avec), Promptfoo (2 367) et LiteLLM (5 029), aucune étendue retirée ne porte un
+mot de 12 caractères ou plus qui mêle lettres et au moins deux chiffres, hors quatre lignes de xSOM Fleet où ce mot est
+le nom d'un champ ; échantillons lus à la main (valeurs d'essai en mots, noms de variables, types, libellés). Cas vécus
+(63 lignes de code ordinaire) : 41 signalés avant, 8 après sans langage ; 39 avant, 6 après avec langage. Seuil du
+palier 2 et vitesse : `docs/bench.md`, « v0.10.0 : code ordinaire ».
+
+Relecture indépendante du lot, le même jour : les garde-fous ajoutés (voir « Corpus ») ne changent aucun constat sur
+ces dépôts. Moteur d'avant la relecture puis moteur relu, mêmes fichiers : xSOM Fleet, 355 constats d'affectation sans
+langage et 186 avec, dans les deux cas (le dépôt a reçu des fichiers depuis la première mesure) ; Promptfoo, 2 456 et
+425 ; LiteLLM avec langage, 766. Aucun constat ajouté ni retiré.
+
+### Vérification
+
+`TestNoiseCorpus` (en échec sur le code de v0.9.0 avec les cas ajoutés) ; `TestAssignmentValueIsNotALiteral`,
+`TestStructureIsWalked`, `TestAssignmentNoiseGuards`, `TestReferenceAt`, `TestSecretShapes` ;
+`TestCodeValueWithoutSecretShape`, `TestCodeValueGuards`, `TestSecretShapeThreshold`,
+`TestSecretShapeCoversProviderTokens` ; `TestBasicAuthIgnoresDatesAndNumericIDs`, `TestBasicAuthKeepsCredentials` ;
+`TestEncryptedEnvelopeIsNotASecret`, `TestEncryptedEnvelopeGuards`, `TestPGPPrivateKeyIsNotAnEnvelope` ;
+`TestPublicForms`, `TestPublicValueIsNotAnAssignment`, `TestPublicValueIsNotAnEntropyFinding` ;
+`TestCodeNoiseWorstCases`, `FuzzCodeNoise`, `TestStructureHelpers` ; `TestParity` (1 730 cas, 0 écart), `TestParityWorkers`, `TestRedactParity`,
+`TestDecisionParity`, et la suite du module `expurgation` ; côté générateur, `generator/test/code-noise.test.ts`.
+
+### Ce qui reste signalé, et ce qui est perdu
+
+- Reste signalé : une valeur courte ou en mots hors d'un code reconnu (sans langage ni mot-clé de déclaration ; YAML,
+  JSON, shell, dotenv) ; un mot de passe d'essai banal, où qu'il soit ; le défaut littéral d'une expansion ; une
+  annotation de type Python à crochets sous un mot de passe (cas `contextual/optional-type-annotation` du corpus
+  d'origine) ; la prose d'un commentaire ou d'un document sous un nom sensible ; une URL de base dont le mot de passe
+  est une référence (règle des URL à identifiants) ; l'avertissement d'entropie d'un texte chiffré de longueur réelle
+  (chiffrement de transit de Vault, corps d'un bloc Ansible Vault) : l'entropie ne lit pas les enveloppes.
+- Perdu, dans du code seulement (palier 2) : le constat d'affectation d'une clé, d'un jeton ou d'un secret générique
+  dont la valeur est faite de mots (y compris longs, séparés par des tirets), d'une suite aléatoire de moins de
+  12 caractères sans chiffre, ou de moins de 16 lettres d'une seule casse. Une règle à format fixe ou l'entropie
+  peuvent encore la trouver.
+- Perdu, partout hors dotenv et affectation nue d'environnement : sous un nom de mot de passe, le constat d'un littéral
+  de moins de 8 caractères porté par un tableau ou un objet (seuil qui écarte les schémas à type de chaîne), et celui
+  d'un mot de passe fait de mots, sans chiffre, passé en argument d'un appel ou écrit dans un gabarit. Sous les autres
+  noms, le constat d'un littéral sans chiffre porté par une structure. Dans une liste en ligne de plusieurs éléments,
+  le constat d'un mot nu sans forme stricte (`[motdepasse1, autre]`) ; dans du code, celui de tout mot nu.
+- Perdu, partout : sous un nom de mot de passe, le constat d'une chaîne faite d'un dollar, d'un nom et de signes
+  (`"$Nom2024!"`) : lue comme une variable suivie de ponctuation, y compris hors d'un script shell (l'origine écartait
+  déjà la variable seule, `"$Nom2024"`) ; le constat d'un mot enveloppé dans un gabarit (`"#{mot}"`, `"%{mot}"`).
+- Perdu, partout : le constat d'une valeur qui a exactement la forme d'une valeur publique de la liste sous un nom de
+  clé d'API ou de jeton (pour les formes sans préfixe propre, seulement avec le mot-clé du fournisseur sur la ligne,
+  avant la valeur) ; le constat d'une valeur à marque de chiffrement suivie de texte chiffré.
+
+### Reprise de Betterleaks (licence MIT)
+
+Dépôt `https://github.com/betterleaks/betterleaks`, commit `b4b1c4455987636400ce693bd9d8a8e2cf375ed9` du
+13 novembre 2026, licence MIT, « Copyright (c) 2026 Zachary Rice ».
+
+| Élément d'origine | Dans ce dépôt | Ce qui est repris | Ce qui change |
+|---|---|---|---|
+| `rules/generic/filter.go`, `testAndPublicAPIFilters` (65 formes de clés publiques et de clés d'essai : 22 par leur motif seul, 43 avec des mots-clés) | `detect/publicvalues.go`, `publicForms` | les 65 motifs et leurs mots-clés, tels quels (`\@` et `\/` écrits sans barre oblique inverse ; les deux valeurs fixes assemblées par morceaux) | motifs ancrés aux deux bouts et compilés par RE2 ; un mot-clé ne compte que sur la ligne et **avant** la valeur (à l'origine : à proximité) ; les affectations n'appliquent la liste qu'aux noms de clé d'API et de jeton, jamais à un mot de passe ni à un nom qui porte « secret » ; l'entropie l'applique par un seul appel (`scanEntropy`) ; les quatre formes que l’origine garde en commentaire (clés secrètes et jeton d’accès d’essai) ne sont pas reprises |
+| `rules/generic/password.go`, `isEncryptedValue` (enveloppes chiffrées) | `detect/codenoise.go`, `isEncryptedEnvelope`, `isEncryptedBlock` | l'idée, et six formes : sops (`ENC[…]`), Spring Cloud Config (`{cipher}…`), Ansible Vault (`$ANSIBLE_VAULT;`, étiquette `!vault`), chiffrement de transit de Vault (`vault:vN:…`), age, PGP (en-têtes d'armure) | aucun motif copié : lecture écrite à la main, resserrée (la marque doit être suivie de texte chiffré : `,data:` et crochet fermant pour sops, 64 caractères de texte chiffré après `{cipher}`, 40 après `vault:vN:`, numéro de version après `$ANSIBLE_VAULT;`, indicateur de bloc ou fin de ligne après `!vault`) ; les autres formes de l'origine (OpenSSL salé, Fernet, JWE, PASETO, DPAPI, `ENCRYPTED PRIVATE KEY`) ne sont pas reprises |
+
+Le code qui applique ces listes est écrit pour ce module ; aucun essai de Betterleaks n'est repris. Rien n'est repris
+de TruffleHog (AGPL-3.0). L'idée d'écarter une référence (`$1`, `${NOM}`, `{{ … }}`, `${{ … }}`) vient aussi de la
+liste des valeurs ignorées de Gitleaks (`config/gitleaks.toml`, commit `5f6ec56cfa6f8c67648d863582c7ae2f206d5c1c`,
+licence MIT, « Copyright (c) 2019 Zachary Rice ») : seule l'idée est reprise, sans motif ni code.
+
+Le texte de la licence MIT de Betterleaks n'est reproduit qu'une fois, plus haut : « Licence de Betterleaks ».
+
+## Décodage à plusieurs couches et vue UTF-16 (v0.10.0)
+
+Deux écarts d'analyse ajoutés en v0.10.0, sans origine dans Secret Guard, qui lit une couche de chaque encodage et
+reçoit un texte déjà décodé. Lot L19 de l'Epic 27 de xSOM Fleet (stories 27.45 et 27.46).
+
+### Décodage à plusieurs couches (`detect/scan.go`, `detect/views.go`, `detect/encoding.go`)
+
+- **Base64** : les candidats base64 d'un texte décodé sont décodés à leur tour (`scanState.decodedText`, puis
+  `base64Layer`), fenêtres de lignes jointes comprises, jusqu'à trois couches (`maxDecodeLayers`). Le constat garde
+  l'étendue du candidat de la couche extérieure dans la source et l'encodage `base64`.
+- **Pourcentage** : une vue par couche restante, jusqu'à trois (`deeperPercentViews` : « %2541 », « %41 », « A »),
+  ajoutées après les vues de l'origine, dont l'ordre ne change pas. Encodage `percent`.
+- **Base64 d'UTF-16** : un texte décodé qui n'est pas de l'UTF-8, ou qui porte un octet nul, est lu en UTF-16 quand
+  il en a la forme (`utf16Text`) : charge d'une commande PowerShell encodée. L'origine refuse ce texte.
+- **Score** : 5 points de moins par couche (`layerPenalty`), la première comprise comme à l'origine.
+- **Budgets** : ceux de l'origine, inchangés et partagés par toutes les couches (128 décodages, 262 144 octets
+  décodés, 128 fenêtres, 16 Mio de vues). Budget épuisé : analyse incomplète, donc blocage, jamais un candidat
+  ignoré. La profondeur, elle, n'est pas un budget : une quatrième couche n'est pas décodée et l'analyse reste
+  complète (l'avertissement d'entropie de la couche extérieure demeure).
+- **Aucune valeur nouvelle du champ `encoding`** : il appartient au contrat des Événements de xSOM Fleet.
+
+**Corpus de parité** : deux cas tirés des tests d'origine éprouvaient l'arrêt à une couche, et changent :
+`upstream/scan.test.ts > … > detects exactly one Base64 layer #2` (avertissement d'entropie à 35, désormais
+`contextual_password` en `base64` à 60) et `upstream/security.test.ts > … > does not recursively decode nested
+Base64 #1` (désormais `github_token` en `base64` à 85). Leur entrée reste celle de l'origine ; leur résultat attendu
+vient de la seconde écriture `generator/corpus/layered.ts` (l'entrée est décodée couche après couche dans le
+générateur, et le moteur d'origine juge chaque texte décodé), jamais d'une édition à la main. Leur texte masqué
+(`vectors/redact.json`) est celui de `redact` d'origine sur ces constats. Les 1 860 autres cas et les 617 autres
+vecteurs du masquage sont inchangés, octet pour octet (`--check` de l'export d'origine avant la modification :
+« Corpus identique : 1862 cas, 17 fichiers », « Vecteurs identiques : 619 cas »).
+
+**Cas de Betterleaks** : les 18 cas de `TestDecode` (`internal/codec/decoder_test.go`, commit
+`b4b1c4455987636400ce693bd9d8a8e2cf375ed9`, licence MIT, « Copyright (c) 2026 Zachary Rice », texte de la licence :
+« Licence de Betterleaks ») sont repris dans `TestBetterleaksDecoderCases` (`detect/encoding_test.go`) : noms et
+textes attendus repris, entrées encodées refaites à l'exécution, noms sensibles assemblés par morceaux. 14 cas sont
+lus (base64 standard et URL, pourcentage, texte sans rien à décoder) ; 4 sont marqués reportés et sautés
+(hexadécimal, « U+XXXX », « \\uXXXX » à barre doublée, mélange avec de l'hexadécimal) : la vue hexadécimale et les
+échappements étendus ne sont pas dans ce lot. Aucun code de Betterleaks n'est repris ; rien n'est repris de
+TruffleHog (AGPL-3.0), dont seule l'idée d'une lecture UTF-16 est retenue.
+
+### Vue UTF-16 (`detect/utf16.go`)
+
+Un contenu UTF-16 est analysé une seconde fois dans sa vue UTF-16 (`utf16View`, puis toutes les vues et tous les
+décodages ordinaires sur elle), dans les mêmes budgets. Chaque caractère de la vue garde l'étendue de ses deux octets
+(quatre pour une paire de substitution) : un constat est ramené aux octets de la source, et la valeur dont est tirée
+l'Empreinte locale est le texte en UTF-8, la même que pour le même secret dans un fichier UTF-8. Caractères accentués
+gardés ; substitut isolé et octet final sans pendant écrits U+FFFD.
+
+- **Déclenchement** : marque d'ordre (FF FE, FE FF) ; sans marque, une parité qui porte un octet nul dans une paire
+  sur huit au moins et quatre fois plus que l'autre. Un texte sans octet nul ni marque ne coûte qu'une recherche
+  d'octet.
+- **Encodage du constat** : `normalized` (aucune valeur nouvelle). Choix par défaut, à confirmer par Julian.
+- **Limites connues** : UTF-16 sans marque fait surtout de caractères hors Latin-1 (pas assez d'octets nuls) ;
+  passage UTF-16 au milieu d'un fichier d'un autre encodage ; UTF-32. Les règles du client (`custom`) et les paquets
+  `hidden`, `mentions` et `injection` ne lisent pas cette vue.
+- **Expurgation** : inchangée. Une entrée UTF-16 sans marque et en ASCII est de l'UTF-8 valide : le Substitut
+  remplace exactement les octets du jeton (`vectors/expurgate.json`, `utf16/petit-boutien-sans-marque`), écrit en
+  UTF-8 au milieu du texte UTF-16. Avec une marque d'ordre ou un caractère accentué, l'entrée n'est pas de l'UTF-8 :
+  l'expurgation la refuse comme avant (`ErrEncoding`, cas `utf16/petit-boutien-marque-refuse`), le constat, lui,
+  est rendu par l'analyse.
+
+### Vérification, et ce qui reste à lancer
+
+Lancé le 15 novembre 2026 : `TestLayeredDecoding`, `TestBetterleaksDecoderCases`, `TestUTF16View` (nouveaux),
+les autres essais de `detect/scan_test.go` et `detect/encoding_test.go`, `TestParity`, `TestRedactParity`,
+`TestExpurgateVectors` (44 cas) ; `npm run typecheck` du générateur. `TestParityWorkers` a été lancé avant la
+régénération du corpus (mêmes deux cas en écart), pas après.
+
+À lancer (non lancé dans ce lot, consigne d'économie) :
+
+- `go test -run '^$' -bench 'BenchmarkScan64KiB' -count=3 ./detect`, avant (commit `12394e7`) et après : le hook de
+  xSOM Fleet a un budget de durée, et chaque texte décodé cherche désormais des candidats base64 ;
+- `go run ./tools/bruit` : les couches débitent le même budget de 128 décodages, un fichier riche en base64 peut
+  donc passer d'une analyse complète à une analyse incomplète ;
+- `go test -count=1 ./...` dans les deux modules, `golangci-lint run`, `go run ./tools/depguardcheck`,
+  `go run ./tools/spdxcheck`, `node --test wasm/parity.test.mjs`, les essais Vitest du générateur.
+
+### Questions pour Julian
+
+1. La vue UTF-16 rend ses constats avec l'encodage `normalized`. Est-ce la bonne valeur du contrat, ou faut-il une
+   valeur `utf16` dans le contrat des Événements ?
+2. L'expurgation refuse une entrée UTF-16 à marque d'ordre ou à caractères accentués (hors UTF-8), et écrit sinon un
+   Substitut en UTF-8 dans un texte UTF-16. Faut-il qu'elle écrive le Substitut en UTF-16 et accepte ces entrées
+   (`expurgation/expurgate.go`, positions UTF-16 des Substitutions à redéfinir) ?
+3. Une quatrième couche n'est pas décodée et ne bloque pas. Faut-il qu'un candidat plausible à la profondeur
+   maximale rende l'analyse incomplète (blocages en plus sur tout texte décodé qui porte un mot de 20 caractères) ?
+4. Les cas nouveaux (double et triple base64, double pourcentage, base64 d'UTF-16, fichiers UTF-16) sont éprouvés
+   par des essais Go, pas encore par des cas du corpus `vectors/detection/views.json` : la seconde écriture du
+   générateur ne juge aujourd'hui que le base64 entier. À étendre avec la matrice d'encodages (lot L27) ?
+
+## Identifiants européens et français, règle composée AWS (v0.10.0)
+
+Quinze règles s'ajoutent à la fin du Pack initial, après les règles de données à contexte de la v0.9.0
+(`generator/rule-pack/context-data.ts`) : dix identifiants européens à somme de contrôle portés de Presidio, quatre
+identifiants français que Presidio n'a pas, et une règle composée pour AWS. La table des longueurs d'IBAN passe de 52
+à 76 pays. Aucune de ces règles n'existe dans le moteur d'origine.
+
+### Reprise de Presidio (licence MIT)
+
+Dépôt `https://github.com/data-privacy-stack/presidio` (le projet a quitté `microsoft/presidio`), commit
+`fd78e974fbf9e15dad1f90de4fc125db39ef4200` du 14 novembre 2026, licence MIT, « Copyright (c) Presidio Contributors. ».
+Dossier `presidio-analyzer/presidio_analyzer/predefined_recognizers` : `country_specific/` pour les identifiants,
+`generic/iban_patterns.py` pour la liste des pays.
+
+| Fichier d'origine | Règle et validateur ici | Ce qui est repris |
+|---|---|---|
+| `country_specific/spain/es_nif_recognizer.py` | `es_nif`, `es_nif_mod23` | forme (7 ou 8 chiffres, une lettre), table des 23 lettres, mots « DNI », « NIF », « documento nacional de identidad » |
+| `country_specific/spain/es_nie_recognizer.py` | `es_nie`, `es_nie_mod23` | forme (X, Y ou Z, 7 chiffres, une lettre), même table, mot « NIE » |
+| `country_specific/italy/it_fiscal_code_recognizer.py` | `it_fiscal_code`, `it_fiscal_code_check` | valeurs des caractères de rang impair et pair, lettre de contrôle modulo 26, mot « codice fiscale » |
+| `country_specific/italy/it_vat_code.py` | `it_vat`, `it_vat_luhn` | 11 chiffres, contrôle (qui est celui de Luhn), mots « partita iva », « piva » |
+| `country_specific/germany/de_tax_id_recognizer.py` | `de_tax_id`, `de_tax_id_iso7064` | 11 chiffres sans zéro initial, aucun chiffre plus de trois fois parmi les dix premiers, ISO 7064 MOD 11,10, mots « Steuer-ID », « IdNr », « Steueridentifikationsnummer » |
+| `country_specific/germany/de_vat_id_recognizer.py` | `de_vat`, `de_vat_iso7064` | « DE » et 9 chiffres, ISO 7064 MOD 11,10 sur les huit premiers, mots « USt-IdNr », « Umsatzsteuer-ID » |
+| `country_specific/poland/pl_pesel_recognizer.py` | `pl_pesel`, `pl_pesel_check` | 11 chiffres, poids 1-3-7-9, mot « PESEL » |
+| `country_specific/uk/uk_nhs_recognizer.py` | `uk_nhs`, `uk_nhs_mod11` | 10 chiffres (3-3-4), somme pondérée de 10 à 1 multiple de 11, mots « NHS », « National Health Service » |
+| `country_specific/sweden/se_personnummer_recognizer.py` | `se_personnummer`, `se_personnummer_luhn` | 10 ou 12 chiffres, jour augmenté de 60 (samordningsnummer), Luhn des dix derniers, mots « personnummer », « samordningsnummer », « personal identity number » |
+| `country_specific/finland/fi_personal_identity_code_recognizer.py` | `fi_personal_identity_code`, `fi_hetu_mod31` | forme, siècle selon le séparateur, table des 31 caractères, mots « hetu », « henkilötunnus », « personbeteckning », « personal identity code » |
+| `generic/iban_patterns.py` | `iban`, `ibanLengths` | la liste des 76 pays |
+
+Ce qui change, pour toutes ces règles :
+
+- **Motifs réécrits en RE2.** Aucun motif de Presidio n'est copié : ceux qui portent une anticipation ne se
+  compilent pas en RE2, et tous sont réécrits avec leur mot-clé. Le motif du code fiscal italien est ici plus simple
+  que celui de Presidio (qui contrôle aussi le jour selon le mois) : le caractère de contrôle décide.
+- **Contexte obligatoire.** Chez Presidio, un mot de contexte ajoute 0,35 au score d'une valeur qui reste un constat
+  sans lui. Ici, sans mot-clé juste avant la valeur (même ligne, liaison bornée « : », « = », « est », « is »), il n'y
+  a pas de constat. Les mots-clés sont donnés en français, en anglais et dans la langue du pays.
+- **Somme de contrôle obligatoire**, par un validateur nommé du moteur (`detect/personaldata.go`). Pour la TVA
+  allemande, Presidio garde par défaut une valeur dont le contrôle échoue ; ici elle est écartée.
+- **Contrôles ajoutés** : une valeur faite d'un seul chiffre répété est écartée ; le mois et le jour d'un PESEL
+  doivent être possibles ; la date d'un identifiant finlandais doit exister (années bissextiles comprises).
+- **IBAN.** Presidio contrôle la forme du compte de chaque pays ; ce module ne contrôle que la longueur et le modulo
+  97. Les longueurs viennent du registre des IBAN de l'ISO 13616, tenu par SWIFT, relu le 15 novembre 2026 sur la
+  table de Wikipédia qui le reproduit (`https://en.wikipedia.org/wiki/International_Bank_Account_Number`), et non
+  des motifs de Presidio, dont quatre sont trop courts : Portugal (25 caractères, 21 chez Presidio), Maurice (30,
+  28), Palestine (29, 25), Qatar (29, 25). Le registre lui-même n'a pas été relu dans cette passe.
+
+Corpus : `vectors/detection/rules-context-data.json`. Le résultat attendu de chaque cas vient d'une seconde écriture
+des contrôles en TypeScript (`generator/rule-pack/personal-data.ts` : BigInt, expressions, tables écrites à part),
+qui sert aussi à calculer la clé de chaque valeur d'essai ; `generator/test/personal-data.test.ts` éprouve cette
+seconde écriture sur l'exemple public de chaque format. Aucun essai ni jeu de données de Presidio n'est repris.
+`vectors/noise.json` reçoit quatre cas « contexte/ » (216 au total) : deux adresses postales ordinaires, que seule la
+règle « à activer » signale, une plaque en minuscules et des numéros à forme d'identifiant sans leur mot-clé.
+
+Licence de Presidio :
+
+```text
+The MIT License (MIT)
+
+Copyright (c) Presidio Contributors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Identifiants français : formules et sources
+
+Ces règles sont écrites pour ce module. Presidio n'a aucune reconnaissance française.
+
+| Règle | Contrôle | Source |
+|---|---|---|
+| `fr_vat` (`fr_vat_key`) | « FR », clé de deux chiffres, SIREN ; clé = (12 + 3 × (SIREN modulo 97)) modulo 97, et SIREN valide (Luhn) | **Source officielle non trouvée dans cette passe.** La structure (code pays, clé, SIREN) est celle que décrit l'administration fiscale ; la formule de la clé est donnée à l'identique par les guides consultés le 15 novembre 2026 (`https://www.eurofiscalis.com/calculateur-numero-tva-intracommunautaire/`, `https://www.indy.fr/guide/fiscalite/taxes/tva/numero-intracommunautaire/`) et vérifiée sur l'exemple courant FR 40 303 265 045. À remplacer par la référence d'un texte officiel. |
+| `fr_rib` (`fr_rib_key`) | banque (5 chiffres), guichet (5), compte (11 chiffres ou lettres), clé = 97 − ((89 × banque + 15 × guichet + 3 × compte) modulo 97) ; une lettre du compte vaut un chiffre (A et J : 1 ; B, K et S : 2 ; jusqu'à I, R et Z : 9) | **Source officielle non trouvée dans cette passe** (la norme est celle du CFONB). Formule donnée par un document pédagogique de l'IREM de Limoges (`https://www.irem.unilim.fr/OLD/fileadmin/documents/ERR/arithmetiquueaulycee/codes_au_quotidien.pdf`) ; la seconde écriture la calcule autrement (les 21 chiffres suivis de « 00 », modulo 97) et les deux s'accordent sur le RIB de l'IBAN d'exemple de la documentation bancaire (30006 00001 12345678901, clé 89). À remplacer par la référence du CFONB. |
+| `fr_license_plate` | aucun : le format de 2009 (deux lettres, trois chiffres, deux lettres, sans I, O ni U) n'a pas de clé ; le mot-clé de contexte est obligatoire | Format du système d'immatriculation des véhicules (arrêté du 9 février 2009 relatif aux modalités d'immatriculation des véhicules) : référence citée de mémoire, non relue dans cette passe. |
+| `fr_postal_address` | aucun : numéro, type de voie en liste fermée, nom, code postal à cinq chiffres, commune | Règle « à activer » (`detect.OptInRuleIDs`) : elle n'est jamais exécutée d'office. |
+
+Limites : une clé de TVA à lettres (numéros attribués depuis quelques années) n'est pas reconnue ; une TVA écrite
+« FR 40 … » (espace avant la clé) non plus ; les plaques d'avant 2009 (« 1234 AB 75 ») et les numéros de voie à
+lettre (« 12B ») ne sont pas lus.
+
+### Règle composée AWS
+
+`detect/awspair.go` : un identifiant de clé d'accès (AKIA, ASIA) et une valeur de 40 caractères de base64 à 200
+octets au plus l'un de l'autre, dans un ordre ou l'autre, donnent un seul constat `aws_access_key_pair` (score 95,
+CRITICAL), de l'un à l'autre ; la déduplication y absorbe le constat de l'identifiant et celui de l'entropie.
+L'identifiant seul reste `aws_access_key_id` (45, MEDIUM). La valeur doit être une suite maximale d'exactement 40
+caractères, avec une minuscule, une majuscule et un chiffre, et ne pas être faite de chiffres hexadécimaux (empreinte
+SHA-1). La paire d'exemple de la documentation d'AWS n'est pas un constat.
+
+L'idée de chercher les deux parties d'un secret dans une même fenêtre vient de TruffleHog
+(`https://github.com/trufflesecurity/trufflehog`, AGPL-3.0). **Aucune ligne de TruffleHog n'est reprise** : ni motif,
+ni seuil d'entropie, ni taille de fenêtre, ni liste de comptes ; le code est écrit pour ce module et la fenêtre de
+200 octets est un choix de ce module. Le Pack porte la règle comme une règle « motif seul » dont le motif décrit la
+forme « identifiant, puis valeur » : un moteur antérieur l'exécuterait ainsi, sans les deux ordres ni le rejet des
+empreintes. Le moteur de la v0.10.0 exécute sa famille à la place du motif pour toute règle qui porte cet
+identifiant. Seconde écriture pour le corpus : `awsPairSpans` (`generator/rule-pack/context-data.ts`).
+
+### Décisions prises par défaut, à confirmer
+
+1. **Cinq types de secret ajoutés au schéma** `RulePack` : `national_identifier`, `vat_number`,
+   `bank_account_number`, `vehicle_registration_plate`, `postal_address` ; douze validateurs ajoutés à
+   `RULE_VALIDATORS`. Un moteur antérieur refuse un Pack qui les emploie (`unknown_secret_type`,
+   `unknown_validator`) : un Pack signé qui les porte déclare en `minAgentVersion` la première version qui embarque
+   le moteur v0.10.0.
+2. **Scores** : identifiant d'une personne 60 (HIGH, comme le NIR) ; numéro de TVA 35 (donnée publique d'une
+   entreprise, comme le SIRET) ; RIB 45 (comme l'IBAN) ; plaque et adresse postale 30.
+3. **La TVA française n'exige pas de mot-clé** : le préfixe « FR », la clé et le Luhn du SIREN laissent passer une
+   suite de onze chiffres sur 970 environ.
+4. **Fenêtre de la règle AWS : 200 octets**, et constat étendu de l'identifiant à la valeur : le masquage retire
+   aussi le texte qui les sépare.
+5. **L'adresse postale seule est « à activer »** ; la plaque s'exécute d'office, son mot-clé étant obligatoire.
+6. **Sources officielles** de la clé de TVA et de la clé du RIB : à fournir (tableau ci-dessus).
+
+Vérification : `TestParity` (1 970 cas), `TestContextRules`, `TestOptInRules`, `TestAWSKeyPair`,
+`generator/test/personal-data.test.ts`, `generator/test/rule-pack.test.ts`. Non mesuré dans cette passe : le banc de
+bruit sur les dépôts de référence (`go run ./tools/bruit <nom>=<chemin>…`, à lancer avant l'étiquette) et le coût des
+quinze règles sur le banc de `docs/bench.md`.
+
+## Langage par bloc de code, matrice d'encodages, fermeture de la v0.10.0
+
+Lot L27 de l'Epic 27 de xSOM Fleet (stories 27.7, 27.49 et 27.50), le 15 novembre 2026. Aucun code, motif ni cas
+d'essai d'un tiers n'est repris dans ce lot : le langage par bloc est une idée propre, et les 21 écritures de la matrice
+viennent de nos propres essais (rien de TruffleHog, AGPL-3.0, ni de Betterleaks).
+
+### Langage par bloc de code (`detect/fencedblocks.go`)
+
+Écart d'analyse ajouté, sans origine dans Secret Guard et sans effet sur le corpus de parité. Dans un texte analysé
+**sans langage déclaré** (un prompt), une affectation dont le nom est dans un bloc clôturé par trois accents graves ou
+plus est lue avec le langage que nomme l'ouverture du bloc, comme si l'analyse l'avait déclaré (`Options.LanguageID`) :
+le palier 2 du code ordinaire s'applique alors dans un prompt collé.
+
+- **Langages connus** : ceux que le moteur distingue déjà (`codeLanguages`, `structuredLanguages`, `dotenvLanguages`,
+  `shellLanguages` de `detect/contextual.go`). Le nom est le premier mot après l'ouverture, gardé tel qu'il est écrit ;
+  ce qui le suit (`title=…`, `{1,3}`) est ignoré.
+- **Lecture inchangée** : bloc sans nom, de nom inconnu (`mermaid`, `console`, `golang`, `c++`), jamais refermé, ou
+  ouvert par des tildes ; tout texte hors d'un bloc ; toute analyse qui déclare un langage, quel qu'il soit.
+- **Fermeture** : une ligne d'au moins autant d'accents graves que l'ouverture, sans autre texte ; trois espaces de
+  retrait au plus, comme en Markdown.
+- **Portée** : les motifs d'affectation (`scanAssignmentPattern`). Les cookies, l'option `-u`, les annonces de mot de
+  passe, la clé `auth` de Docker, les règles à motif et l'entropie ne lisent pas le langage, comme avant.
+- **Travail borné** : les blocs d'une vue sont lus en un passage, au plus une fois par motif, et seulement si le texte
+  porte trois accents graves ; la recherche du bloc d'un nom est logarithmique.
+- **Ce que cela retire et ajoute** : dans un bloc de code, une clé d'API, un jeton ou un secret générique dont la valeur
+  n'a pas la forme d'un secret (libellé, valeur d'essai en mots) n'est plus un constat ; une valeur à forme de secret le
+  reste. Dans un bloc `env` ou `dotenv`, toute affectation est lue comme une affectation nue d'environnement, ce qui
+  garde plus de constats. L'auteur d'un prompt choisit le nom du bloc comme l'appelant choisit `LanguageID` : le
+  langage ne décide que de la lecture des affectations, jamais d'une règle à motif.
+
+**Corpus.** `TestParity` : aucun écart, avant comme après (`--check` de l'export d'origine sur la branche
+d'intégration : « Corpus identique : 1970 cas, 17 fichiers »). `vectors/noise.json` : onze cas « bloc/ » (227 au
+total), des prompts dont le libellé est signalé quand le bloc n'a pas de nom et ne l'est plus quand il en a un.
+`TestFencedBlockLanguage` (`detect/fencedblocks_test.go`) : libellé écarté dans un bloc `ts`, `TypeScript` à attributs
+et à quatre accents graves ; valeur à forme de secret gardée ; lecture inchangée pour un bloc sans nom, de nom inconnu,
+jamais refermé, après le bloc, et sous un langage déclaré.
+
+### Matrice d'encodages (`vectors/detection/views-encodings.json`)
+
+Les 21 écritures d'un même jeton synthétique essayées pendant l'étude de la v0.10.0 deviennent des cas du corpus de
+parité, écrits par `generator/corpus/encodings.ts`. Seize sont jugés par le moteur d'origine. Cinq éprouvent les écarts
+de la section « Décodage à plusieurs couches et vue UTF-16 » et sont jugés par une seconde écriture, qui répond à la
+question 4 de cette section : le générateur décode lui-même (UTF-16, ou base64 couche après couche) et fait juger le
+texte clair par le moteur d'origine ; le constat attendu en garde la règle, avec l'encodage et l'étendue de l'entrée
+(`normalized` et deux octets par caractère pour UTF-16 ; `base64`, étendue du candidat et 5 points de moins par couche
+sinon). Le moteur Go a rendu ces 21 résultats sans retouche.
+
+Le fichier est hors des vecteurs du masquage, comme le code ordinaire (`generator/redact/main.ts`,
+`detect/redact_test.go`) : le masquage d'origine ne connaît pas ces écarts. Le corpus passe à 1 991 cas et 18 fichiers ;
+les 1 970 autres cas et les 619 vecteurs du masquage sont inchangés octet pour octet. L'archive gzip du cas 20 a un
+en-tête fixe écrit par le générateur, pour donner les mêmes octets sur tout poste.
+
+`docs/encodages.md` publie le tableau : 12 écritures lues par la règle du jeton, 5 à l'entropie seule, 4 sans constat
+(hexadécimal, échappements à deux chiffres et entre accolades, entités HTML, base32, concaténation, inversion,
+compression : non lus).
+
+### Fichiers de bruit
+
+`TestNoiseCorpus` rejoue les trois fichiers de bruit (`vectors/noise.json`, `noise-providers.json`,
+`noise-entropy.json`, 598 cas), avec des identifiants uniques d'un fichier à l'autre. `TestNoiseProviders` et
+`TestNoiseEntropyCorpus` restent pour ce qui est propre à leur fichier (motif de la règle qui reconnaît le texte,
+familles présentes).
+
+### Page de comparaison
+
+`docs/comparaison.md` est un brouillon : il réunit des chiffres déjà commités (banc Betterleaks, banc de bruit, rappel du
+paquet `injection`, matrice d'encodages), dit ce qui est mesuré et ce qui est seulement lu dans le code des autres
+outils, et n'est lié depuis aucune page. Sa publication reste à décider par Julian.
+
+### Version v0.10.0 : ce qui est fait, ce qui reste à lancer
+
+Fait le 15 novembre 2026, sur la branche `release/v0.10.0` :
+
+- commit de version : `wasm/package.json` en 0.10.0, `expurgation/go.mod` exige `v0.10.0` (le `replace` de
+  développement reste) ; les décomptes du `README.md` et de `docs/rule-pack.md` étaient déjà à 426 ;
+- `go run ./tools/versioncheck v0.10.0` : « 6 points concordent » ;
+- `npm run pack:initial` puis `git diff --exit-code pack/ detect/` : aucun écart ;
+- `npm run vectors:detection -- --upstream <checkout> --check` : « Corpus identique : 1991 cas, 18 fichiers » ;
+  `npm run vectors:redact -- --upstream <checkout> --check` : « Vecteurs identiques : 619 cas, 15 cas d’étendues » ;
+- essais lancés : `TestFencedBlockLanguage`, `TestNoiseCorpus`, `TestParity` (1 991 cas, aucun écart),
+  `TestRedactParity`, `TestComparisonBetterleaks` ; `generator/test/detection-corpus.test.ts` et
+  `generator/test/redact-vectors.test.ts` (35 essais) ; `tsc` du générateur ; `go build` et `go vet` du module
+  `expurgation` ;
+- `gofmt -l .` sans sortie ; `go run ./tools/spdxcheck` : 260 fichiers ; `gitleaks dir . --redact --no-banner` : aucune
+  fuite ; `golangci-lint run --new-from-rev=integration/v0.10.0 ./detect/...` : aucune remarque sur les lignes du lot ;
+- `go run ./tools/depguardcheck` : lancé puis interrompu au bout de cinq minutes (consigne d'économie). Sa première
+  étape, golangci-lint entier sur une copie des deux modules, était passée, et les imports interdits essayés jusqu'à
+  `internal/limits` étaient refusés ; la suite (`internal/jstext`, ligne de commande, module `expurgation`) n'a pas
+  tourné ;
+- attributions relues pour tous les lots de la version : chaque reprise sous MIT ou Apache-2.0 (Titus, Betterleaks,
+  Presidio, LLM Guard, Promptfoo, Akto, Skill Scanner, DefenseClaw) a son dépôt, son commit et sa licence dans
+  `NOTICE` et dans ce fichier ; Gitleaks, Giskard et TruffleHog ne donnent qu'une idée, sans ligne reprise.
+
+**À lancer avant l'étiquette** (non lancé dans ce lot, consigne d'économie de la passe ; la version n'est pas prête à
+étiqueter tant que cette liste n'est pas verte) :
+
+```sh
+go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...
+go run ./tools/covercheck coverage.out
+(cd expurgation && go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...)
+go run ./tools/covercheck -module expurgation expurgation/coverage.out
+go run ./tools/depguardcheck
+(cd generator && npm ci && npm test)
+(cd expurgation && GOOS=wasip1 GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -buildmode=c-shared -o ../dist/secret-guard.wasm ./cmd/secret-guard-wasm)
+node --test wasm/secret-guard.test.mjs wasm/parity.test.mjs wasm/package.test.mjs
+go run ./tools/bruit xsom-fleet=<chemin> litellm=<chemin> promptfoo=<chemin> ggshield=<chemin> gitleaks=<chemin>
+go test -run '^$' -bench 'BenchmarkScan64KiB' -count=3 ./detect
+```
+
+Le banc de bruit n'a été relancé par aucun lot depuis la correction de l'entropie (rapport à 345 règles) : son premier
+passage sur la v0.10.0 complète peut montrer une hausse des règles nouvelles et une baisse des affectations, à poser
+avec `-baseline` et à expliquer dans le message du commit.
+
+### Décisions prises par défaut, à confirmer
+
+1. **Le langage d'un bloc ne joue que sans langage déclaré.** Un fichier Markdown analysé avec `LanguageID`
+   « markdown » garde la lecture d'avant, blocs de code compris. Faut-il que « markdown » et « mdx » laissent aussi
+   parler leurs blocs ?
+2. **Aucun alias** : `golang`, `c++`, `c#`, `console`, `node` ne sont pas des noms connus. À ajouter si le bruit mesuré
+   sur des prompts réels le demande.
+3. **Bloc jamais refermé, bloc à tildes** : lecture sans langage (choix du périmètre le plus étroit).
+4. **Cas positifs du langage par bloc dans un essai Go**, pas dans le corpus de parité : le moteur d'origine n'a pas
+   cette lecture, il faudrait une seconde écriture de plus dans le générateur. Le module WebAssembly n'éprouve donc
+   cette lecture que par le code Go qu'il compile.
+5. **`generator/` et `detect/redact_test.go` modifiés** pour que la matrice soit un fichier du corpus généré, jamais un
+   fichier écrit à la main.
+6. **La colonne v0.9.0** de `docs/encodages.md` et de `docs/comparaison.md` vient d'un relevé d'étude sur le binaire de
+   la v0.9.0, qu'aucun essai du dépôt ne rejoue.

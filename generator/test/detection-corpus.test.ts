@@ -15,6 +15,8 @@ import { UPSTREAM_COMMIT as PACK_UPSTREAM_COMMIT } from '../rule-pack/catalog.ts
 import { RulePack } from '../src/rule-pack.ts';
 import { PERSONAL_DATA_RULES, referenceFindings } from '../rule-pack/personal-data.ts';
 import { byteOffsetOf, decodeInput } from '../corpus/bytes.ts';
+import { CODE_NOISE_FILE } from '../corpus/code-noise.ts';
+import { ENCODINGS_FILE } from '../corpus/encodings.ts';
 import { CorpusError, coverageProblems, expectedFor, type CoverageInput, type EvaluatedCase } from '../corpus/corpus.ts';
 import { jsonString, serializeCaseFile } from '../corpus/json.ts';
 import { PERSONAL_DATA_FILE, personalDataCases, personalDataCoverageProblems } from '../corpus/personal-data.ts';
@@ -191,7 +193,9 @@ describe('corpus de parité commité', () => {
         !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value) &&
         !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value) &&
         !(corpus.get(PROVIDER_RULES_FILE) ?? []).includes(value) &&
-        !(corpus.get(CONTEXT_DATA_FILE) ?? []).includes(value),
+        !(corpus.get(CONTEXT_DATA_FILE) ?? []).includes(value) &&
+        !(corpus.get(CODE_NOISE_FILE) ?? []).includes(value) &&
+        !(corpus.get(ENCODINGS_FILE) ?? []).includes(value),
     );
     expect(others.length).toBe(synthetic.length);
   });
@@ -424,6 +428,11 @@ describe('corpus de parité commité', () => {
 
 /** Vecteurs du masquage, exemptés de la recherche de secrets par leur chemin exact. */
 const REDACT_VECTORS = 'vectors/redact.json';
+/**
+ * Banc de comparaison Betterleaks et bruit des règles de fournisseurs (v0.10.0), exemptés par leur chemin exact
+ * (tests : provider-rules.test.ts).
+ */
+const OTHER_EXEMPTED = [REDACT_VECTORS, 'vectors/comparison/betterleaks.json', 'vectors/noise-providers.json'];
 
 describe('recherche de secrets', () => {
   const config = parseToml(read(new URL('.gitleaks.toml', REPOSITORY))) as Record<string, unknown>;
@@ -434,7 +443,7 @@ describe('recherche de secrets', () => {
     expect(Object.keys(config).sort()).toEqual(['allowlists', 'extend']);
     expect(config['extend']).toEqual({ useDefault: true });
     // Ni règle générale (regexes, stopwords, commits, targetRules), ni exception hors de ses chemins.
-    expect(fileAllowlists).toHaveLength(2);
+    expect(fileAllowlists).toHaveLength(4);
     for (const allowlist of fileAllowlists) expect(Object.keys(allowlist).sort()).toEqual(['description', 'paths']);
     const patterns = fileAllowlists.flatMap((allowlist) => allowlist['paths'] as string[]).map((source) => new RegExp(source));
     const tracked = execFileSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
@@ -444,17 +453,18 @@ describe('recherche de secrets', () => {
       .split('\0')
       .filter((path) => path !== '');
     const exempted = tracked.filter((path) => patterns.some((pattern) => pattern.test(path)));
-    // Vecteurs du masquage : seul autre fichier exempté (test : redact-vectors.test.ts).
+    // Vecteurs du masquage (test : redact-vectors.test.ts), banc de comparaison et bruit des règles de fournisseurs :
+    // seuls autres fichiers exemptés.
     const outside = exempted.filter(
       (path) =>
-        path !== REDACT_VECTORS &&
+        !OTHER_EXEMPTED.includes(path) &&
         !(path.startsWith('vectors/detection/') && CASE_FILE_PATTERN.test(path.slice('vectors/detection/'.length))),
     );
     expect(outside).toEqual([]);
     for (const file of corpus.keys()) expect(exempted, file).toContain(`vectors/detection/${file}`);
     expect(exempted).not.toContain(`vectors/detection/${MANIFEST_FILE}`);
     // Le générateur, le moteur, ses tests et le Pack restent analysés.
-    expect(exempted.some((path) => !path.startsWith('vectors/detection/') && path !== REDACT_VECTORS)).toBe(false);
+    expect(exempted.some((path) => !path.startsWith('vectors/detection/') && !OTHER_EXEMPTED.includes(path))).toBe(false);
   });
 
   // _bmad/ n'est plus suivi depuis la v0.6.0 : l'exception ne sert plus qu'à l'analyse de l'historique publié, où son

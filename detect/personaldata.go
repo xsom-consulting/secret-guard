@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Validateurs des données personnelles (v0.7.0) : IBAN, numéro de sécurité sociale français (NIR), SIRET, SIREN,
-// numéro de carte bancaire.
+// numéro de carte bancaire ; puis (v0.10.0) identifiants européens portés de Presidio et identifiants français (TVA
+// intracommunautaire, RIB), en fin de fichier.
 //
 // Extension propre à ce module, sans origine dans Secret Guard (avis dans UPSTREAM.md). Les règles correspondantes du
 // Pack initial sont des règles « motif seul » : le motif RE2 délimite un candidat, le validateur nommé (liste fermée
@@ -21,6 +22,19 @@ const (
 	validatorSiret = "fr_siret_luhn"
 	validatorSiren = "fr_siren_luhn"
 	validatorCard  = "payment_card_luhn"
+	// Identifiants européens et français (v0.10.0).
+	validatorSpanishNIF        = "es_nif_mod23"
+	validatorSpanishNIE        = "es_nie_mod23"
+	validatorItalianFiscalCode = "it_fiscal_code_check"
+	validatorItalianVAT        = "it_vat_luhn"
+	validatorGermanTaxID       = "de_tax_id_iso7064"
+	validatorGermanVAT         = "de_vat_iso7064"
+	validatorPESEL             = "pl_pesel_check"
+	validatorNHS               = "uk_nhs_mod11"
+	validatorPersonnummer      = "se_personnummer_luhn"
+	validatorFinnishIdentity   = "fi_hetu_mod31"
+	validatorFrenchVAT         = "fr_vat_key"
+	validatorRIB               = "fr_rib_key"
 )
 
 // plainValidator adapte un contrôle sans décodage (donc sans budget) au type validator.
@@ -78,14 +92,17 @@ func allSameDigit(digits []byte) bool {
 	return len(digits) > 0
 }
 
-// ibanLengths : longueur de l'IBAN par pays pour les pays d'Europe et du pourtour (registre ISO 13616) ; un pays hors de
-// cette table n'a pas de longueur imposée (15 à 34 caractères, contrôle modulo 97).
+// ibanLengths : longueur de l'IBAN par pays, pour les 76 pays que reconnaît Presidio (longueurs du registre de
+// l'ISO 13616, UPSTREAM.md) ; un pays hors de cette table n'a pas de longueur imposée (15 à 34 caractères, contrôle
+// modulo 97).
 var ibanLengths = map[string]int{
-	"AD": 24, "AL": 28, "AT": 20, "AZ": 28, "BA": 20, "BE": 16, "BG": 22, "BY": 28, "CH": 21, "CY": 28, "CZ": 24,
-	"DE": 22, "DK": 18, "EE": 20, "ES": 24, "FI": 18, "FO": 18, "FR": 27, "GB": 22, "GE": 22, "GI": 23, "GL": 18,
-	"GR": 27, "HR": 21, "HU": 28, "IE": 22, "IL": 23, "IS": 26, "IT": 27, "LI": 21, "LT": 20, "LU": 20, "LV": 21,
-	"MC": 27, "MD": 24, "ME": 22, "MK": 19, "MT": 31, "NL": 18, "NO": 15, "PL": 28, "PT": 25, "RO": 24, "RS": 22,
-	"SE": 24, "SI": 19, "SK": 24, "SM": 27, "TR": 26, "UA": 29, "VA": 22, "XK": 20,
+	"AD": 24, "AE": 23, "AL": 28, "AT": 20, "AZ": 28, "BA": 20, "BE": 16, "BG": 22, "BH": 22, "BR": 29, "BY": 28,
+	"CH": 21, "CR": 22, "CY": 28, "CZ": 24, "DE": 22, "DK": 18, "DO": 28, "EE": 20, "EG": 29, "ES": 24, "FI": 18,
+	"FO": 18, "FR": 27, "GB": 22, "GE": 22, "GI": 23, "GL": 18, "GR": 27, "GT": 28, "HR": 21, "HU": 28, "IE": 22,
+	"IL": 23, "IQ": 23, "IS": 26, "IT": 27, "JO": 30, "KW": 30, "KZ": 20, "LB": 28, "LC": 32, "LI": 21, "LT": 20,
+	"LU": 20, "LV": 21, "LY": 25, "MC": 27, "MD": 24, "ME": 22, "MK": 19, "MR": 27, "MT": 31, "MU": 30, "NL": 18,
+	"NO": 15, "PK": 24, "PL": 28, "PS": 29, "PT": 25, "QA": 29, "RO": 24, "RS": 22, "SA": 24, "SC": 31, "SE": 24,
+	"SI": 19, "SK": 24, "SM": 27, "TL": 23, "TN": 24, "TR": 26, "UA": 29, "VA": 22, "VG": 24, "XK": 20,
 }
 
 // isValidIBAN : IBAN (ISO 13616) écrit avec ou sans espaces, en majuscules ou en minuscules : deux lettres de pays,
@@ -295,4 +312,299 @@ func cardNetwork(d []byte) bool {
 		return true
 	}
 	return false
+}
+
+// Identifiants européens et français à somme de contrôle (v0.10.0).
+//
+// Les contrôles européens sont portés de Presidio (MIT, avis dans NOTICE, détail dans UPSTREAM.md) ; les contrôles
+// français suivent les formules publiées (UPSTREAM.md). Chaque règle exige en plus un mot-clé de contexte dans son
+// motif (generator/rule-pack/context-data.ts), sauf la TVA française que son préfixe « FR » et ses deux contrôles
+// suffisent à distinguer. La valeur lue est le groupe capturant du motif : lettres en toute casse, séparateurs admis
+// par le motif.
+
+// compactUpper rend les lettres (en majuscules) et les chiffres de value, espaces et tirets retirés ; faux pour tout
+// autre octet.
+func compactUpper(value string) ([]byte, bool) {
+	out := make([]byte, 0, len(value))
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		switch {
+		case c == ' ' || c == '-':
+			continue
+		case c >= 'a' && c <= 'z':
+			c -= 'a' - 'A'
+		case isUpperLetter(c) || isDigit(c):
+		default:
+			return nil, false
+		}
+		out = append(out, c)
+	}
+	return out, true
+}
+
+// allDigits dit si b n'est fait que de chiffres ASCII (au moins un).
+func allDigits(b []byte) bool {
+	for _, c := range b {
+		if !isDigit(c) {
+			return false
+		}
+	}
+	return len(b) > 0
+}
+
+// digitsValue rend le nombre écrit par les chiffres ASCII de b (18 chiffres au plus : sans débordement).
+func digitsValue(b []byte) int64 {
+	var total int64
+	for _, c := range b {
+		total = total*10 + int64(c-'0')
+	}
+	return total
+}
+
+// spanishControlLetters : lettre de contrôle du NIF et du NIE espagnols, par reste du nombre modulo 23.
+const spanishControlLetters = "TRWAGMYFPDXBNJZSQVHLCKE"
+
+// isValidSpanishNIF : NIF (DNI) espagnol, 7 ou 8 chiffres puis la lettre du nombre modulo 23.
+func isValidSpanishNIF(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) < 8 || len(c) > 9 {
+		return false
+	}
+	digits := c[:len(c)-1]
+	if !allDigits(digits) || allSameDigit(digits) {
+		return false
+	}
+	return spanishControlLetters[digitsValue(digits)%23] == c[len(c)-1]
+}
+
+// isValidSpanishNIE : NIE espagnol, X, Y ou Z (lus 0, 1 et 2) et 7 chiffres, puis la lettre du nombre modulo 23.
+func isValidSpanishNIE(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) != 9 || c[0] < 'X' || c[0] > 'Z' || !allDigits(c[1:8]) {
+		return false
+	}
+	number := int64(c[0]-'X')*10_000_000 + digitsValue(c[1:8])
+	return spanishControlLetters[number%23] == c[8]
+}
+
+// fiscalCodeOdd : valeur d'un caractère de rang impair (premier, troisième…) du code fiscal italien, par rang du
+// caractère (chiffre 0 à 9, ou lettre A à Z : les dix premières lettres valent les dix chiffres).
+var fiscalCodeOdd = [26]int{1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23}
+
+// isValidItalianFiscalCode : code fiscal italien de 16 caractères ; le dernier est la lettre de rang (somme des
+// quinze premiers modulo 26), un caractère de rang impair valant fiscalCodeOdd, un caractère de rang pair son rang.
+func isValidItalianFiscalCode(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) != 16 || !isUpperLetter(c[15]) {
+		return false
+	}
+	sum := 0
+	for i, char := range c[:15] {
+		rank := int(char - '0')
+		if isUpperLetter(char) {
+			rank = int(char - 'A')
+		}
+		if i%2 == 0 {
+			sum += fiscalCodeOdd[rank]
+		} else {
+			sum += rank
+		}
+	}
+	return byte('A'+sum%26) == c[15]
+}
+
+// isValidItalianVAT : numéro de TVA italien (partita IVA), 11 chiffres, Luhn.
+func isValidItalianVAT(value string) bool {
+	digits := []byte(value)
+	return len(digits) == 11 && allDigits(digits) && !allSameDigit(digits) && luhn(digits)
+}
+
+// iso7064Check rend le chiffre de contrôle ISO 7064 MOD 11,10 de la suite de chiffres ASCII body.
+func iso7064Check(body []byte) byte {
+	product := 10
+	for _, c := range body {
+		sum := (int(c-'0') + product) % 10
+		if sum == 0 {
+			sum = 10
+		}
+		product = sum * 2 % 11
+	}
+	return byte('0' + (11-product)%10)
+}
+
+// isValidGermanTaxID : identifiant fiscal allemand (Steuer-ID), 11 chiffres sans zéro initial, espaces admis ; aucun
+// chiffre plus de trois fois parmi les dix premiers ; le onzième est leur contrôle ISO 7064 MOD 11,10.
+func isValidGermanTaxID(value string) bool {
+	digits, ok := compactDigits(value, false)
+	if !ok || len(digits) != 11 || digits[0] == '0' {
+		return false
+	}
+	var counts [10]int
+	for _, d := range digits[:10] {
+		if counts[d-'0']++; counts[d-'0'] > 3 {
+			return false
+		}
+	}
+	return iso7064Check(digits[:10]) == digits[10]
+}
+
+// isValidGermanVAT : numéro de TVA allemand (USt-IdNr.), « DE » et 9 chiffres ; le neuvième est le contrôle
+// ISO 7064 MOD 11,10 des huit premiers.
+func isValidGermanVAT(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) != 11 || c[0] != 'D' || c[1] != 'E' || !allDigits(c[2:]) || allSameDigit(c[2:]) {
+		return false
+	}
+	return iso7064Check(c[2:10]) == c[10]
+}
+
+// isValidPESEL : PESEL polonais, 11 chiffres : date de naissance (mois 01 à 12, augmenté de 20 par siècle), numéro
+// d'ordre, puis contrôle (10 − somme pondérée 1-3-7-9 modulo 10) modulo 10.
+func isValidPESEL(value string) bool {
+	digits := []byte(value)
+	if len(digits) != 11 || !allDigits(digits) || allSameDigit(digits) {
+		return false
+	}
+	month := int(digitsValue(digits[2:4])) % 20
+	day := int(digitsValue(digits[4:6]))
+	if month < 1 || month > 12 || day < 1 || day > 31 {
+		return false
+	}
+	weights := [10]int{1, 3, 7, 9, 1, 3, 7, 9, 1, 3}
+	sum := 0
+	for i, w := range weights {
+		sum += int(digits[i]-'0') * w
+	}
+	return (10-sum%10)%10 == int(digits[10]-'0')
+}
+
+// isValidNHSNumber : numéro NHS britannique, 10 chiffres (espaces ou tirets admis) dont la somme pondérée de 10 à 1
+// est un multiple de 11.
+func isValidNHSNumber(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) != 10 || !allDigits(c) || allSameDigit(c) {
+		return false
+	}
+	sum := 0
+	for i, d := range c {
+		sum += int(d-'0') * (10 - i)
+	}
+	return sum%11 == 0
+}
+
+// isValidPersonnummer : personnummer (ou samordningsnummer) suédois, 10 ou 12 chiffres, « - » ou « + » admis avant
+// les quatre derniers ; mois et jour possibles (jour augmenté de 60 pour un samordningsnummer), Luhn des dix derniers.
+func isValidPersonnummer(value string) bool {
+	digits := make([]byte, 0, 12)
+	for i := 0; i < len(value); i++ {
+		switch c := value[i]; {
+		case isDigit(c):
+			digits = append(digits, c)
+		case c != '-' && c != '+':
+			return false
+		}
+	}
+	if len(digits) != 10 && len(digits) != 12 {
+		return false
+	}
+	last := digits[len(digits)-10:]
+	month, day := int(digitsValue(last[2:4])), int(digitsValue(last[4:6]))
+	if day > 60 {
+		day -= 60
+	}
+	return month >= 1 && month <= 12 && day >= 1 && day <= 31 && luhn(last)
+}
+
+// finnishControlCharacters : caractère de contrôle de l'identifiant personnel finlandais, par reste modulo 31.
+const finnishControlCharacters = "0123456789" + "ABCDEF" + "HJKLMN" + "PRSTUVWXY"
+
+// isValidFinnishIdentityCode : identifiant personnel finlandais (henkilötunnus), JJMMAA, séparateur du siècle (« + » :
+// 1800 ; « - », U à Y : 1900 ; A à F : 2000), trois chiffres, puis le caractère du nombre JJMMAAnnn modulo 31. La date
+// doit exister.
+func isValidFinnishIdentityCode(value string) bool {
+	c := []byte(value)
+	if len(c) != 11 || !allDigits(c[:6]) || !allDigits(c[7:10]) {
+		return false
+	}
+	separator, control := c[6], c[10]
+	if separator >= 'a' && separator <= 'z' {
+		separator -= 'a' - 'A'
+	}
+	if control >= 'a' && control <= 'z' {
+		control -= 'a' - 'A'
+	}
+	century := 1900
+	switch {
+	case separator == '+':
+		century = 1800
+	case separator >= 'A' && separator <= 'F':
+		century = 2000
+	case separator != '-' && (separator < 'U' || separator > 'Y'):
+		return false
+	}
+	day, month, year := int(digitsValue(c[0:2])), int(digitsValue(c[2:4])), century+int(digitsValue(c[4:6]))
+	if month < 1 || month > 12 || day < 1 || day > daysIn(month, year) {
+		return false
+	}
+	number := digitsValue(c[:6])*1000 + digitsValue(c[7:10])
+	return finnishControlCharacters[number%31] == control
+}
+
+// daysIn rend le nombre de jours du mois (1 à 12) de l'année du calendrier grégorien.
+func daysIn(month, year int) int {
+	switch month {
+	case 4, 6, 9, 11:
+		return 30
+	case 2:
+		if year%4 == 0 && (year%100 != 0 || year%400 == 0) {
+			return 29
+		}
+		return 28
+	}
+	return 31
+}
+
+// isValidFrenchVAT : numéro de TVA intracommunautaire français, « FR », clé de deux chiffres et SIREN (espaces
+// admis) : SIREN valide (Luhn) et clé égale à (12 + 3 × (SIREN modulo 97)) modulo 97.
+func isValidFrenchVAT(value string) bool {
+	if len(value) < 13 || value[0] != 'F' || value[1] != 'R' {
+		return false
+	}
+	digits, ok := compactDigits(value[2:], false)
+	if !ok || len(digits) != 11 {
+		return false
+	}
+	siren := digits[2:]
+	if allSameDigit(siren) || !luhn(siren) {
+		return false
+	}
+	return (12+3*(digitsValue(siren)%97))%97 == digitsValue(digits[:2])
+}
+
+// isValidRIB : relevé d'identité bancaire français, code banque (5 chiffres), code guichet (5 chiffres), numéro de
+// compte (11 chiffres ou lettres) et clé (2 chiffres), espaces ou tirets admis. Une lettre du compte vaut un chiffre
+// (A et J : 1 ; B, K et S : 2 ; … ; I, R et Z : 9). Clé = 97 − ((89 × banque + 15 × guichet + 3 × compte) modulo 97).
+func isValidRIB(value string) bool {
+	c, ok := compactUpper(value)
+	if !ok || len(c) != 23 || !allDigits(c[:10]) || !allDigits(c[21:]) {
+		return false
+	}
+	account := make([]byte, 11)
+	for i, char := range c[10:21] {
+		switch {
+		case isDigit(char):
+			account[i] = char
+		case char >= 'S':
+			account[i] = '2' + (char - 'S')
+		case char >= 'J':
+			account[i] = '1' + (char - 'J')
+		default:
+			account[i] = '1' + (char - 'A')
+		}
+	}
+	if allSameDigit(append(append([]byte(nil), c[:10]...), account...)) {
+		return false
+	}
+	rest := (89*digitsValue(c[:5]) + 15*digitsValue(c[5:10]) + 3*digitsValue(account)) % 97
+	return 97-rest == digitsValue(c[21:])
 }

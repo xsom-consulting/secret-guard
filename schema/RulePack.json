@@ -76,7 +76,12 @@
               "payment_card_security_code",
               "one_time_code",
               "internal_ip_address",
-              "cloud_resource_address"
+              "cloud_resource_address",
+              "national_identifier",
+              "vat_number",
+              "bank_account_number",
+              "vehicle_registration_plate",
+              "postal_address"
             ],
             "type": "string"
           },

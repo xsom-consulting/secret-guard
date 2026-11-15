@@ -28,12 +28,7 @@ func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bo
 			continue
 		}
 		var err error
-		if fixed.id == ruleJWT {
-			findings, err = scanJWT(v, fixed, budget, findings)
-		} else {
-			findings, err = scanFixedPattern(v, fixed, budget, findings)
-		}
-		if err != nil {
+		if findings, err = fixedScanOf(fixed)(v, fixed, budget, findings); err != nil {
 			return nil, err
 		}
 	}
@@ -93,8 +88,9 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 // scanFixedPattern exécute une règle « motif seul » du Pack : chaque correspondance (matchAll), valeur détectée =
 // groupe capturant 1 s'il a participé, sinon la correspondance entière (capturedRange de Secret Guard, qui la cherche
 // par lastIndexOf) ; valeur fictive ou exemple public ignorés (Substitut en fin de ligne d'une vue jointe compris,
-// extension de ce module) ; bornes minLength/maxLength (unités UTF-16, 0 = absente) ; validateur nommé. Aucun littéral
-// de la porte de la règle dans le texte de la vue : aucune correspondance possible, le motif n'est pas exécuté.
+// extension de ce module) ; bornes minLength/maxLength (unités UTF-16, 0 = absente) ; vraisemblance d'un jeton de
+// fournisseur (entropyFloor, validators.go : extension de ce module) ; validateur nommé. Aucun littéral de la porte de
+// la règle dans le texte de la vue : aucune correspondance possible, le motif n'est pas exécuté.
 func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
 	if !r.gate.admits(text) {
@@ -119,6 +115,9 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			value = text[start:end]
 		}
 		if safeLiteral(value) || isSubstituteBeforeJoin(v, start, end) || !withinBounds(value, r.minLength, r.maxLength) {
+			continue
+		}
+		if r.entropyFloor > 0 && !plausibleToken(value, r.entropyFloor) {
 			continue
 		}
 		if r.validator != nil {
@@ -481,7 +480,8 @@ func (r *Rules) scanEntropy(v *view) []finding {
 		value := text[m[0]:m[1]]
 		if entropyExcluded(value) || isShellEnvironmentPath(text, m[0], value) ||
 			isPathContinuation(v, m[0], value) || isKnownResourceLink(v, m[0], value) || isWordSlug(value) ||
-			isEntropyName(value) || isProviderObjectID(text, m[0], value) || !hasStrongEntropy(v, m[0], m[1]) {
+			isEntropyName(value) || isProviderObjectID(text, m[0], value) || !hasStrongEntropy(v, m[0], m[1]) ||
+			isPublicValue(text, m[0], m[1]) {
 			continue
 		}
 		score := entropy.score

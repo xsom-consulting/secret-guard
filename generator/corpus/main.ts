@@ -18,6 +18,9 @@ import { corpusCaseOf, coverageProblems, expectedFor, type CaseSource, type Eval
 import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from './harness.ts';
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
+import { codeNoiseCases, codeNoiseCoverageProblems, codeNoiseExpected, codeNoiseUpstream } from './code-noise.ts';
+import { LAYERED_UPSTREAM_CASES, layeredExpected } from './layered.ts';
+import { encodingCases, encodingExpected } from './encodings.ts';
 import { contextDataCases, contextDataCoverageProblems, contextDataExpected } from './context-data.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
@@ -147,9 +150,13 @@ async function main(): Promise<number> {
     const evaluated: EvaluatedCase[] = [];
     const written: [string, CorpusCase][] = [];
     for (const source of sources) {
-      const expected = expectedFor(engine, source.bytes, source.languageId);
+      // Décodage à plusieurs couches (v0.10.0) : deux cas d'origine jugés par la seconde écriture de `corpus/layered.ts`.
+      const expected = LAYERED_UPSTREAM_CASES.has(source.id) ? layeredExpected(engine, source) : expectedFor(engine, source.bytes, source.languageId);
       evaluated.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
       written.push([source.file, corpusCaseOf(source, expected)]);
+    }
+    for (const id of LAYERED_UPSTREAM_CASES) {
+      if (!sources.some((source) => source.id === id)) problems.push(`cas rejugé absent des tests d’origine : ${id}`);
     }
     const personal: EvaluatedCase[] = [];
     for (const source of personalDataCases()) {
@@ -180,6 +187,20 @@ async function main(): Promise<number> {
       written.push([source.file, corpusCaseOf(source, expected)]);
       sources.push(source);
     }
+    // Code ordinaire (v0.10.0) : constats du moteur d'origine jugés par la seconde écriture de `corpus/code-noise.ts`.
+    const codeNoise: (EvaluatedCase & { upstream: ReturnType<typeof codeNoiseUpstream> })[] = [];
+    for (const source of codeNoiseCases()) {
+      const expected = codeNoiseExpected(engine, source);
+      codeNoise.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected, upstream: codeNoiseUpstream(engine, source.bytes, source.languageId) });
+      written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
+    // Matrice d'encodages (v0.10.0) : seize cas jugés par l'origine, cinq par la seconde écriture de `corpus/encodings.ts`.
+    for (const source of encodingCases()) {
+      written.push([source.file, corpusCaseOf(source, encodingExpected(engine, source))]);
+      sources.push(source);
+    }
+    problems.push(...codeNoiseCoverageProblems(codeNoise));
     problems.push(...missingContext.map((id) => `règle de données à contexte absente du Pack : ${id}`));
     problems.push(...contextDataCoverageProblems(context));
     problems.push(...missingPersonal.map((id) => `règle de données personnelles absente du Pack : ${id}`));

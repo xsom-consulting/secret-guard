@@ -10,7 +10,7 @@
 //
 // Pour ces motifs, le moteur cherche aussi le motif sans le « \b » final (dashTail) et retient une correspondance qui
 // finit par un tiret au bout de la suite de caractères du jeton, si le motif d'origine n'a rien trouvé qui la touche.
-// Bornes, valeur fictive et validateur s'appliquent comme au motif d'origine.
+// Bornes, valeur fictive, vraisemblance et validateur s'appliquent comme au motif d'origine.
 
 package detect
 
@@ -60,6 +60,9 @@ func scanDashTail(v *view, r *rule, budget *decodeBudget, found []finding, from 
 		}
 		value := text[start:end]
 		if overlaps || safeLiteral(value) || isSubstituteBeforeJoin(v, start, end) || !withinBounds(value, r.minLength, r.maxLength) {
+			continue
+		}
+		if r.entropyFloor > 0 && !plausibleToken(value, r.entropyFloor) {
 			continue
 		}
 		if r.validator != nil {

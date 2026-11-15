@@ -50,6 +50,27 @@ demande de fusion d'une personne extérieure au dépôt ; une demande dont ce co
 Les commandes de la section « Vérifier » du README, dans les deux modules, plus `go run ./tools/spdxcheck`, et, si le
 module WebAssembly change, sa construction et `node --test wasm/secret-guard.test.mjs wasm/parity.test.mjs wasm/package.test.mjs`.
 
+### Liste de contrôle d'une version
+
+La version v0.9.0 a été étiquetée avec `wasm/package.json` et `expurgation/go.mod` restés en 0.8.1 : sa Release a
+échoué et son paquet npm n'existe pas. Avant toute étiquette `vX.Y.Z`, dans l'ordre :
+
+1. **Commit de version.** Il met à jour `wasm/package.json` (champ `version`), `expurgation/go.mod` (version exigée du
+   module racine), le nombre de règles du `README.md` (en français et en anglais) et celui de `docs/rule-pack.md`.
+   `go run ./tools/versioncheck vX.Y.Z` doit sortir en 0 : il compare ces fichiers à la version visée et au Pack
+   initial, et nomme chaque écart.
+2. **Vérifications.** Les commandes de « Vérifier » du README dans les deux modules (essais, parité, couverture,
+   `depguardcheck`, `spdxcheck`), le corpus de bruit (`TestNoiseCorpus`, `TestNoiseEntropyCorpus`), `gitleaks`, la
+   construction du module WebAssembly et ses essais sous Node, et le banc de bruit :
+   `go run ./tools/bruit <nom>=<chemin>…` sur les dépôts de `tools/bruit/rapport.json` ne doit signaler aucune hausse
+   (une hausse voulue se pose avec `-baseline` et s'explique dans le message du commit ; les chiffres publiés sont
+   dans [docs/bench.md](docs/bench.md)).
+3. **Fusion** dans `main`.
+4. **Étiquettes** `vX.Y.Z`, puis `expurgation/vX.Y.Z`, sur le même commit de fusion.
+5. **Poussée** des deux étiquettes, par un mainteneur.
+6. **Publication.** Le workflow `release.yml` construit et atteste la Release, puis attend l'approbation d'un
+   mainteneur dans l'environnement `npm`. Vérifier ensuite la Release (`gh release view vX.Y.Z`) et le paquet npm.
+
 ## English
 
 Thank you for your interest in Secret Guard. The repository is maintained by xSOM Consulting; contributions are
@@ -70,3 +91,7 @@ reviewed by the team in `.github/CODEOWNERS`.
   with the SPDX identifier of its module (`go run ./tools/spdxcheck`); the root module never imports `expurgation/`;
   test values shaped like secrets are assembled at run time; generated files are never edited by hand.
 - Run the "Verify" commands of the README in both modules before opening the pull request.
+- **Release checklist** (maintainers): the release commit updates `wasm/package.json`, `expurgation/go.mod` and the
+  rule counts of `README.md` and `docs/rule-pack.md`; `go run ./tools/versioncheck vX.Y.Z` must exit 0 before the tag;
+  `go run ./tools/bruit <name>=<path>…` must report no rise against `tools/bruit/rapport.json`; then merge, tag
+  `vX.Y.Z` and `expurgation/vX.Y.Z` on the same commit, push both tags, approve the `npm` environment.

@@ -11,7 +11,9 @@ import {
   translationOf,
   VALUE_BOUNDS,
 } from '../rule-pack/catalog.ts';
-import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
+import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_BETTERLEAKS_COMMIT,
+  PROVIDER_BETTERLEAKS_REPOSITORY,
+  PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
 import {
   buildContextRulesGo,
   CONTEXT_DATA_RULES,
@@ -20,7 +22,11 @@ import {
   CONTEXT_UPSTREAM_COMMIT,
   CONTEXT_UPSTREAM_PATH,
   CONTEXT_UPSTREAM_REPOSITORY,
+  PRESIDIO_UPSTREAM_COMMIT,
+  PRESIDIO_UPSTREAM_PATH,
+  PRESIDIO_UPSTREAM_REPOSITORY,
 } from '../rule-pack/context-data.ts';
+import { REFERENCE_VALIDATORS } from '../rule-pack/personal-data.ts';
 import { RULE_FAMILIES, RULE_FAMILIES_WITH_PATTERN, RULE_VALIDATORS, RulePack } from '../src/rule-pack.ts';
 
 const upstreamText = readFileSync(new URL('../../pack/initial/upstream/rules.ts.txt', import.meta.url), 'utf8');
@@ -148,17 +154,23 @@ describe('Pack initial', () => {
     expect(Object.keys(VALUE_BOUNDS).sort()).toEqual(['basic_auth_url', 'cli_basic_auth', 'database_url_credentials', 'jwt']);
   });
 
-  it('règles de fournisseurs : reprises de Titus, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
+  it('règles de fournisseurs : reprises de Titus et de Betterleaks, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
     expect(providerRules).toEqual(PROVIDER_RULES);
-    expect(providerRules).toHaveLength(294);
+    expect(providerRules).toHaveLength(360);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_REPOSITORY);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_COMMIT);
+    // Règles reprises de Betterleaks (v0.10.0, MIT) : dépôt, commit et licence cités dans UPSTREAM.md et NOTICE.
+    for (const notes of [upstreamNotes, readFileSync(new URL('../../NOTICE', import.meta.url), 'utf8')]) {
+      expect(notes).toContain(PROVIDER_BETTERLEAKS_REPOSITORY);
+      expect(notes).toContain(PROVIDER_BETTERLEAKS_COMMIT);
+      expect(notes).toContain('MIT');
+    }
     const earlier = new Set([...catalogRules, ...personalRules].map((rule) => rule.ruleId));
     const ids = new Set<string>();
     for (const rule of PROVIDER_RULE_SOURCES) {
       expect(earlier.has(rule.ruleId) || ids.has(rule.ruleId), rule.ruleId).toBe(false);
       ids.add(rule.ruleId);
-      expect(rule.upstream, rule.ruleId).toMatch(/^(?:np|kingfisher|titus)\.[a-z0-9._-]+$/);
+      expect(rule.upstream, rule.ruleId).toMatch(/^(?:np|kingfisher|titus|betterleaks)\.[a-z0-9._-]+$/);
       expect([80, 95], rule.ruleId).toContain(rule.score);
       // Un seul groupe capturant (la valeur) ; aucun groupe nommé ; le motif se lit aussi en JavaScript.
       expect((rule.pattern.match(/\((?!\?)/g) ?? []).length, rule.ruleId).toBeLessThanOrEqual(1);
@@ -172,7 +184,7 @@ describe('Pack initial', () => {
     expect(providerLabelsText).toBe(buildProviderLabelsGo());
   });
 
-  it('règles de données à contexte : écrites ici, « motif seul » sans validateur, un groupe capturant au plus, origine de la technique citée', () => {
+  it('règles de données à contexte : écrites ici, « motif seul », validateur nommé des identifiants à somme de contrôle, un groupe capturant au plus, origines citées', () => {
     expect(contextRules).toEqual(CONTEXT_DATA_RULES);
     expect(contextRules.map((rule) => rule.ruleId)).toEqual([
       'email_address',
@@ -186,29 +198,69 @@ describe('Pack initial', () => {
       'aws_s3_bucket',
       'aws_rds_endpoint',
       'aws_dynamodb_endpoint',
+      // Identifiants européens portés de Presidio, identifiants français, règle composée AWS (v0.10.0).
+      'es_nif',
+      'es_nie',
+      'it_fiscal_code',
+      'it_vat',
+      'de_tax_id',
+      'de_vat',
+      'pl_pesel',
+      'uk_nhs',
+      'se_personnummer',
+      'fi_personal_identity_code',
+      'fr_vat',
+      'fr_rib',
+      'fr_license_plate',
+      'fr_postal_address',
+      'aws_access_key_pair',
     ]);
+    expect(contextRules.filter((rule) => rule.validator !== '').map((rule) => [rule.ruleId, rule.validator])).toEqual([
+      ['es_nif', 'es_nif_mod23'],
+      ['es_nie', 'es_nie_mod23'],
+      ['it_fiscal_code', 'it_fiscal_code_check'],
+      ['it_vat', 'it_vat_luhn'],
+      ['de_tax_id', 'de_tax_id_iso7064'],
+      ['de_vat', 'de_vat_iso7064'],
+      ['pl_pesel', 'pl_pesel_check'],
+      ['uk_nhs', 'uk_nhs_mod11'],
+      ['se_personnummer', 'se_personnummer_luhn'],
+      ['fi_personal_identity_code', 'fi_hetu_mod31'],
+      ['fr_vat', 'fr_vat_key'],
+      ['fr_rib', 'fr_rib_key'],
+    ]);
+    // Un groupe « (?i:…) » du Pack s'écrit lettre par lettre dans le motif de référence (adresse postale).
+    const letterByLetter = (pattern: string): string =>
+      pattern.replaceAll(/\(\?i:([^)]*)\)/g, (_, words: string) => `(?:${[...words].map((c) => (/[a-z]/.test(c) ? `[${c}${c.toUpperCase()}]` : c)).join('')})`);
     const earlier = new Set([...catalogRules, ...personalRules, ...providerRules].map((rule) => rule.ruleId));
     for (const { rule, labelFr, labelEn, reference } of CONTEXT_RULE_SOURCES) {
       expect(earlier.has(rule.ruleId), rule.ruleId).toBe(false);
-      expect([rule.family, rule.validator, rule.minLength, rule.maxLength], rule.ruleId).toEqual(['fixed_pattern', '', 0, 0]);
+      expect([rule.family, rule.minLength, rule.maxLength], rule.ruleId).toEqual(['fixed_pattern', 0, 0]);
+      // Validateur nommé : sa seconde écriture existe (`personal-data.ts`).
+      if (rule.validator !== '') expect(REFERENCE_VALIDATORS[rule.validator], rule.ruleId).toBeDefined();
       // Un seul groupe capturant (la valeur) ; aucun groupe nommé ; le motif de référence se lit en JavaScript, et ne
       // diffère du motif du Pack que par l'écriture du repli de casse.
       expect((rule.pattern.match(/\((?!\?)/g) ?? []).length, rule.ruleId).toBeLessThanOrEqual(1);
       expect(rule.pattern, rule.ruleId).not.toMatch(/\(\?P?</);
       expect(() => new RegExp(reference.source, reference.flags), rule.ruleId).not.toThrow();
-      expect(reference.flags.includes('i') ? `(?i:${reference.source.slice(0, -2)})\\b` : reference.source, rule.ruleId).toBe(rule.pattern);
+      if (reference.flags.includes('i')) expect(`(?i:${reference.source.slice(0, -2)})\\b`, rule.ruleId).toBe(rule.pattern);
+      else expect(reference.source, rule.ruleId).toBe(letterByLetter(rule.pattern));
       for (const label of [labelFr, labelEn]) {
         expect(label, rule.ruleId).toMatch(/^[\p{L}\p{N}][\p{L}\p{N} .’+-]*[\p{L}\p{N}.]$/u);
       }
     }
-    // Une règle « à activer » est une règle de données à contexte ; aujourd'hui, l'adresse électronique seule.
-    expect(CONTEXT_OPT_IN_RULE_IDS).toEqual(['email_address']);
+    // Une règle « à activer » est une règle de données à contexte : l'adresse électronique et l'adresse postale.
+    expect(CONTEXT_OPT_IN_RULE_IDS).toEqual(['email_address', 'fr_postal_address']);
     // Le fichier Go (libellés, règles « à activer ») est exactement celui du générateur.
     expect(contextRulesText).toBe(buildContextRulesGo());
     // Technique du mot-clé de contexte : origine citée dans UPSTREAM.md et avis MIT dans NOTICE.
     for (const text of [CONTEXT_UPSTREAM_REPOSITORY, CONTEXT_UPSTREAM_COMMIT, CONTEXT_UPSTREAM_PATH]) expect(upstreamNotes).toContain(text);
     expect(noticeText).toContain(CONTEXT_UPSTREAM_REPOSITORY);
     expect(noticeText).toContain('MIT License');
+    // Identifiants européens portés de Presidio (MIT) : dépôt, commit et dossier dans UPSTREAM.md, avis dans NOTICE.
+    for (const text of [PRESIDIO_UPSTREAM_REPOSITORY, PRESIDIO_UPSTREAM_COMMIT, PRESIDIO_UPSTREAM_PATH]) expect(upstreamNotes).toContain(text);
+    expect(noticeText).toContain(PRESIDIO_UPSTREAM_REPOSITORY);
+    expect(noticeText).toContain('Copyright (c) Presidio Contributors');
   });
 
   it('validateur nommé et valeur portée par le premier groupe des règles fixes', () => {

@@ -11,6 +11,10 @@
  * RFC 2606 et 6761), assemblées par morceaux. Téléphones : tranches réservées à la fiction (Arcep : 01 99 00, 06 39 98 ;
  * Amérique du Nord : 555-01xx ; Ofcom : 020 7946 0xxx). Passeports, cryptogrammes, codes, comptes AWS, identifiants
  * d'instance et clés : chiffres et lettres tirés de SHA-256 (`synth`). Adresses IP : plages privées de la RFC 1918.
+ *
+ * Depuis la v0.10.0 : identifiants européens et français à somme de contrôle (valeur calculée, clé retrouvée par le
+ * contrôle de référence de `rule-pack/personal-data.ts`, seconde écriture indépendante du moteur Go) et règle
+ * composée AWS (lecture de référence `awsPairSpans`).
  */
 import { byteOffsetOf, decodeInput, utf8Bytes } from './bytes.ts';
 import { CorpusError, expectedFor, type CaseSource } from './corpus.ts';
@@ -18,6 +22,26 @@ import { levelForScore, type CorpusExpected, type CorpusFinding } from './model.
 import { mergeProviderFindings } from './provider-rules.ts';
 import { synth, type CaseIntent } from './synthetic.ts';
 import { CONTEXT_DATA_RULES, contextReferenceFindings } from '../rule-pack/context-data.ts';
+import {
+  CHECK_ALNUM,
+  CHECK_DIGITS,
+  CHECK_LETTERS,
+  CHECK_PAIRS,
+  deTaxIdValid,
+  deVatValid,
+  esNieValid,
+  esNifValid,
+  fiHetuValid,
+  frRibValid,
+  frVatValid,
+  itFiscalCodeValid,
+  itVatValid,
+  luhnCheckDigit,
+  plPeselValid,
+  sePersonnummerValid,
+  ukNhsValid,
+  withCheck,
+} from '../rule-pack/personal-data.ts';
 import type { UpstreamEngine } from './upstream.ts';
 
 /** Fichier du corpus qui porte ces cas (famille `rules`, couverte par l'exception de `.gitleaks.toml`). */
@@ -242,6 +266,228 @@ function awsDrafts(): Draft[] {
   ];
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Identifiants européens et français à somme de contrôle, règle composée AWS (v0.10.0). Chaque valeur est calculée :
+// chiffres et lettres tirés de SHA-256, clé de contrôle retrouvée par essais avec le contrôle de référence
+// (`withCheck`). Aucun identifiant d'une personne ou d'une entreprise réelle ; codes postaux en 99, hors de France.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Premier essai réussi de `build` sur `label/0`, `label/1`… : une suite tirée au sort peut ne pas avoir de clé valide. */
+function firstValid(label: string, build: (label: string) => string): string {
+  for (let attempt = 0; attempt < 64; attempt += 1) {
+    try {
+      return build(`${label}/${String(attempt)}`);
+    } catch {
+      // Essai suivant.
+    }
+  }
+  throw new CorpusError(`valeur d’essai introuvable : ${label}`);
+}
+
+/** Nombre de 01 à `max`, sur deux chiffres. */
+const two = (label: string, max: number): string => String(1 + (Number(digits(label, 4)) % max)).padStart(2, '0');
+
+/** Même valeur, dernier caractère changé (chiffre ou lettre suivants) : la clé de contrôle ne tient plus. */
+function breakLast(value: string): string {
+  const last = value.at(-1) ?? '0';
+  const next = /[0-9]/.test(last) ? String((Number(last) + 1) % 10) : String.fromCharCode(last === 'Z' ? 65 : last.charCodeAt(0) + 1);
+  return `${value.slice(0, -1)}${next}`;
+}
+
+/** Cas d'un identifiant annoncé : positifs, puis clé fausse, valeur sans mot-clé et mot-clé sur la ligne précédente. */
+function announcedDrafts(
+  rule: string,
+  keyword: string,
+  positives: readonly (readonly [name: string, before: string, value: string, after?: string])[],
+): Draft[] {
+  const sample = positives[0]?.[2] ?? '';
+  return [
+    ...positives.map(([name, before, value, after]) => positive(rule, name, before, value, after)),
+    negative(rule, 'cle-fausse', `${keyword} ${breakLast(sample)}`),
+    negative(rule, 'sans-mot-cle', `dossier ${sample} transmis`),
+    negative(rule, 'ligne-precedente', `${keyword}\n${sample}`),
+  ];
+}
+
+function spanishDrafts(): Draft[] {
+  const nif = (label: string): string => withCheck(digits(`es/nif/${label}`, 8), CHECK_LETTERS, esNifValid);
+  const nie = (label: string, head: string): string => withCheck(`${head}${digits(`es/nie/${label}`, 7)}`, CHECK_LETTERS, esNieValid);
+  const dashed = nif('b');
+  const foreign = nie('c', 'Z');
+  return [
+    ...announcedDrafts('es_nif', 'NIF', [
+      ['phrase', 'mon NIF est ', nif('a')],
+      ['json-dni-tiret', '{"dni": "', `${dashed.slice(0, 8)}-${dashed.slice(8)}`, '"}'],
+      ['carte-espagnole', 'carte d’identité espagnole n° ', nif('c'), ', délivrée à Séville'],
+      ['spanish-id-card', 'Spanish ID card number: ', nif('d').toLowerCase()],
+    ]),
+    ...announcedDrafts('es_nie', 'NIE', [
+      ['phrase', 'NIE : ', nie('a', 'X')],
+      ['foreigner-identity-number', 'foreigner identity number ', nie('b', 'Y')],
+      ['numero-d-etranger-tirets', 'numéro d’identité d’étranger : ', `${foreign.slice(0, 1)}-${foreign.slice(1, 8)}-${foreign.slice(8)}`],
+    ]),
+  ];
+}
+
+function italianDrafts(): Draft[] {
+  const fiscalCode = (label: string): string =>
+    withCheck(
+      `${letters(`it/cf/${label}/name`, 6)}${digits(`it/cf/${label}/year`, 2)}${synth(`context-data/it/cf/${label}/month`, 'ABCDEHLMPRST', 1)}` +
+        `${two(`it/cf/${label}/day`, 28)}${letters(`it/cf/${label}/town`, 1)}${digits(`it/cf/${label}/code`, 3)}`,
+      CHECK_LETTERS,
+      itFiscalCodeValid,
+    );
+  const vat = (label: string): string => withCheck(digits(`it/vat/${label}`, 10), CHECK_DIGITS, itVatValid);
+  return [
+    ...announcedDrafts('it_fiscal_code', 'codice fiscale', [
+      ['codice-fiscale', 'Codice fiscale: ', fiscalCode('a')],
+      ['code-fiscal-italien-minuscules', 'code fiscal italien : ', fiscalCode('b').toLowerCase(), ' (né à Turin)'],
+      ['italian-tax-code', 'Italian tax code ', fiscalCode('c')],
+    ]),
+    ...announcedDrafts('it_vat', 'partita IVA', [
+      ['partita-iva', 'Partita IVA: ', vat('a')],
+      ['p-iva-prefixe-it', 'P. IVA IT', vat('b')],
+      ['tva-italienne', 'TVA italienne : ', vat('c'), ', siège à Milan'],
+      ['italian-vat-number', 'Italian VAT number: ', vat('d')],
+    ]),
+  ];
+}
+
+function germanDrafts(): Draft[] {
+  const taxId = (label: string): string => firstValid(`de/tax/${label}`, (attempt) => withCheck(number(attempt, 10), CHECK_DIGITS, deTaxIdValid));
+  const vat = (label: string): string => withCheck(`DE${number(`de/vat/${label}`, 8)}`, CHECK_DIGITS, deVatValid);
+  const spaced = taxId('b');
+  const second = vat('c');
+  return [
+    ...announcedDrafts('de_tax_id', 'Steuer-ID', [
+      ['steuer-id', 'Steuer-ID: ', taxId('a')],
+      ['idnr-espaces', 'IdNr. ', `${spaced.slice(0, 2)} ${spaced.slice(2, 5)} ${spaced.slice(5, 8)} ${spaced.slice(8)}`],
+      ['identifiant-fiscal-allemand', 'identifiant fiscal allemand : ', taxId('c'), ' (Berlin)'],
+      ['german-tax-id-number', 'German tax ID number: ', taxId('d')],
+    ]),
+    ...announcedDrafts('de_vat', 'USt-IdNr.', [
+      ['ust-idnr', 'USt-IdNr.: ', vat('a')],
+      ['tva-allemande', 'TVA allemande : ', vat('b')],
+      ['german-vat-number-espace', 'German VAT number ', `${second.slice(0, 2)} ${second.slice(2)}`],
+    ]),
+  ];
+}
+
+function northernDrafts(): Draft[] {
+  const pesel = (label: string): string =>
+    withCheck(`${digits(`pl/${label}/year`, 2)}${two(`pl/${label}/month`, 12)}${two(`pl/${label}/day`, 28)}${digits(`pl/${label}/order`, 4)}`, CHECK_DIGITS, plPeselValid);
+  const nhs = (label: string): string => firstValid(`uk/nhs/${label}`, (attempt) => withCheck(number(attempt, 9), CHECK_DIGITS, ukNhsValid));
+  const personnummer = (label: string): string =>
+    withCheck(`${digits(`se/${label}/year`, 2)}${two(`se/${label}/month`, 12)}${two(`se/${label}/day`, 28)}${digits(`se/${label}/order`, 3)}`, CHECK_DIGITS, sePersonnummerValid);
+  const hetu = (label: string, separator: string): string =>
+    withCheck(`${two(`fi/${label}/day`, 28)}${two(`fi/${label}/month`, 12)}${digits(`fi/${label}/year`, 2)}${separator}${digits(`fi/${label}/order`, 3)}`, CHECK_ALNUM, fiHetuValid);
+  const grouped = nhs('a');
+  const hyphenated = nhs('c');
+  const dashed = personnummer('a');
+  return [
+    ...announcedDrafts('pl_pesel', 'PESEL', [
+      ['phrase', 'mon numéro PESEL est ', pesel('a')],
+      ['json', '{"pesel": "', pesel('b'), '"}'],
+      ['pesel-number', 'PESEL number: ', pesel('c')],
+    ]),
+    ...announcedDrafts('uk_nhs', 'NHS number', [
+      ['nhs-number-groupes', 'NHS number: ', `${grouped.slice(0, 3)} ${grouped.slice(3, 6)} ${grouped.slice(6)}`],
+      ['numero-nhs', 'numéro NHS : ', nhs('b'), ' (patient)'],
+      ['national-health-service-tirets', 'National Health Service no. ', `${hyphenated.slice(0, 3)}-${hyphenated.slice(3, 6)}-${hyphenated.slice(6)}`],
+    ]),
+    ...announcedDrafts('se_personnummer', 'personnummer', [
+      ['personnummer-tiret', 'Personnummer: ', `${dashed.slice(0, 6)}-${dashed.slice(6)}`],
+      ['personal-identity-number-douze-chiffres', 'personal identity number ', `19${personnummer('b')}`],
+      ['numero-personnel-suedois', 'numéro personnel suédois : ', personnummer('c')],
+    ]),
+    ...announcedDrafts('fi_personal_identity_code', 'HETU', [
+      ['hetu', 'HETU: ', hetu('a', '-')],
+      ['henkilotunnus-annees-2000', 'henkilötunnus ', hetu('b', 'A')],
+      ['identifiant-personnel-finlandais', 'identifiant personnel finlandais : ', hetu('c', '-').toLowerCase(), ' (Helsinki)'],
+      ['finnish-personal-identity-code', 'Finnish personal identity code: ', hetu('d', '+')],
+    ]),
+  ];
+}
+
+function frenchDrafts(): Draft[] {
+  const siren = (label: string): string => {
+    const body = number(`fr/siren/${label}`, 8);
+    return `${body}${luhnCheckDigit(body)}`;
+  };
+  const vat = (label: string): string => withCheck('FR', CHECK_PAIRS, frVatValid, siren(label));
+  const rib = (label: string, account: string): string =>
+    withCheck(`${digits(`fr/rib/${label}/bank`, 5)}${digits(`fr/rib/${label}/branch`, 5)}${account}`, CHECK_PAIRS, frRibValid);
+  const account = (label: string): string => digits(`fr/rib/${label}/account`, 11);
+  const plain = rib('a', account('a'));
+  const lettered = rib('c', `${digits('fr/rib/c/head', 4)}${letters('fr/rib/c/letters', 3)}${digits('fr/rib/c/tail', 4)}`);
+  const plateLetters = (label: string): string => synth(`context-data/fr/plate/${label}`, 'ABCDEFGHJKLMNPQRSTVWXYZ', 2);
+  const plate = (label: string, separator: string): string =>
+    [plateLetters(`${label}/a`), digits(`fr/plate/${label}`, 3), plateLetters(`${label}/b`)].join(separator);
+  const spacedVat = vat('b');
+  const street = '12 rue des Essais, 99000 Villefictive';
+  return [
+    positive('fr_vat', 'tva-intracommunautaire', 'TVA intracommunautaire : ', vat('a')),
+    positive('fr_vat', 'espaces', 'N° TVA ', `${spacedVat.slice(0, 4)} ${spacedVat.slice(4, 7)} ${spacedVat.slice(7, 10)} ${spacedVat.slice(10)}`, ' (siège)'),
+    positive('fr_vat', 'sans-mot-cle', 'facture émise par ', vat('c'), ', payée'),
+    negative('fr_vat', 'cle-fausse', `TVA ${breakLast(vat('a').slice(0, 4))}${vat('a').slice(4)}`),
+    negative('fr_vat', 'siren-faux', `TVA ${breakLast(vat('a'))}`),
+    negative('fr_vat', 'minuscules', `tva ${vat('a').toLowerCase()}`),
+    negative('fr_vat', 'un-chiffre-de-trop', `TVA ${vat('a')}7`),
+
+    ...announcedDrafts('fr_rib', 'RIB', [
+      ['rib-groupes', 'RIB : ', `${plain.slice(0, 5)} ${plain.slice(5, 10)} ${plain.slice(10, 21)} ${plain.slice(21)}`],
+      ['releve-d-identite-bancaire', 'relevé d’identité bancaire : ', rib('b', account('b')), ', merci'],
+      ['compte-a-lettres-tirets', 'RIB ', `${lettered.slice(0, 5)}-${lettered.slice(5, 10)}-${lettered.slice(10, 21).toLowerCase()}-${lettered.slice(21)}`],
+      ['bank-account-details', 'bank account details: ', rib('d', account('d'))],
+    ]),
+
+    positive('fr_license_plate', 'plaque-d-immatriculation', 'plaque d’immatriculation : ', plate('a', '-')),
+    positive('fr_license_plate', 'vehicule-immatricule-espaces', 'véhicule immatriculé ', plate('b', ' '), ', gris'),
+    positive('fr_license_plate', 'license-plate-d-un-bloc', 'license plate ', plate('c', '')),
+    positive('fr_license_plate', 'registration-number', 'Registration number: ', plate('d', '-')),
+    negative('fr_license_plate', 'sans-mot-cle', `référence ${plate('a', '-')} en stock`),
+    negative('fr_license_plate', 'minuscules', `plaque ${plate('a', '-').toLowerCase()}`),
+    negative('fr_license_plate', 'lettres-exclues', 'plaque AI-123-OU'),
+    negative('fr_license_plate', 'mot-cle-trop-loin', `immatriculation du véhicule de la direction régionale : ${plate('a', '-')}`),
+    negative('fr_license_plate', 'ligne-precedente', `plaque\n${plate('a', '-')}`),
+    negative('fr_license_plate', 'mot-qui-porte-plate', `template ${plate('a', '-')}`),
+
+    positive('fr_postal_address', 'rue', 'Adresse : ', street),
+    positive('fr_postal_address', 'avenue-deux-lignes', 'Livraison :\n', '5 bis avenue du Corpus\n99100 Saint-Exemple'),
+    positive('fr_postal_address', 'boulevard-a-date', '', '128 Boulevard du 11 Novembre 1918, 99200 Bourg-la-Demo', ' (siège)'),
+    negative('fr_postal_address', 'sans-code-postal', '12 rue des Essais, Villefictive'),
+    negative('fr_postal_address', 'sans-numero', 'rue des Essais, 99000 Villefictive'),
+    negative('fr_postal_address', 'type-de-voie-inconnu', '12 venelle des Essais, 99000 Villefictive'),
+    negative('fr_postal_address', 'commune-sans-majuscule', '12 rue des Essais, 99000 villefictive'),
+    negative('fr_postal_address', 'code-postal-de-quatre-chiffres', '12 rue des Essais, 9900 Villefictive'),
+  ];
+}
+
+function awsPairDrafts(): Draft[] {
+  const rule = 'aws_access_key_pair';
+  const base32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  const id = (label: string, prefix: readonly [string, string]): string => `${prefix.join('')}${synth(`context-data/aws/pair/id/${label}`, base32, 16)}`;
+  const shaped = (value: string): string => {
+    if (!/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/[0-9]/.test(value)) throw new CorpusError('valeur sans minuscule, majuscule ou chiffre');
+    return value;
+  };
+  const secret = (label: string): string => firstValid(`aws/pair/secret/${label}`, (attempt) => shaped(synth(`context-data/${attempt}`, B64, 40)));
+  const durable = id('a', ['AK', 'IA']);
+  const temporary = id('b', ['AS', 'IA']);
+  return [
+    positive(rule, 'deux-colonnes', 'identifiant,valeur\n', `${durable},${secret('a')}`),
+    positive(rule, 'cote-a-cote', '', `${id('c', ['AK', 'IA'])} ${secret('b')}`, ' (console)'),
+    positive(rule, 'valeur-avant-l-identifiant', 'export : ', `${secret('c')}\t${temporary}`),
+    positive(rule, 'deux-lignes', 'copie du fichier :\n', `${id('d', ['AK', 'IA'])}\n${secret('d')}`, '\n# fin'),
+    negative(rule, 'identifiant-seul', `compte ${durable}`),
+    negative(rule, 'empreinte-hexadecimale', `${durable} ${synth('context-data/aws/pair/hex', '0123456789abcdef', 40)}`),
+    negative(rule, 'valeur-hors-de-la-fenetre', `${durable} ${'mot '.repeat(60)}${secret('a')}`),
+    negative(rule, 'valeur-de-39-caracteres', `${durable},${secret('a').slice(1)}`),
+    negative(rule, 'valeur-de-41-caracteres', `${durable},${secret('a')}A`),
+    negative(rule, 'valeur-sans-chiffre', `${durable},${synth('context-data/aws/pair/letters', LOWER + UPPER, 40)}`),
+  ];
+}
+
 function drafts(): Draft[] {
   return [
     ...emailDrafts(),
@@ -252,6 +498,12 @@ function drafts(): Draft[] {
     ...azureDrafts(),
     ...internalIpDrafts(),
     ...awsDrafts(),
+    ...spanishDrafts(),
+    ...italianDrafts(),
+    ...germanDrafts(),
+    ...northernDrafts(),
+    ...frenchDrafts(),
+    ...awsPairDrafts(),
   ];
 }
 
