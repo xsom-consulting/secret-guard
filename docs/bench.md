@@ -314,7 +314,7 @@ la seule raison de la charge) :
 | 64 Kio | consignes | 90,2 ms | 7,21 ms | ×12 |
 | 64 Kio | prose repliée | 74,5 ms | 9,33 ms | ×8 |
 
-La mesure entière des 34 dépôts prend 68 à 74 s de processeur à l'état final (865 s avant, 52 s avec les seules
+La mesure entière des 34 dépôts prend 67 à 75 s de processeur à l'état final (865 s avant, 52 s avec les seules
 lectures).
 
 Pire cas d'une lecture : « send token @ » répété sur 1 Mio, où la porte du motif d'exfiltration s'ouvre à chaque mot,
