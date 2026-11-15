@@ -1114,3 +1114,132 @@ Vérification : `TestParity` (1 970 cas), `TestContextRules`, `TestOptInRules`, 
 `generator/test/personal-data.test.ts`, `generator/test/rule-pack.test.ts`. Non mesuré dans cette passe : le banc de
 bruit sur les dépôts de référence (`go run ./tools/bruit <nom>=<chemin>…`, à lancer avant l'étiquette) et le coût des
 quinze règles sur le banc de `docs/bench.md`.
+
+## Langage par bloc de code, matrice d'encodages, fermeture de la v0.10.0
+
+Lot L27 de l'Epic 27 de xSOM Fleet (stories 27.7, 27.49 et 27.50), le 15 novembre 2026. Aucun code, motif ni cas
+d'essai d'un tiers n'est repris dans ce lot : le langage par bloc est une idée propre, et les 21 écritures de la matrice
+viennent de nos propres essais (rien de TruffleHog, AGPL-3.0, ni de Betterleaks).
+
+### Langage par bloc de code (`detect/fencedblocks.go`)
+
+Écart d'analyse ajouté, sans origine dans Secret Guard et sans effet sur le corpus de parité. Dans un texte analysé
+**sans langage déclaré** (un prompt), une affectation dont le nom est dans un bloc clôturé par trois accents graves ou
+plus est lue avec le langage que nomme l'ouverture du bloc, comme si l'analyse l'avait déclaré (`Options.LanguageID`) :
+le palier 2 du code ordinaire s'applique alors dans un prompt collé.
+
+- **Langages connus** : ceux que le moteur distingue déjà (`codeLanguages`, `structuredLanguages`, `dotenvLanguages`,
+  `shellLanguages` de `detect/contextual.go`). Le nom est le premier mot après l'ouverture, gardé tel qu'il est écrit ;
+  ce qui le suit (`title=…`, `{1,3}`) est ignoré.
+- **Lecture inchangée** : bloc sans nom, de nom inconnu (`mermaid`, `console`, `golang`, `c++`), jamais refermé, ou
+  ouvert par des tildes ; tout texte hors d'un bloc ; toute analyse qui déclare un langage, quel qu'il soit.
+- **Fermeture** : une ligne d'au moins autant d'accents graves que l'ouverture, sans autre texte ; trois espaces de
+  retrait au plus, comme en Markdown.
+- **Portée** : les motifs d'affectation (`scanAssignmentPattern`). Les cookies, l'option `-u`, les annonces de mot de
+  passe, la clé `auth` de Docker, les règles à motif et l'entropie ne lisent pas le langage, comme avant.
+- **Travail borné** : les blocs d'une vue sont lus en un passage, au plus une fois par motif, et seulement si le texte
+  porte trois accents graves ; la recherche du bloc d'un nom est logarithmique.
+- **Ce que cela retire et ajoute** : dans un bloc de code, une clé d'API, un jeton ou un secret générique dont la valeur
+  n'a pas la forme d'un secret (libellé, valeur d'essai en mots) n'est plus un constat ; une valeur à forme de secret le
+  reste. Dans un bloc `env` ou `dotenv`, toute affectation est lue comme une affectation nue d'environnement, ce qui
+  garde plus de constats. L'auteur d'un prompt choisit le nom du bloc comme l'appelant choisit `LanguageID` : le
+  langage ne décide que de la lecture des affectations, jamais d'une règle à motif.
+
+**Corpus.** `TestParity` : aucun écart, avant comme après (`--check` de l'export d'origine sur la branche
+d'intégration : « Corpus identique : 1970 cas, 17 fichiers »). `vectors/noise.json` : onze cas « bloc/ » (227 au
+total), des prompts dont le libellé est signalé quand le bloc n'a pas de nom et ne l'est plus quand il en a un.
+`TestFencedBlockLanguage` (`detect/fencedblocks_test.go`) : libellé écarté dans un bloc `ts`, `TypeScript` à attributs
+et à quatre accents graves ; valeur à forme de secret gardée ; lecture inchangée pour un bloc sans nom, de nom inconnu,
+jamais refermé, après le bloc, et sous un langage déclaré.
+
+### Matrice d'encodages (`vectors/detection/views-encodings.json`)
+
+Les 21 écritures d'un même jeton synthétique essayées pendant l'étude de la v0.10.0 deviennent des cas du corpus de
+parité, écrits par `generator/corpus/encodings.ts`. Seize sont jugés par le moteur d'origine. Cinq éprouvent les écarts
+de la section « Décodage à plusieurs couches et vue UTF-16 » et sont jugés par une seconde écriture, qui répond à la
+question 4 de cette section : le générateur décode lui-même (UTF-16, ou base64 couche après couche) et fait juger le
+texte clair par le moteur d'origine ; le constat attendu en garde la règle, avec l'encodage et l'étendue de l'entrée
+(`normalized` et deux octets par caractère pour UTF-16 ; `base64`, étendue du candidat et 5 points de moins par couche
+sinon). Le moteur Go a rendu ces 21 résultats sans retouche.
+
+Le fichier est hors des vecteurs du masquage, comme le code ordinaire (`generator/redact/main.ts`,
+`detect/redact_test.go`) : le masquage d'origine ne connaît pas ces écarts. Le corpus passe à 1 991 cas et 18 fichiers ;
+les 1 970 autres cas et les 619 vecteurs du masquage sont inchangés octet pour octet. L'archive gzip du cas 20 a un
+en-tête fixe écrit par le générateur, pour donner les mêmes octets sur tout poste.
+
+`docs/encodages.md` publie le tableau : 12 écritures lues par la règle du jeton, 5 à l'entropie seule, 4 sans constat
+(hexadécimal, échappements à deux chiffres et entre accolades, entités HTML, base32, concaténation, inversion,
+compression : non lus).
+
+### Fichiers de bruit
+
+`TestNoiseCorpus` rejoue les trois fichiers de bruit (`vectors/noise.json`, `noise-providers.json`,
+`noise-entropy.json`, 598 cas), avec des identifiants uniques d'un fichier à l'autre. `TestNoiseProviders` et
+`TestNoiseEntropyCorpus` restent pour ce qui est propre à leur fichier (motif de la règle qui reconnaît le texte,
+familles présentes).
+
+### Page de comparaison
+
+`docs/comparaison.md` est un brouillon : il réunit des chiffres déjà commités (banc Betterleaks, banc de bruit, rappel du
+paquet `injection`, matrice d'encodages), dit ce qui est mesuré et ce qui est seulement lu dans le code des autres
+outils, et n'est lié depuis aucune page. Sa publication reste à décider par Julian.
+
+### Version v0.10.0 : ce qui est fait, ce qui reste à lancer
+
+Fait le 15 novembre 2026, sur la branche `release/v0.10.0` :
+
+- commit de version : `wasm/package.json` en 0.10.0, `expurgation/go.mod` exige `v0.10.0` (le `replace` de
+  développement reste) ; les décomptes du `README.md` et de `docs/rule-pack.md` étaient déjà à 426 ;
+- `go run ./tools/versioncheck v0.10.0` : « 6 points concordent » ;
+- `npm run pack:initial` puis `git diff --exit-code pack/ detect/` : aucun écart ;
+- `npm run vectors:detection -- --upstream <checkout> --check` : « Corpus identique : 1991 cas, 18 fichiers » ;
+  `npm run vectors:redact -- --upstream <checkout> --check` : « Vecteurs identiques : 619 cas, 15 cas d’étendues » ;
+- essais lancés : `TestFencedBlockLanguage`, `TestNoiseCorpus`, `TestParity` (1 991 cas, aucun écart),
+  `TestRedactParity`, `TestComparisonBetterleaks` ; `generator/test/detection-corpus.test.ts` et
+  `generator/test/redact-vectors.test.ts` (35 essais) ; `tsc` du générateur ; `go build` et `go vet` du module
+  `expurgation` ;
+- `gofmt -l .` sans sortie ; `go run ./tools/spdxcheck` : 260 fichiers ; `gitleaks dir . --redact --no-banner` : aucune
+  fuite ; `golangci-lint run --new-from-rev=integration/v0.10.0 ./detect/...` : aucune remarque sur les lignes du lot ;
+- `go run ./tools/depguardcheck` : lancé puis interrompu au bout de cinq minutes (consigne d'économie). Sa première
+  étape, golangci-lint entier sur une copie des deux modules, était passée, et les imports interdits essayés jusqu'à
+  `internal/limits` étaient refusés ; la suite (`internal/jstext`, ligne de commande, module `expurgation`) n'a pas
+  tourné ;
+- attributions relues pour tous les lots de la version : chaque reprise sous MIT ou Apache-2.0 (Titus, Betterleaks,
+  Presidio, LLM Guard, Promptfoo, Akto, Skill Scanner, DefenseClaw) a son dépôt, son commit et sa licence dans
+  `NOTICE` et dans ce fichier ; Gitleaks, Giskard et TruffleHog ne donnent qu'une idée, sans ligne reprise.
+
+**À lancer avant l'étiquette** (non lancé dans ce lot, consigne d'économie de la passe ; la version n'est pas prête à
+étiqueter tant que cette liste n'est pas verte) :
+
+```sh
+go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...
+go run ./tools/covercheck coverage.out
+(cd expurgation && go vet ./... && golangci-lint run && go test -count=1 -coverprofile=coverage.out ./...)
+go run ./tools/covercheck -module expurgation expurgation/coverage.out
+go run ./tools/depguardcheck
+(cd generator && npm ci && npm test)
+(cd expurgation && GOOS=wasip1 GOARCH=wasm go build -trimpath -buildvcs=false -ldflags="-s -w" -buildmode=c-shared -o ../dist/secret-guard.wasm ./cmd/secret-guard-wasm)
+node --test wasm/secret-guard.test.mjs wasm/parity.test.mjs wasm/package.test.mjs
+go run ./tools/bruit xsom-fleet=<chemin> litellm=<chemin> promptfoo=<chemin> ggshield=<chemin> gitleaks=<chemin>
+go test -run '^$' -bench 'BenchmarkScan64KiB' -count=3 ./detect
+```
+
+Le banc de bruit n'a été relancé par aucun lot depuis la correction de l'entropie (rapport à 345 règles) : son premier
+passage sur la v0.10.0 complète peut montrer une hausse des règles nouvelles et une baisse des affectations, à poser
+avec `-baseline` et à expliquer dans le message du commit.
+
+### Décisions prises par défaut, à confirmer
+
+1. **Le langage d'un bloc ne joue que sans langage déclaré.** Un fichier Markdown analysé avec `LanguageID`
+   « markdown » garde la lecture d'avant, blocs de code compris. Faut-il que « markdown » et « mdx » laissent aussi
+   parler leurs blocs ?
+2. **Aucun alias** : `golang`, `c++`, `c#`, `console`, `node` ne sont pas des noms connus. À ajouter si le bruit mesuré
+   sur des prompts réels le demande.
+3. **Bloc jamais refermé, bloc à tildes** : lecture sans langage (choix du périmètre le plus étroit).
+4. **Cas positifs du langage par bloc dans un essai Go**, pas dans le corpus de parité : le moteur d'origine n'a pas
+   cette lecture, il faudrait une seconde écriture de plus dans le générateur. Le module WebAssembly n'éprouve donc
+   cette lecture que par le code Go qu'il compile.
+5. **`generator/` et `detect/redact_test.go` modifiés** pour que la matrice soit un fichier du corpus généré, jamais un
+   fichier écrit à la main.
+6. **La colonne v0.9.0** de `docs/encodages.md` et de `docs/comparaison.md` vient d'un relevé d'étude sur le binaire de
+   la v0.9.0, qu'aucun essai du dépôt ne rejoue.

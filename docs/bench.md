@@ -502,3 +502,15 @@ alternées) :
 
 Sur le banc à un fil, le lot exécute 0,4 % d'instructions de plus que le moteur v0.9.0 : l'écart existe, il est petit.
 Le temps écoulé reste à mesurer sur une machine calme avant l'étiquette de version.
+
+## v0.10.0 : langage par bloc de code, matrice d'encodages
+
+Aucune mesure de vitesse ni de bruit n'a été faite pour ces deux ajouts (lot L27, 15 novembre 2026).
+
+- Langage par bloc de code (`detect/fencedblocks.go`) : sur un texte sans trois accents graves, le chemin ajouté est
+  une recherche d'octets par motif d'affectation ; avec des blocs, un passage sur les lignes de la vue. À mesurer :
+  `go test -run '^$' -bench 'BenchmarkScan64KiB' -count=3 ./detect`, avant (commit `9c7a357`) et après.
+- Le banc de bruit analyse sans langage : les blocs de code des fichiers Markdown des cinq dépôts y sont désormais lus
+  avec leur langage. À mesurer : `go run ./tools/bruit <nom>=<chemin>…` (méthode plus haut).
+- Ce que le moteur lit sous 21 écritures d'un même jeton est un relevé de résultats, pas de durées :
+  [encodages.md](encodages.md).
