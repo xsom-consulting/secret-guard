@@ -3500,7 +3500,7 @@
       "secretType": "provider_token",
       "score": 95,
       "validator": "",
-      "pattern": "\\b(dvc_server_[0-9A-Za-z]{8,32})\\b",
+      "pattern": "\\b(dvc_server_[A-Za-z]{0,31}[0-9][0-9A-Za-z]{0,31})\\b",
       "minLength": 0,
       "maxLength": 0
     },
@@ -3659,8 +3659,8 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 95,
-      "validator": "token_entropy_34",
-      "pattern": "\\b(lip_[0-9A-Z_a-z]{16,60})\\b",
+      "validator": "token_entropy_35",
+      "pattern": "(?-m:\\b(lip_[0-9A-Za-z]{16,60})(?:[^\\-0-9A-Z_a-z]|$))",
       "minLength": 0,
       "maxLength": 0
     },
@@ -3780,7 +3780,7 @@
       "secretType": "provider_token",
       "score": 95,
       "validator": "token_entropy_35",
-      "pattern": "(?-m:\\b(persona_production_[\\-0-9_a-z]{20,80})(?:[^\\-0-9_a-z]|$))",
+      "pattern": "(?-m:\\b(persona_production_[\\-0-9a-z]{20,80})(?:[^\\-0-9A-Z_a-z]|$))",
       "minLength": 0,
       "maxLength": 0
     },
@@ -3860,7 +3860,7 @@
       "secretType": "provider_token",
       "score": 95,
       "validator": "token_entropy_35",
-      "pattern": "(?-m:\\b(prf_(?:cli_)?[\\-0-9A-Z_a-z]{20,80})(?:[^\\-0-9A-Z_a-z]|$))",
+      "pattern": "(?-m:\\b(prf_(?:cli_)?[0-9A-Za-z]{20,80})(?:[^\\-0-9A-Z_a-z]|$))",
       "minLength": 0,
       "maxLength": 0
     },
@@ -3935,22 +3935,12 @@
       "maxLength": 0
     },
     {
-      "ruleId": "stripe_prod_key",
-      "family": "fixed_pattern",
-      "secretType": "provider_token",
-      "score": 95,
-      "validator": "",
-      "pattern": "\\b((?:sk|rk)_prod_[0-9A-Za-z]{10,99})\\b",
-      "minLength": 0,
-      "maxLength": 0
-    },
-    {
       "ruleId": "thunderstore_api_token",
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 95,
       "validator": "token_entropy_35",
-      "pattern": "(?-m:\\b(tss_[\\-0-9A-Z_a-z]{20,80})(?:[^\\-0-9A-Z_a-z]|$))",
+      "pattern": "(?-m:\\b(tss_[0-9A-Za-z]{20,80})(?:[^\\-0-9A-Z_a-z]|$))",
       "minLength": 0,
       "maxLength": 0
     },
@@ -4010,7 +4000,7 @@
       "secretType": "provider_token",
       "score": 95,
       "validator": "",
-      "pattern": "\\bxox[ceo]-[0-9]{1,15}-[0-9A-Za-z-]{8,200}\\b",
+      "pattern": "\\b(xox(?:c-[0-9]{9,15}-[0-9]{9,15}-[0-9]{9,15}-[0-9a-f]{64}|e-[0-9]-[0-9A-Za-z]{146}|e-[0-9]{10,13}-[0-9]{10,13}-[0-9]{10,13}-[0-9A-Za-z-]{28,34}|o-[0-9]{6,15}-[0-9]{6,15}-[0-9]{6,15}-[0-9A-Fa-f]{16,}))\\b",
       "minLength": 0,
       "maxLength": 0
     },

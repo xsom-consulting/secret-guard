@@ -142,13 +142,13 @@ describe('vraisemblance des règles de fournisseurs', () => {
 describe('règles reprises de Betterleaks', () => {
   const taken = PROVIDER_RULE_SOURCES.filter((rule) => rule.upstream.startsWith('betterleaks.'));
 
-  it('67 règles, après celles de Titus, chacune avec l’identifiant de sa règle d’origine et ses deux libellés', () => {
+  it('66 règles, après celles de Titus, chacune avec l’identifiant de sa règle d’origine et ses deux libellés', () => {
     expect(PROVIDER_BETTERLEAKS_REPOSITORY).toBe(BETTERLEAKS_REPOSITORY);
     expect(PROVIDER_BETTERLEAKS_COMMIT).toBe(BETTERLEAKS_COMMIT);
-    expect(taken).toHaveLength(67);
+    expect(taken).toHaveLength(66);
     expect(PROVIDER_RULE_SOURCES.slice(-taken.length)).toEqual(taken);
-    expect(PROVIDER_RULE_SOURCES).toHaveLength(361);
-    expect(new Set(PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId)).size).toBe(361);
+    expect(PROVIDER_RULE_SOURCES).toHaveLength(360);
+    expect(new Set(PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId)).size).toBe(360);
     for (const rule of taken) {
       expect(rule.upstream, rule.ruleId).toMatch(/^betterleaks\.[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[0-9])?$/);
       expect(rule.labelFr.length > 0 && rule.labelEn.length > 0 && rule.labelFr !== rule.labelEn, rule.ruleId).toBe(true);
@@ -165,15 +165,21 @@ describe('règles reprises de Betterleaks', () => {
     for (const rule of taken.filter((entry) => entry.score === 95)) expect(rule.sample.before, rule.ruleId).toEqual([]);
   });
 
-  it('les jetons Slack xapp-, xoxc-, xoxe- et xoxo- ont une règle ; « xoxo- » suivi de mots n’en est pas un', () => {
+  it('les jetons Slack xapp-, xoxc-, xoxe- et xoxo- ont une règle ; « xoxo- » suivi de mots ou d’une date n’en est pas un', () => {
     const ids = (text: string): string[] => providerReferenceFindings(text).map((found) => found.rule.ruleId);
     const digits = (length: number): string => '4815162342'.repeat(2).slice(0, length);
     const hex = '0f1e2d3c4b5a6978'.repeat(4);
     expect(ids(`jeton ${['xoxc', digits(12), digits(12), digits(12), hex].join('-')} fin`)).toEqual(['slack_other_token']);
     expect(ids(`jeton ${['xoxo', digits(11), digits(11), digits(12), hex.slice(0, 32)].join('-')} fin`)).toEqual(['slack_other_token']);
     expect(ids(`jeton ${['xoxe', '1', 'M0N1P2Q3R4S5T6U7V8W9'.repeat(8).slice(0, 146)].join('-')} fin`)).toEqual(['slack_other_token']);
+    expect(ids(`jeton ${['xoxe', digits(13), digits(13), digits(13), 'a1B2c3D4e5F6g7H8i9J0k1L2m3N4'].join('-')} fin`)).toEqual(['slack_other_token']);
     expect(ids(`jeton ${['xapp', '1', 'A0B1C2D3E4F', digits(13), hex].join('-')} fin`)).toEqual(['slack_app_token']);
     expect(ids('message : xoxo-my-dear-friends-and-family fin')).toEqual([]);
+    expect(ids(`carte : ${['xoxo', '2026-11-15-cafe0123456789ab'].join('-')} fin`)).toEqual([]);
+    // Un identifiant de code qui commence comme un préfixe de fournisseur n'est pas un jeton.
+    for (const name of ['dvc_server_hostname', 'prf_hmac_sha256_expand_label', 'tss_thread_specific_storage_key', 'lip_sync_animation_controller', 'persona_production_database_connection_url']) {
+      expect(ids(`const value = ${name};`), name).toEqual([]);
+    }
   });
 });
 
@@ -202,8 +208,9 @@ describe('bruit des règles de fournisseurs', () => {
     // Chaque règle a son cas, sauf exemption motivée ; aucun motif ne refuse une valeur à caractère répété.
     expect(unmatched).toEqual([]);
     expect(cases.length + plausible.length + PROVIDER_NOISE_ASSIGNMENT_FORM.length).toBe(PROVIDER_RULE_SOURCES.length);
-    // Adresses de webhook : les littéraux de l'adresse portent la diversité, la règle se déclenche encore.
-    expect(plausible).toEqual(['slack_workflow_webhook', 'slack_trigger_url']);
+    // Adresses de webhook : les littéraux de l'adresse portent la diversité, la règle se déclenche encore ; de même le
+    // préfixe de la clé DevCycle, dont la suite la plus courte n'a que huit caractères.
+    expect(plausible).toEqual(['slack_workflow_webhook', 'slack_trigger_url', 'devcycle_server_sdk_key']);
   });
 });
 

@@ -152,7 +152,7 @@ describe('Pack initial', () => {
 
   it('règles de fournisseurs : reprises de Titus et de Betterleaks, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
     expect(providerRules).toEqual(PROVIDER_RULES);
-    expect(providerRules).toHaveLength(361);
+    expect(providerRules).toHaveLength(360);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_REPOSITORY);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_COMMIT);
     // Règles reprises de Betterleaks (v0.10.0, MIT) : dépôt, commit et licence cités dans UPSTREAM.md et NOTICE.

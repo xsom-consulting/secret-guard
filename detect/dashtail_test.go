@@ -20,7 +20,7 @@ func TestDashTailRules(t *testing.T) {
 		}
 	}
 	sort.Strings(got)
-	want := []string{"anthropic_key", "gitlab_pat", "google_api_key", "google_oauth_token", "openai_key", "openrouter_key", "sendgrid_key", "slack_other_token", "slack_token"}
+	want := []string{"anthropic_key", "gitlab_pat", "google_api_key", "google_oauth_token", "openai_key", "openrouter_key", "sendgrid_key", "slack_token"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("%v, attendu %v", got, want)
 	}

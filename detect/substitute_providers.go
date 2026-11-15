@@ -360,7 +360,6 @@ var providerSubstituteLabels = []SubstituteLabel{
 	{"samsara_api_token", "jeton d\u2019API Samsara", "Samsara API token"},
 	{"settlemint_access_token", "jeton d\u2019acc\u00e8s SettleMint", "SettleMint access token"},
 	{"square_access_token_eaaa", "jeton d\u2019acc\u00e8s Square", "Square access token"},
-	{"stripe_prod_key", "cl\u00e9 secr\u00e8te Stripe", "Stripe secret key"},
 	{"thunderstore_api_token", "jeton d\u2019API Thunderstore", "Thunderstore API token"},
 	{"unkey_root_key", "cl\u00e9 racine Unkey", "Unkey root key"},
 	{"upcloud_api_token", "jeton d\u2019API UpCloud", "UpCloud API token"},

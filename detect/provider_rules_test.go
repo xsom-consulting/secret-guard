@@ -17,7 +17,7 @@ func TestProviderRules(t *testing.T) {
 		byID[r.id] = r
 	}
 	t.Run("chaque règle de fournisseur est une règle « motif seul » à porte, avec un libellé de Substitut dans les deux langues", func(t *testing.T) {
-		if len(providerSubstituteLabels) != 361 {
+		if len(providerSubstituteLabels) != 360 {
 			t.Fatalf("%d règles de fournisseurs", len(providerSubstituteLabels))
 		}
 		// Les règles de fournisseurs suivent les 35 règles du catalogue et les 5 de données personnelles, dans l'ordre de

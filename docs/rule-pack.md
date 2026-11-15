@@ -14,7 +14,7 @@ Objets fermés ; chaînes et entiers seulement.
 | `minAgentVersion` | semver `MAJEUR.MINEUR.CORRECTIF`, sans pré-version ni métadonnées : version minimale du programme qui exécute le Pack (le moteur ne la juge pas) ; `0.0.0` pour le Pack initial |
 | `packVersion` | entier de 1 à 2^53 − 1 |
 | `issuedAt` | horodatage UTC `AAAA-MM-JJTHH:MM:SS[.mmm]Z` qui existe (forme et calendrier vérifiés par `pack.Decode`) |
-| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (412 dans le Pack initial de la v0.10.0) |
+| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (411 dans le Pack initial de la v0.10.0) |
 
 Règle :
 
@@ -60,9 +60,9 @@ Les validateurs ne s'exécutent pas dans un texte décodé de base64 (`allowStru
 
 ### Règles de fournisseurs (v0.8.1)
 
-361 règles « motif seul » (`fixed_pattern`, type de secret `provider_token`, sans borne) s'ajoutent après les règles de données personnelles : 294 depuis la v0.8.1, reprises de Titus, et 67 depuis la v0.10.0, reprises de Betterleaks. Leur source est `generator/rule-pack/provider-rules.json` (une règle par ligne : identifiant, règle d'origine, libellés de Substitut, score, validateur de vraisemblance facultatif, motif RE2, forme d'une valeur d'essai et d'un presque positif), entretenue à la main depuis ces reprises (UPSTREAM.md, « Règles de fournisseurs » et « Règles reprises de Betterleaks, vraisemblance et banc de comparaison ») ; `npm run pack:initial` en écrit le Pack et la table Go des libellés (`detect/substitute_providers.go`).
+360 règles « motif seul » (`fixed_pattern`, type de secret `provider_token`, sans borne) s'ajoutent après les règles de données personnelles : 294 depuis la v0.8.1, reprises de Titus, et 66 depuis la v0.10.0, reprises de Betterleaks. Leur source est `generator/rule-pack/provider-rules.json` (une règle par ligne : identifiant, règle d'origine, libellés de Substitut, score, validateur de vraisemblance facultatif, motif RE2, forme d'une valeur d'essai et d'un presque positif), entretenue à la main depuis ces reprises (UPSTREAM.md, « Règles de fournisseurs » et « Règles reprises de Betterleaks, vraisemblance et banc de comparaison ») ; `npm run pack:initial` en écrit le Pack et la table Go des libellés (`detect/substitute_providers.go`).
 
-- Score 95 (178 règles) : la valeur porte un préfixe fixe du fournisseur. Score 80 (183 règles) : le motif exige le nom du fournisseur avant la valeur, à quelques dizaines de caractères au plus.
+- Score 95 (177 règles) : la valeur porte un préfixe fixe du fournisseur. Score 80 (183 règles) : le motif exige le nom du fournisseur avant la valeur, à quelques dizaines de caractères au plus.
 - La valeur détectée est l'unique groupe capturant du motif. Un motif peut replier la casse (`(?i:…)`) et porter des drapeaux de groupe (`(?s:…)`, `(?-m:…)`).
 - Chaque règle doit avoir une porte littérale (`TestProviderRules`) : un littéral d'au moins trois octets présent dans toute correspondance. Une règle sans porte s'exécuterait sur tout texte.
 - Ajouter une règle : une ligne dans `provider-rules.json`, puis `npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout>`, `node corpus/provider-noise.ts` et les tests ; un moteur plus ancien exécute la règle (famille connue) si elle ne porte pas de validateur qu'il ignore, mais écrit le libellé de repli « secret » dans ses Substituts.
