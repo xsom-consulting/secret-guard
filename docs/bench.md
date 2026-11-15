@@ -107,7 +107,8 @@ Le chiffre sert à comparer deux versions du moteur sur les mêmes octets.
   rapport ne garde que des décomptes : ni chemin, ni ligne, ni valeur.
 - Une hausse du nombre de constats, des constats d'une règle ou des analyses incomplètes face au rapport commité est
   refusée (sortie 1). `-write` enregistre une baisse ; `-baseline` pose une nouvelle base (nouveau dépôt, nouveau
-  commit, hausse acceptée et justifiée dans le message du commit).
+  commit, hausse acceptée et justifiée dans le message du commit). Un dépôt du rapport absent de la ligne de
+  commande est nommé « non mesuré » sur la sortie : une passe partielle ne vaut pas pour tout le rapport.
 
 ### Chiffres de départ et effet de la Story 27.6
 

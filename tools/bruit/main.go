@@ -12,7 +12,9 @@
 //
 // Sans -baseline, chaque dépôt nommé est relu au commit, avec la limite et l'option de langage que le rapport a
 // retenus, puis comparé à sa mesure du rapport : une hausse du nombre de constats, des constats d'une règle ou des
-// analyses incomplètes est refusée (sortie 1, rien n'est écrit). -write réécrit le rapport quand rien ne monte.
+// analyses incomplètes est refusée (sortie 1, rien n'est écrit). -write réécrit le rapport quand rien ne monte. Un
+// dépôt du rapport que la ligne de commande ne donne pas n'est pas mesuré : il est nommé sur la sortie (« non
+// mesuré »), pour qu'une passe partielle ne se lise pas comme « aucune hausse » sur tout le rapport.
 // -baseline pose une nouvelle base sans comparer : nouveau dépôt, nouveau commit épinglé (HEAD, ou <commit>), ou
 // hausse acceptée, à justifier dans le message du commit qui porte le rapport.
 //
@@ -224,6 +226,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 		}
 		report.set(measured)
 	}
+	if skipped := report.unmeasured(targets); len(skipped) > 0 {
+		_, _ = fmt.Fprintf(stdout, "non mesuré : %s (au rapport, absent de la ligne de commande : aucune hausse n'y est cherchée)\n",
+			strings.Join(skipped, ", "))
+	}
 	if rises > 0 {
 		_, _ = fmt.Fprintf(stderr, "bruit : %d hausse(s) face au rapport %s : refusé, rapport inchangé\n", rises, *reportPath)
 		return exitRise
@@ -280,6 +286,21 @@ func (r *Report) set(measured Repository) {
 	}
 	r.Repositories = append(r.Repositories, measured)
 	sort.Slice(r.Repositories, func(i, j int) bool { return r.Repositories[i].Name < r.Repositories[j].Name })
+}
+
+// unmeasured rend les noms des dépôts du rapport que targets ne donne pas, dans l'ordre du rapport.
+func (r *Report) unmeasured(targets []target) []string {
+	given := map[string]bool{}
+	for _, t := range targets {
+		given[t.name] = true
+	}
+	var names []string
+	for _, repository := range r.Repositories {
+		if !given[repository.Name] {
+			names = append(names, repository.Name)
+		}
+	}
+	return names
 }
 
 // readReport lit le rapport ; un fichier absent est un rapport vide (première base).

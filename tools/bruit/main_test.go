@@ -293,6 +293,17 @@ func TestRun(t *testing.T) {
 	if code, stdout, stderr := invoke("-baseline", "depot="+dir); code != exitOK || !strings.Contains(stdout, "3 fichiers") {
 		t.Fatalf("nouvelle base : %d %s %s", code, stdout, stderr)
 	}
+
+	// Un second dépôt au rapport : une passe qui n'en donne qu'un nomme l'autre, une passe complète ne nomme rien.
+	if code, stdout, stderr := invoke("-baseline", "second="+dir); code != exitOK || !strings.Contains(stdout, "non mesuré : depot ") {
+		t.Fatalf("second dépôt : %d %s %s", code, stdout, stderr)
+	}
+	if code, stdout, stderr := invoke("depot=" + dir); code != exitOK || !strings.Contains(stdout, "non mesuré : second ") {
+		t.Fatalf("passe partielle : %d %s %s", code, stdout, stderr)
+	}
+	if code, stdout, stderr := invoke("depot="+dir, "second="+dir); code != exitOK || strings.Contains(stdout, "non mesuré") {
+		t.Fatalf("passe complète : %d %s %s", code, stdout, stderr)
+	}
 }
 
 // withCount rend une copie de counts où name vaut n.
