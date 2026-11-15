@@ -127,9 +127,27 @@ func (c valueClasses) count() int {
 	return n
 }
 
+const (
+	// shapeRunMin : plus courte suite de lettres et de chiffres tenue pour aléatoire quand elle n'est pas un mot de nom.
+	shapeRunMin = 12
+	// shapeWordMax : plus long mot d'une seule casse tenu pour un mot (les mots courants s'arrêtent à 15 lettres).
+	shapeWordMax = 15
+)
+
 // secretShaped dit si v.text[start:end] a la forme d'un secret (seuil du palier 2, mesuré dans docs/bench.md) : au
-// moins 8 unités UTF-16 sans espace, et trois classes de caractères, ou une forte entropie (hasStrongEntropy), ou des
-// lettres avec au moins deux chiffres sur 10 unités ou plus.
+// moins 8 unités UTF-16 sans espace, et l'une de ces formes :
+//
+//   - trois classes de caractères parmi minuscules, majuscules, chiffres et autres ;
+//   - des lettres avec au moins deux chiffres, sur 10 unités ou plus ;
+//   - une forte entropie (hasStrongEntropy) ;
+//   - une suite de lettres et de chiffres d'au moins shapeRunMin caractères qui n'est pas un mot de nom
+//     (nameTokenLetters : minuscules, majuscule initiale, majuscules, casse de chameau) : casse mêlée sans régularité,
+//     chiffres au milieu ;
+//   - une suite de lettres d'une seule casse de plus de shapeWordMax caractères.
+//
+// Ce qui n'a pas cette forme : un mot, un nom de variable ou de constante, un libellé, une valeur d'essai en mots
+// (« test-key »). Perte acceptée, dans du code seulement : une suite aléatoire de moins de 12 caractères sans chiffre,
+// ou de moins de 16 lettres d'une seule casse (TestSecretShapeThreshold).
 func secretShaped(v *view, start, end int) bool {
 	value := v.text[start:end]
 	units := utf16Units(value)
@@ -140,10 +158,43 @@ func secretShaped(v *view, start, end int) bool {
 	if c.spaced {
 		return false
 	}
-	if c.count() >= 3 || hasStrongEntropy(v, start, end) {
+	if c.count() >= 3 || ((c.lower || c.upper) && c.digits >= 2 && units >= 10) || hasStrongEntropy(v, start, end) {
 		return true
 	}
-	return (c.lower || c.upper) && c.digits >= 2 && units >= 10
+	for i := 0; i < len(value); {
+		if !isASCIIAlphanumeric(value[i]) {
+			i++
+			continue
+		}
+		runStart := i
+		for i < len(value) && isASCIIAlphanumeric(value[i]) {
+			i++
+		}
+		run := value[runStart:i]
+		if len(run) < shapeRunMin {
+			continue
+		}
+		if _, name := nameTokenLetters(run); !name || (len(run) > shapeWordMax && isSingleCaseWord(run)) {
+			return true
+		}
+	}
+	return false
+}
+
+// isSingleCaseWord dit si word n'est fait que de minuscules, ou que de majuscules.
+func isSingleCaseWord(word []byte) bool {
+	lower, upper := false, false
+	for _, c := range word {
+		switch {
+		case isASCIILower(c):
+			lower = true
+		case isASCIIUpper(c):
+			upper = true
+		default:
+			return false
+		}
+	}
+	return lower != upper
 }
 
 // strictShaped : forme d'un secret pour un littéral porté par une structure (élément d'un tableau, valeur d'un objet,
@@ -788,7 +839,29 @@ func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parse
 		}
 	}
 
-	return keepFinding
+	// Palier 2 : du code seulement, et pour une clé d'API, un jeton ou un secret générique (un mot de passe peut être
+	// un mot). Le constat d'origine ne couvre aucun mot à forme de secret (valeur d'essai, nom de variable, libellé,
+	// mot du langage).
+	if !shapeJudgedTypes[secretType] || !ctx.codeContext(m, lang) || hasSecretWord(v, start, max(end, p.end)) {
+		return keepFinding
+	}
+	if p.kind == kindQuoted && concatTail(text, min(end+1, len(text))) {
+		// Chaîne prolongée par une concaténation : l'autre opérande peut porter le secret.
+		return keepFinding
+	}
+	return noiseVerdict{drop: true, resume: start}
+}
+
+// shapeJudgedTypes : types de secret jugés sur la forme de la valeur par le palier 2.
+var shapeJudgedTypes = map[string]bool{"api_key": true, "access_token": true, "generic_secret": true}
+
+// codeContext dit si l'affectation est dans du code (palier 2) : langage de code déclaré, ou, sans langage, ligne qui
+// porte avant le nom un mot-clé de déclaration (const, let, var, return, readonly, type…).
+func (ctx *contextualText) codeContext(m *assignmentMatch, lang language) bool {
+	if lang.set {
+		return lang.isCodeLike()
+	}
+	return ctx.keywords(keywordsExternalCode).inSlice(ctx.text, ctx.matchLineStart(m), m.end)
 }
 
 // referenceNoise : la valeur est une référence, ou une chaîne faite de références.
@@ -888,6 +961,12 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 		return noiseVerdict{}, false
 	}
 	walked := func(open int) (noiseVerdict, bool) {
+		// Fermée sur la ligne et suivie d'un signe collé (« {a}b », « nom(1)! ») : ce n'est pas une structure reconnue,
+		// le constat d'origine reste.
+		if closing, ok := balancedEnd(text, open, lineEnd); ok && closing < len(text) && !isLineSpace(text[closing]) &&
+			bytes.IndexByte([]byte(",;)]}.?:"), text[closing]) < 0 {
+			return noiseVerdict{}, false
+		}
 		walk := ctx.walkStructure(v, open, secretType)
 		if !walk.judged || walk.firstLine {
 			return noiseVerdict{}, false
@@ -919,12 +998,7 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 	}
 	switch next := text[pathEnd]; {
 	case next == '(':
-		// Appel : la liste d'arguments est parcourue. Fermé sur la ligne et suivi d'un signe collé (« nom(1)! »), ce
-		// n'est pas un appel reconnu : le constat d'origine reste.
-		if closing, ok := balancedEnd(text, pathEnd, lineEnd); ok && closing < len(text) &&
-			!isLineSpace(text[closing]) && bytes.IndexByte([]byte(",;)]}.?:"), text[closing]) < 0 {
-			return noiseVerdict{}, false
-		}
+		// Appel : la liste d'arguments est parcourue.
 		return walked(pathEnd)
 	case next == '[' && bytes.IndexByte(text[i:pathEnd], '.') >= 0:
 		// Accès indexé à une propriété : « a.b[c] ». Un nom seul suivi de crochets (« Optional[str] ») reste à

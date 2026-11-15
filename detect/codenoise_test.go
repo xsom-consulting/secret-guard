@@ -187,6 +187,8 @@ func TestAssignmentNoiseGuards(t *testing.T) {
 		{"accents graves d'un mot, sans commande", strings.ToUpper(nameToken) + "=`sesame`", ""},
 		{"valeur entre guillemets à la ligne suivante", nameToken + " =\n  \"" + literalStrong + "\"", "typescript"},
 		{"mot court sans langage", nameAPIKey + `: "test",`, ""},
+		{"accolades suivies d'un texte collé", namePassword + `={label}` + literalStrong, "properties"},
+		{"crochets suivis d'un texte collé", namePassword + `: [a]` + literalWords, "yaml"},
 	}
 	for _, c := range cases {
 		for _, language := range []string{"", c.language} {
@@ -294,5 +296,135 @@ func TestCodeNoiseWorstCases(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestCodeValueWithoutSecretShape : palier 2. Dans du code (langage de code déclaré, ou ligne à mot-clé de
+// déclaration), une valeur dont aucun mot n'a la forme d'un secret n'est ni une clé d'API, ni un jeton, ni un secret
+// générique.
+func TestCodeValueWithoutSecretShape(t *testing.T) {
+	cases := []noiseCase{
+		{"valeur d'essai courte", `  ` + nameAPIKey + `: "test",`, "typescript"},
+		{"valeur d'essai en mots", `    ` + strings.ToLower(nameAPIKey) + ` = 'test-key'`, "python"},
+		{"littéral de type", `  ` + nameToken + `: "bearer" as const,`, "typescript"},
+		{"union de littéraux", `type Kind = { ` + nameToken + `: "access" | "refresh" };`, ""},
+		{"constante", `    intake = await start({ port: 0, ` + nameSecret + `: SHARED, sink: queue });`, "typescript"},
+		{"autre variable", `    ` + nameToken + ` = next_page_cursor`, "python"},
+		{"type nu", `  client` + strings.ToUpper(nameSecret[:1]) + nameSecret[1:] + `: Buffer,`, "typescript"},
+		{"libellé", `const ` + nameToken + ` = "jeton d'enrôlement absent";`, ""},
+		{"déclaration à valeur d'essai", `const ` + nameAPIKey + ` = "test-key";`, ""},
+		{"retour d'une valeur d'essai", `  return { ` + nameToken + `: "fixture" };`, ""},
+	}
+	for _, c := range cases {
+		if got := assignmentFindings(t, c.text+"\n", c.language); len(got) != 0 {
+			t.Errorf("%s (langage %q) : %d constat(s), règle %s", c.name, c.language, len(got), got[0].RuleID)
+		}
+	}
+}
+
+// TestCodeValueGuards : garde-fous du palier 2. Chaque cas garde son constat.
+func TestCodeValueGuards(t *testing.T) {
+	upperKey := "API_" + "KEY"
+	cases := []noiseCase{
+		{"sans langage ni mot-clé", `  ` + nameAPIKey + `: "test",`, ""},
+		{"YAML", nameToken + `: fixture`, "yaml"},
+		{"JSON", `{"` + nameToken + `": "fixture"}`, "json"},
+		{"script shell", nameToken + `=fixture`, "shellscript"},
+		{"fichier dotenv", upperKey + `=fixture`, "dotenv"},
+		{"affectation nue d'environnement dans du code", upperKey + ` = "test-key"`, "python"},
+		{"affectation nue d'environnement sans langage", `export ` + upperKey + `=fixture`, ""},
+		{"mot de passe", `  ` + namePassword + `: "test",`, "typescript"},
+		{"mot de passe déclaré", `const ` + namePassword + ` = "fixture";`, ""},
+		{"valeur à forme de secret", `  ` + nameAPIKey + `: "` + literalStrong + `",`, "typescript"},
+		{"valeur à forme de secret déclarée", `const ` + nameToken + ` = "` + literalStrong + `";`, ""},
+		{"lettres et deux chiffres sur dix caractères", `  ` + nameAPIKey + `: "fixturekey42",`, "typescript"},
+		{"chaîne prolongée par une concaténation", `const ` + nameToken + ` = "gh" + stored;`, "typescript"},
+	}
+	for _, c := range cases {
+		if got := assignmentFindings(t, c.text+"\n", c.language); len(got) == 0 {
+			t.Errorf("%s (langage %q) : aucun constat d'affectation", c.name, c.language)
+		}
+	}
+}
+
+// splitmix est un générateur déterministe (SplitMix64) : les chiffres de TestSecretShapeThreshold, repris dans
+// docs/bench.md, se rejouent à l'identique.
+type splitmix uint64
+
+func (s *splitmix) next() uint64 {
+	*s += 0x9E3779B97F4A7C15
+	z := uint64(*s)
+	z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
+	z = (z ^ (z >> 27)) * 0x94D049BB133111EB
+	return z ^ (z >> 31)
+}
+
+func (s *splitmix) token(alphabet string, length int) []byte {
+	out := make([]byte, length)
+	for i := range out {
+		out[i] = alphabet[s.next()%uint64(len(alphabet))]
+	}
+	return out
+}
+
+// TestSecretShapeThreshold : seuil du palier 2 (secretShaped). Part des suites aléatoires qui gardent la forme d'un
+// secret, par alphabet et par longueur, sur 20 000 tirages déterministes ; le journal de l'essai (-v) est la table de
+// docs/bench.md. À 16 caractères et plus, au moins 990 suites sur 1 000 la gardent, quel que soit l'alphabet. Perte
+// acceptée, dans du code seulement : les suites plus courtes sans chiffre, et les lettres d'une seule casse sous
+// 16 caractères, qu'on ne distingue pas d'un mot.
+func TestSecretShapeThreshold(t *testing.T) {
+	const samples = 20_000
+	const lower, upper, digits = "abcdefghijklmnopqrstuvwxyz", "ABCDEFGHIJKLMNOPQRSTUVWXYZ", "0123456789"
+	alphabets := []struct {
+		name, letters string
+		// floor : part minimale, en pour mille, à 16 caractères et plus.
+		floor int
+	}{
+		{"hexadécimal", "0123456789abcdef", 990},
+		{"base32", upper + "234567", 990},
+		{"minuscules et chiffres", lower + digits, 990},
+		{"base62", lower + upper + digits, 990},
+		{"base64url", lower + upper + digits + "-_", 990},
+		{"minuscules seules", lower, 990},
+	}
+	generator := splitmix(46)
+	for _, alphabet := range alphabets {
+		for _, length := range []int{8, 12, 16, 20, 24, 32, 40} {
+			shaped := 0
+			for i := 0; i < samples; i++ {
+				value := generator.token(alphabet.letters, length)
+				if secretShaped(identityView(value), 0, len(value)) {
+					shaped++
+				}
+			}
+			perMille := shaped * 1000 / samples
+			t.Logf("%-24s %2d caractères : %5d sur %d (%d ‰)", alphabet.name, length, shaped, samples, perMille)
+			if length >= 16 && perMille < alphabet.floor {
+				t.Errorf("%s, %d caractères : %d ‰ des suites aléatoires ont la forme d'un secret, moins de %d ‰", alphabet.name, length, perMille, alphabet.floor)
+			}
+		}
+	}
+}
+
+// TestSecretShapeCoversProviderTokens : chaque étendue détectée par une règle de fournisseur du corpus (jeton à
+// préfixe, forme fixe) porte un mot à forme de secret au sens du palier 2 : écrite dans du code sous un nom sensible,
+// elle garde aussi son constat d'affectation.
+func TestSecretShapeCoversProviderTokens(t *testing.T) {
+	values, shaped := 0, 0
+	for _, c := range loadCorpusFile(t, providerRulesCorpusFile) {
+		input := c.bytes(t)
+		for _, f := range c.Expected.Findings {
+			if f.ByteEnd > len(input) || f.Encoding != EncodingPlain {
+				continue
+			}
+			values++
+			if hasSecretWord(identityView(input), f.ByteStart, f.ByteEnd) {
+				shaped++
+			}
+		}
+	}
+	t.Logf("%d valeurs de fournisseurs du corpus, %d à forme de secret", values, shaped)
+	if values < 250 || shaped != values {
+		t.Fatalf("%d valeurs sur %d ont la forme d'un secret", shaped, values)
 	}
 }
