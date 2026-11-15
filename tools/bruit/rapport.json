@@ -12,7 +12,7 @@
       "limit": 0,
       "files": 568,
       "incomplete": 0,
-      "findings": 699,
+      "findings": 698,
       "byRule": [
         {
           "name": "aws_arn",
@@ -48,7 +48,7 @@
         },
         {
           "name": "high_entropy",
-          "count": 193
+          "count": 192
         },
         {
           "name": "private_key_pem",
@@ -148,7 +148,7 @@
         },
         {
           "name": "identifiant en casse de chameau",
-          "count": 15
+          "count": 14
         },
         {
           "name": "nom à soulignés",
@@ -170,7 +170,7 @@
       "limit": 0,
       "files": 225,
       "incomplete": 2,
-      "findings": 584,
+      "findings": 579,
       "byRule": [
         {
           "name": "age_identity",
@@ -294,7 +294,7 @@
         },
         {
           "name": "high_entropy",
-          "count": 132
+          "count": 127
         },
         {
           "name": "huggingface_token",
@@ -482,7 +482,7 @@
         },
         {
           "name": "chemin d'URL",
-          "count": 9
+          "count": 8
         },
         {
           "name": "hexadécimal",
@@ -490,11 +490,11 @@
         },
         {
           "name": "identifiant en casse de chameau",
-          "count": 21
+          "count": 18
         },
         {
           "name": "nom à soulignés",
-          "count": 32
+          "count": 31
         },
         {
           "name": "nom à tirets",
@@ -512,7 +512,7 @@
       "limit": 2500,
       "files": 2500,
       "incomplete": 15,
-      "findings": 7071,
+      "findings": 7026,
       "byRule": [
         {
           "name": "anthropic_key",
@@ -572,7 +572,7 @@
         },
         {
           "name": "high_entropy",
-          "count": 534
+          "count": 489
         },
         {
           "name": "iban",
@@ -712,11 +712,11 @@
         },
         {
           "name": "identifiant en casse de chameau",
-          "count": 60
+          "count": 18
         },
         {
           "name": "nom à soulignés",
-          "count": 97
+          "count": 94
         },
         {
           "name": "nom à tirets",
@@ -734,7 +734,7 @@
       "limit": 2500,
       "files": 2500,
       "incomplete": 3,
-      "findings": 4145,
+      "findings": 4138,
       "byRule": [
         {
           "name": "aws_arn",
@@ -782,7 +782,7 @@
         },
         {
           "name": "high_entropy",
-          "count": 626
+          "count": 619
         },
         {
           "name": "iban",
@@ -930,7 +930,7 @@
         },
         {
           "name": "identifiant en casse de chameau",
-          "count": 24
+          "count": 17
         },
         {
           "name": "nom à soulignés",
@@ -952,7 +952,7 @@
       "limit": 0,
       "files": 4614,
       "incomplete": 1,
-      "findings": 1959,
+      "findings": 1462,
       "byRule": [
         {
           "name": "alchemy_api_key",
@@ -1020,7 +1020,7 @@
         },
         {
           "name": "high_entropy",
-          "count": 868
+          "count": 371
         },
         {
           "name": "iban",
@@ -1136,11 +1136,11 @@
         },
         {
           "name": "chemin",
-          "count": 7
+          "count": 5
         },
         {
           "name": "chemin d'URL",
-          "count": 39
+          "count": 14
         },
         {
           "name": "hexadécimal",
@@ -1148,11 +1148,11 @@
         },
         {
           "name": "identifiant en casse de chameau",
-          "count": 486
+          "count": 37
         },
         {
           "name": "nom à soulignés",
-          "count": 35
+          "count": 14
         },
         {
           "name": "nom à tirets",
