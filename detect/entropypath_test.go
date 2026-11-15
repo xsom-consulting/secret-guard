@@ -4,6 +4,7 @@ package detect
 
 import (
 	"crypto/rand"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +62,12 @@ func TestEntropyIgnoresPaths(t *testing.T) {
 		"chemin absolu coupé par une espace": "cd /Users/jdupont/Documents/PRO/02-COMPANIES/Exemple Conseil/DEV/exemple-fleet-wt-capture-telechargements/agent/internal/domain/hook",
 		"suite après un point":               "cat .agents/skills/bmad-retrospective/SKILL.md",
 		"mot long en majuscules":             "ls DEV/DOCUMENTATIONS/ARCHITECTURES/exemple-fleet",
+		// Identifiants publics dans le chemin d'une URL (15 novembre 2026).
+		"référence d'un article de loi":         "Source : https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000028345220 (version en vigueur)",
+		"références d'un code et d'une section": "https://www.legifrance.gouv.fr/codes/section_lc/LEGITEXT000006070719/LEGISCTA000006149839/",
+		"référence et date":                     "<a href=\"https://www.legifrance.gouv.fr/codes/id/LEGISCTA000006149839/2026-02-02\">",
+		"numéro d'article d'un centre d'aide":   "https://aide.exemple.fr/hc/fr/articles/24373653275165-Configurer-les-restrictions-par-locataire-pour-les-applications-SaaS",
+		"identifiant de page après un titre":    "https://notes.exemple.fr/p/Politique-restreindre-le-reseau-sortant-dans-les-reglages-" + publicPageID,
 	} {
 		t.Run(name, func(t *testing.T) {
 			if n := entropyFindings(t, rules, content); n != 0 {
@@ -80,10 +87,44 @@ func TestEntropyKeepsTokens(t *testing.T) {
 			"jeton après un point":                           "valeur." + token,
 			"jeton dans un chemin relatif":                   "cp out/" + token + "/build .",
 			"jeton de lettres en casse mêlée dans un chemin": "cp out/" + randomLetters(t, 32) + "/build .",
+			"jeton après un titre dans le chemin d'URL":      "https://notes.exemple.fr/p/Politique-de-securite-" + token,
+			"jeton après un numéro dans le chemin d'URL":     "https://support.exemple.fr/hc/fr/articles/24373653275165-" + token,
+			"jeton à côté d'une référence":                   "https://www.exemple.fr/codes/LEGIARTI000028345220/" + token,
 		} {
 			if n := entropyFindings(t, rules, content); n == 0 {
 				t.Fatalf("%s : jeton aléatoire non détecté", name)
 			}
+		}
+	}
+}
+
+// publicPageID : identifiant de page synthétique, 32 chiffres hexadécimaux assemblés à l'exécution.
+var publicPageID = strings.Repeat("0a1b2c3d", 4)
+
+func TestIsPublicID(t *testing.T) {
+	for word, want := range map[string]bool{
+		"24373653275165":              true,  // numéro d'article
+		"12345678901234567890":        true,  // 20 chiffres
+		"123456789012345678901":       false, // 21 chiffres
+		"LEGIARTI000028345220":        true,  // référence : 8 majuscules, 12 chiffres
+		"JORFARTI000047915060":        true,
+		"RFC000009110":                true,
+		"A000028345220":               false, // une seule majuscule
+		"ABCDEFGHIJKLM0000":           false, // 13 majuscules
+		"LEGIARTIXXXXX123":            false, // 3 chiffres
+		"legiarti000028345220":        false, // minuscules
+		"LEGIARTI00002834522A":        false, // lettre après les chiffres
+		publicPageID:                  true,  // 32 chiffres hexadécimaux
+		strings.ToUpper(publicPageID): true,
+		publicPageID[:31] + "A":       false, // casse mêlée
+		publicPageID[:30]:             false, // 30 chiffres hexadécimaux
+		strings.Repeat("abcdefab", 4): false, // aucun chiffre décimal
+		"0a1b2c3d4e5f6071":            false, // 16 chiffres hexadécimaux : reste un candidat
+		"prodview3ao52s7pq45py":       false,
+		"Xk7Pq2Rm9Tz4Lw8Nb3Vc6H":      false,
+	} {
+		if got := isPublicID([]byte(word)); got != want {
+			t.Errorf("isPublicID(%q) = %v, attendu %v", word, got, want)
 		}
 	}
 }

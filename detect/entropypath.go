@@ -8,6 +8,12 @@
 // commence après un point et n'a donc plus la forme d'un chemin (rePathLike exige « / » en tête). De même, un dossier
 // de projet de Claude Code (« -Users-nom-Documents-… ») est un nom en tirets de forte entropie. Le moteur les écarte :
 // moins de constats d'entropie, jamais moins de constats d'une règle ancrée.
+//
+// Chemins d'URL (mesure du 15 novembre 2026, tools/bruit) : dans « https://www.legifrance.gouv.fr/codes/article_lc/
+// LEGIARTI… », la suite commence après le dernier point de l'hôte, et un segment porte un identifiant public long :
+// référence d'un texte (des majuscules puis des chiffres), numéro d'article d'un centre d'aide (des chiffres seuls),
+// identifiant de page à la fin d'un titre en tirets (32 chiffres hexadécimaux). isShortWords les admet (isPublicID) ;
+// un jeton dans le chemin d'une URL, qui mêle majuscules, minuscules et chiffres, reste détecté.
 
 package detect
 
@@ -107,10 +113,12 @@ func isLongNameWord(word []byte) bool {
 
 // isShortWords dit si segment n'est fait que de mots courts séparés par « - » ou « _ » : un nom de dossier
 // (« 318-darwin-arm64 », « -Users-nom-Documents-… »), jamais un jeton, dont les suites aléatoires sont plus longues.
+// Un mot de plus de 12 caractères n'est admis que fait de lettres seules (isLongNameWord) ou s'il est un identifiant
+// public (isPublicID).
 func isShortWords(segment []byte) bool {
 	for _, word := range bytes.FieldsFunc(segment, func(r rune) bool { return r == '-' || r == '_' }) {
 		if len(word) > shortWordMax {
-			if !isLongNameWord(word) {
+			if !isLongNameWord(word) && !isPublicID(word) {
 				return false
 			}
 			continue
@@ -120,6 +128,51 @@ func isShortWords(segment []byte) bool {
 		}
 	}
 	return true
+}
+
+// Bornes d'un identifiant public dans un segment de chemin (isPublicID).
+const (
+	// publicIDDigitsMax : chiffres au plus d'un identifiant numérique (« 24373653275165 »).
+	publicIDDigitsMax = 20
+	// publicIDPrefixMin, publicIDPrefixMax : majuscules du préfixe d'une référence (« LEGIARTI », « JORFTEXT »).
+	publicIDPrefixMin, publicIDPrefixMax = 2, 12
+	// publicIDSuffixMin : chiffres au moins après le préfixe d'une référence.
+	publicIDSuffixMin = 4
+)
+
+// isPublicID dit si word, mot de plus de 12 caractères d'un segment de chemin, est un identifiant public et non un
+// jeton :
+//
+//   - des chiffres seuls, 20 au plus : numéro d'article, de ticket, d'objet (« 24373653275165 ») ;
+//   - une référence : 2 à 12 majuscules puis 4 à 20 chiffres (« LEGIARTI000028345220 », « JORFARTI000047915060 ») ;
+//   - une empreinte ou un identifiant de page : 32, 40 ou 64 chiffres hexadécimaux d'une même casse (« titre-de-la-
+//     page-0123…cdef »), longueurs que entropyExcluded écarte déjà quand le segment entier en est fait.
+//
+// Un jeton alphanumérique aléatoire de 16 caractères n'a l'une de ces formes qu'avec une probabilité inférieure à
+// 10⁻⁹ (chaque caractère un chiffre, ou un chiffre hexadécimal d'une même casse). Ce qui n'est plus signalé : un
+// secret fait de chiffres seuls dans un chemin, et une clé hexadécimale de 32, 40 ou 64 chiffres accolée à des mots
+// par un tiret (seule dans son segment, elle ne l'était déjà pas).
+func isPublicID(word []byte) bool {
+	letters := 0
+	for letters < len(word) && isUpper(word[letters]) {
+		letters++
+	}
+	digits := letters
+	for digits < len(word) && word[digits] >= '0' && word[digits] <= '9' {
+		digits++
+	}
+	if digits == len(word) {
+		count := digits - letters
+		if letters == 0 {
+			return count <= publicIDDigitsMax
+		}
+		return letters >= publicIDPrefixMin && letters <= publicIDPrefixMax && count >= publicIDSuffixMin && count <= publicIDDigitsMax
+	}
+	switch len(word) {
+	case 32, 40, 64:
+		return isHexCandidate(string(word))
+	}
+	return false
 }
 
 // isMixedToken dit si word, de 5 caractères au moins, mêle majuscules, minuscules et chiffres : forme d'un morceau de

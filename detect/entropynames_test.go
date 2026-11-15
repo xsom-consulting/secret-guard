@@ -23,6 +23,11 @@ func TestIsEntropyName(t *testing.T) {
 		"cp-out/Zq8Lr2Vx9Mn4Kp7Tw3Yb6Hc1Jd5":                      false,
 		"aGVsbG8gd29ybGQgaGVsbG8gd29ybGQ":                         false,
 		"PolyForm+Small":                                          false,
+		// Identifiants générés longs (isGeneratedIdentifier), seuls ou dans un nom à soulignés.
+		"JobFamilySubscriptionTemplateSetRequestItemsElemAiServiceMistralLeChat": true,
+		"TestFR16LoopbackListenerIsExclusive":                                    true,
+		"UsageBatchRecordsElemSizeBucketA2K":                                     true,
+		"enumValues_SubscriptionFlowListFlowsElemOfferId":                        true,
 	} {
 		if got := isEntropyName([]byte(value)); got != want {
 			t.Errorf("isEntropyName(%q) = %v, attendu %v", value, got, want)
@@ -30,10 +35,76 @@ func TestIsEntropyName(t *testing.T) {
 	}
 }
 
+func TestGeneratedWords(t *testing.T) {
+	for _, c := range []struct {
+		word                        string
+		regular, irregular, letters int
+		ok                          bool
+	}{
+		{"SubscriptionOverviewLinesElem", 4, 0, 29, true},
+		{"jobFamilyAiService", 3, 1, 16, true},       // « job » en tête, bosse courte « Ai »
+		{"idTokenClaims", 2, 1, 11, true},            // deux minuscules en tête : morceau irrégulier
+		{"TestFR16Loopback", 2, 1, 12, true},         // sigle et ses chiffres : un seul morceau
+		{"ElemAlgEd25519", 2, 1, 7, true},            // bosse courte et ses chiffres
+		{"ElemSha256Sum", 3, 1, 10, true},            // chiffres après un mot régulier : un morceau
+		{"SizeBucketA2K", 2, 1, 10, true},            // « A2K » : majuscule finale du même morceau
+		{"ClaudeMax20X", 2, 1, 9, true},              // « 20X » après un mot régulier
+		{"CurrencyEUR", 1, 1, 8, true},               // sigle final
+		{"HTTPSClientID", 1, 2, 6, true},             // sigle, mot, sigle
+		{"PlanBService", 2, 1, 11, true},             // majuscule seule devant un mot
+		{"xToken", 0, 0, 0, false},                   // minuscule isolée en tête
+		{"9Lives", 0, 0, 0, false},                   // chiffre en tête
+		{"ABCDEFGElem", 0, 0, 0, false},              // sigle de plus de 5 majuscules
+		{"Elem123456Sum", 0, 0, 0, false},            // plus de 5 chiffres
+		{"Sha2X56Sum", 2, 2, 6, true},                // « Sha », « 2 », « X56 », « Sum »
+		{"Elem-Sum", 0, 0, 0, false},                 // caractère hors lettres et chiffres
+		{"", 0, 0, 0, false},                         // vide
+		{"aB3xK9LmQ2pR7sT1", 0, 0, 0, false},         // jeton : minuscule isolée en tête
+		{"Ab3xK9LmQ2pR7sT1", 0, 0, 0, false},         // jeton : minuscule où une majuscule est attendue
+		{"Usage2Batch3Records4Elem", 4, 3, 21, true}, // chiffres après chaque mot : autant de morceaux
+	} {
+		regular, irregular, letters, ok := generatedWords([]byte(c.word))
+		if ok != c.ok || ok && (regular != c.regular || irregular != c.irregular || letters != c.letters) {
+			t.Errorf("generatedWords(%q) = %d, %d, %d, %v ; attendu %d, %d, %d, %v", c.word, regular, irregular, letters, ok,
+				c.regular, c.irregular, c.letters, c.ok)
+		}
+	}
+}
+
+func TestIsGeneratedIdentifier(t *testing.T) {
+	for word, want := range map[string]bool{
+		// Les trois identifiants relevés sur un Poste réel (15 novembre 2026).
+		"JobFamilySubscriptionTemplateSetRequestItemsElemAiServiceMistralLeChat": true, // 11 mots, 2 morceaux
+		"TestFR16LoopbackListenerIsExclusive":                                    true, // 4 mots de 7 lettres, 2 morceaux
+		"UsageBatchRecordsElemSizeBucketA2K":                                     true, // 6 mots de 5 lettres, 1 morceau
+		// Noms de types générés : sigle final, chiffres, bosses courtes.
+		"SubscriptionOverviewTotalsElemCurrencyEUR":     true,
+		"InstallProfileTrustPolicyKeysElemAlgEd25519":   true,
+		"SubscriptionFlowCreateRequestOfferIdChatgptGo": true,
+		"AdminLogPageEntriesElemObjectTypeAiUseCase":    true, // 9 mots de 4 lettres en moyenne, 1 morceau
+		"IpcFrameUsageBatchRecordsElemSizeBucketA256K":  true, // 8 mots, 1 morceau
+		// Trop peu de mots réguliers, ou trop de morceaux irréguliers pour leur longueur.
+		"TestFR13HookIPCNearDeadline": false, // 4 mots de 5 lettres, 2 morceaux
+		"GetHTTPSClientIDForURL":      false, // 3 mots
+		"AbcDefGhiJkl":                false, // 4 mots de 3 lettres
+		"AbcDefGhiJklMnoPqrStu":       false, // 7 mots de 3 lettres
+		"AbcdeFghijKlmnoPqrstX9Y8Z7":  false, // 4 mots de 5 lettres, 3 morceaux
+		// Sans morceau irrégulier, le mot est déjà un mot de nom (nameTokenLetters) ; il a aussi cette forme.
+		"SubscriptionOverviewLinesElemVerificationsElem": true,
+	} {
+		if got := isGeneratedIdentifier([]byte(word)); got != want {
+			t.Errorf("isGeneratedIdentifier(%q) = %v, attendu %v", word, got, want)
+		}
+	}
+}
+
 // TestEntropyNameRarelyMatchesTokens : une suite aléatoire (jeton alphanumérique, base64, base64url) n'a presque
 // jamais la forme d'un nom ; un tel jeton garde son constat d'entropie.
 func TestEntropyNameRarelyMatchesTokens(t *testing.T) {
-	const samples = 50_000
+	// 500 000 tirages de trois suites par longueur : assez pour que la borne ne dépende pas du tirage (le taux mesuré
+	// sur 10 millions de jetons alphanumériques est de 1,4 pour 10 000 à 20 caractères, 2 pour un million à 32, et
+	// aucun à 48 : entropynames.go).
+	const samples = 500_000
 	for _, n := range []int{20, 32, 48} {
 		matched := 0
 		for i := 0; i < samples; i++ {
@@ -51,8 +122,8 @@ func TestEntropyNameRarelyMatchesTokens(t *testing.T) {
 			}
 		}
 		t.Logf("%d caractères : %d suites aléatoires sur %d ont la forme d'un nom", n, matched, 3*samples)
-		// Au plus 1 pour 1 000 à 20 caractères, aucune au-delà.
-		if limit := map[int]int{20: 3 * samples / 1000, 32: 3 * samples / 100_000, 48: 0}[n]; matched > limit {
+		// Au plus 1 pour 1 000 à 20 caractères, 1 pour 100 000 à 32, 1 pour un million à 48.
+		if limit := map[int]int{20: 3 * samples / 1000, 32: 3 * samples / 100_000, 48: 3 * samples / 1_000_000}[n]; matched > limit {
 			t.Fatalf("%d caractères : %d suites aléatoires sur %d ont la forme d'un nom", n, matched, 3*samples)
 		}
 	}
@@ -65,6 +136,12 @@ func TestEntropyIgnoresNames(t *testing.T) {
 		"nom de fichier de licence":      "cp expurgation/LICENSE-PolyForm-Small-Business-1.0.0 deploy/licenses/",
 		"dossier d'un agent de worktree": ".claude/worktrees/agent-a3f9c2e1b7d40568e/agent/internal/domain/hook/tool.go",
 		"identifiant de clé d'API":       "apikey_01Xk7Pq2Rm9Tz4Lw8Nb3Vc6H",
+		// Identifiants générés longs (15 novembre 2026).
+		"constante générée à bosses courtes": "const JobFamilySubscriptionTemplateSetRequestItemsElemAiServiceMistralLeChat JobFamily = \"x\"",
+		"nom d'essai à sigle et chiffres":    "func TestFR16LoopbackListenerIsExclusive(t *testing.T) {",
+		"constante générée à suffixe A2K":    "const UsageBatchRecordsElemSizeBucketA2K UsageBatch = 1",
+		"constante générée à sigle final":    "const SubscriptionOverviewLinesElemVerificationsElemCurrencyEUR Currency = \"EUR\"",
+		"table générée à souligné":           "var enumValues_SubscriptionOverviewLinesElemReplacementTargetOfferId = []interface{}{",
 	} {
 		if n := entropyFindings(t, rules, content); n != 0 {
 			t.Errorf("%s : %d constat(s) d'entropie", name, n)
@@ -82,6 +159,8 @@ func TestEntropyKeepsTokensBesideNames(t *testing.T) {
 			"jeton après un nom de licence":              "LICENSE-PolyForm-" + token,
 			"jeton préfixé comme un identifiant d'objet": "apikey_01" + token,
 			"hexadécimal de 40 dans un chemin":           "secrets/" + hex + "/" + token,
+			"jeton après un identifiant généré":          "SubscriptionOverviewLinesElemCurrencyEUR_" + token,
+			"jeton devant un identifiant généré":         token + "_TestFR16LoopbackListenerIsExclusive",
 		} {
 			if n := entropyFindings(t, rules, content); n == 0 {
 				t.Fatalf("%s : jeton non détecté", name)
