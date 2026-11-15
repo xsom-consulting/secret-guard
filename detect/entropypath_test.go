@@ -4,6 +4,7 @@ package detect
 
 import (
 	"crypto/rand"
+	"math"
 	"strings"
 	"testing"
 )
@@ -45,6 +46,38 @@ func randomToken(t *testing.T, n int) string {
 	return string(raw)
 }
 
+// drawnEntropyMin : entropie de Shannon au moins, en bits, d'une suite tirée par strongDraw. Le moteur ne signale une
+// suite qu'à partir de 4,3 bits (hasStrongEntropy), et un tirage passe parfois dessous sans que les formes écartées
+// de l'entropie y soient pour rien : 4 suites alphanumériques de 32 caractères sur 100 et 12 suites de lettres sur 100
+// (mesure du 15 novembre 2026, 40 000 tirages). TestEntropyKeepsTokens échouait alors une fois sur quarante environ,
+// déjà en v0.9.0.
+const drawnEntropyMin = 4.5
+
+// strongDraw rend le premier tirage de draw dont l'entropie de Shannon atteint drawnEntropyMin et qui n'a pas la forme
+// d'un nom : un essai « un jeton reste détecté » porte sur les chemins et les noms accolés, pas sur le seuil de
+// l'entropie ni sur la forme de nom d'une suite aléatoire, que bornent TestEntropyNameRarelyMatchesTokens et
+// TestEntropyNameRarelyMatchesLetters (3 suites de 32 lettres sur 10 000).
+func strongDraw(t *testing.T, draw func() string) string {
+	t.Helper()
+	for range 1000 {
+		value := draw()
+		counts := map[rune]int{}
+		for _, c := range value {
+			counts[c]++
+		}
+		bits := 0.0
+		for _, n := range counts {
+			p := float64(n) / float64(len(value))
+			bits -= p * math.Log2(p)
+		}
+		if bits >= drawnEntropyMin && !isEntropyName([]byte(value)) {
+			return value
+		}
+	}
+	t.Fatal("aucun tirage d'entropie suffisante et sans forme de nom en 1 000 essais")
+	return ""
+}
+
 func TestEntropyIgnoresPaths(t *testing.T) {
 	rules := loadInitialRules(t)
 	project := "-Users-jdupont-Documents-PRO-02-COMPANIES-Exemple-Conseil-DEV-exemple-fleet"
@@ -80,13 +113,13 @@ func TestEntropyIgnoresPaths(t *testing.T) {
 func TestEntropyKeepsTokens(t *testing.T) {
 	rules := loadInitialRules(t)
 	for i := 0; i < 20; i++ {
-		token := randomToken(t, 40)
+		token := strongDraw(t, func() string { return randomToken(t, 40) })
 		for name, content := range map[string]string{
 			"jeton seul":                                     token,
 			"jeton dans le chemin d'URL":                     "curl https://api.exemple.fr/v1/" + token + "/status",
 			"jeton après un point":                           "valeur." + token,
 			"jeton dans un chemin relatif":                   "cp out/" + token + "/build .",
-			"jeton de lettres en casse mêlée dans un chemin": "cp out/" + randomLetters(t, 32) + "/build .",
+			"jeton de lettres en casse mêlée dans un chemin": "cp out/" + strongDraw(t, func() string { return randomLetters(t, 32) }) + "/build .",
 			"jeton après un titre dans le chemin d'URL":      "https://notes.exemple.fr/p/Politique-de-securite-" + token,
 			"jeton après un numéro dans le chemin d'URL":     "https://support.exemple.fr/hc/fr/articles/24373653275165-" + token,
 			"jeton à côté d'une référence":                   "https://www.exemple.fr/codes/LEGIARTI000028345220/" + token,
@@ -145,8 +178,17 @@ func TestIsWordSlug(t *testing.T) {
 	}
 }
 
-// randomLetters tire n lettres en casse mêlée au hasard.
+// randomLetters tire n lettres en casse mêlée au hasard, avec au moins une majuscule et une minuscule après la
+// première lettre : ce n'est donc pas un tirage uniforme (uniformLetters).
 func randomLetters(t *testing.T, n int) string {
+	t.Helper()
+	raw := []byte(uniformLetters(t, n))
+	raw[1], raw[2] = 'Q', 'q'
+	return string(raw)
+}
+
+// uniformLetters tire n lettres, chacune en majuscule ou en minuscule une fois sur deux : un jeton sans aucun chiffre.
+func uniformLetters(t *testing.T, n int) string {
 	t.Helper()
 	raw := make([]byte, n)
 	if _, err := rand.Read(raw); err != nil {
@@ -159,8 +201,6 @@ func randomLetters(t *testing.T, n int) string {
 		}
 		raw[i] = c
 	}
-	// Au moins une majuscule et une minuscule après la première lettre.
-	raw[1], raw[2] = 'Q', 'q'
 	return string(raw)
 }
 
