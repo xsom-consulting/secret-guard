@@ -130,8 +130,10 @@ func TestWorstCasesAreLinear(t *testing.T) {
 	inputs := map[string]string{
 		"ignore-repete":     strings.Repeat("ignore ", MaxInputBytes/7),
 		"send-token-repete": strings.Repeat("send token ", MaxInputBytes/11),
-		// Le même, avec le signe qui fait passer la porte du motif d'exfiltration à chaque mot.
-		"send-token-arobase": strings.Repeat("send token @ ", MaxInputBytes/13),
+		// Le même, avec le signe qui fait passer la porte du motif d'exfiltration à chaque mot : le pire cas connu,
+		// environ 3 s par Mio sur la machine de mesure (docs/bench.md). Un quart de la borne ici, pour que l'essai
+		// tienne son délai sur une machine chargée.
+		"send-token-arobase": strings.Repeat("send token @ ", MaxInputBytes/4/13),
 		"user-deux-points":   strings.Repeat("user: a\n", MaxInputBytes/8),
 		"inst":               strings.Repeat("[INST", MaxInputBytes/5),
 		"une-ligne":          "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),

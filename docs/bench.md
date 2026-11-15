@@ -297,5 +297,7 @@ la seule raison de la charge) :
 | 64 Kio | prose repliée | 74,5 ms | 9,33 ms | ×8 |
 
 La mesure entière des 34 dépôts prend 74 s de processeur à l'état final (865 s avant, 52 s avec les seules lectures).
-Pire cas à 1 Mio (`TestWorstCasesAreLinear`) : 3,3 s pour « send token @ » répété (charge moyenne de 26), moins de
-0,3 s pour les autres entrées.
+Pire cas connu : « send token @ » répété sur 1 Mio, où la porte du motif d'exfiltration s'ouvre à chaque mot, prend
+3,3 s (charge moyenne de 26) à 5,8 s (charge de 58) ; c'est l'ordre de grandeur du pire cas de la v0.9.0 (« send
+token » répété : 2,7 s). `TestWorstCasesAreLinear` le garde à un quart de cette taille, et les autres entrées de
+1 Mio, une contre chaque lecture, prennent moins de 0,3 s.
