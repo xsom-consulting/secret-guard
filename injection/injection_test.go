@@ -134,9 +134,14 @@ func TestWorstCasesAreLinear(t *testing.T) {
 		// environ 3 s par Mio sur la machine de mesure (docs/bench.md). Un quart de la borne ici, pour que l'essai
 		// tienne son délai sur une machine chargée.
 		"send-token-arobase": strings.Repeat("send token @ ", MaxInputBytes/4/13),
-		"user-deux-points":   strings.Repeat("user: a\n", MaxInputBytes/8),
-		"inst":               strings.Repeat("[INST", MaxInputBytes/5),
-		"une-ligne":          "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),
+		// Le même encore, écrit contre les lectures : espaces insécables et pourcentages font de chaque lecture
+		// (texte reçu, normalisé, décodé, décodé puis normalisé) un texte différent, relu en entier, et une fin de
+		// ligne par bloc y ajoute les lectures dépliées. Environ 3,5 fois le pire cas d'une seule lecture, par
+		// octet (docs/bench.md) ; un seizième de la borne ici.
+		"send-token-lectures": strings.Repeat(strings.Repeat("send\u00a0token\u00a0@\u00a0%41\u00a0", 200)+"x\ny ", MaxInputBytes/16/4204),
+		"user-deux-points":    strings.Repeat("user: a\n", MaxInputBytes/8),
+		"inst":                strings.Repeat("[INST", MaxInputBytes/5),
+		"une-ligne":           "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),
 		// Lectures dérivées : une fin de ligne, un pourcentage, un échappement ou un bloc base64 à chaque mot.
 		"ignore-replie":      strings.Repeat("ignore\n", MaxInputBytes/7),
 		"ignore-pourcentage": strings.Repeat("%69gnore%20all%20", MaxInputBytes/17),

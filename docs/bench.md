@@ -129,6 +129,7 @@ exige d'y retrouver chaque règle attendue :
 | Transformation des 27 cas positifs | Avant | Après |
 |---|---:|---:|
 | Base64 (standard ; URL sans remplissage ; au milieu d'une phrase ; replié à 76 colonnes) | 0 | 27 |
+| Base64 replié entre une ligne de titre et un mot final | non mesuré | 27 |
 | Pourcentages (`%20`…) | 0 | 27 |
 | Échappements JSON (`\uXXXX`, `\n`) | 0 | 27 |
 | Pleine chasse | 0 | 27 |
@@ -164,7 +165,8 @@ moyenne de 15 à 19 pendant la mesure) : les durées sont indicatives, le rappor
 | 256 Kio | propre | 229 ms | 22,0 ms | ×10 |
 
 Pire cas (`TestWorstCasesAreLinear`, entrées de 1 Mio choisies contre les motifs et contre chaque lecture) : 3 s pour
-« send token » répété, comme avant ; moins de 150 ms pour les autres.
+« send token » répété, comme avant ; moins de 150 ms pour les autres. Un texte écrit contre plusieurs lectures à la
+fois coûte davantage : voir « Durée, état final ».
 
 **Faux positifs.** `go run ./tools/injectioncorpus fichiers -racine <clones>` sur les 34 dépôts publics épinglés de
 l'étude des consignes en clair de xSOM Fleet (22 octobre 2026) : 151 392 fichiers texte analysés (586 de plus de 1 Mio,
@@ -210,7 +212,7 @@ Ce que cela dit, et ne dit pas :
 
 - Le gain vient de trois familles : suppression du refus, préfixe imposé, désactivation des filtres. Le faux
   historique, le découpage et toutes les formes françaises n'ont **aucun gain mesuré** : ces corpus sont en anglais et
-  n'en contiennent pas. Ces règles ne sont tenues que par les cas de `vectors/injection.json` (115 cas, dont 60
+  n'en contiennent pas. Ces règles ne sont tenues que par les cas de `vectors/injection.json` (117 cas, dont 62
   positifs et 55 de bruit).
 - Restent manqués : 27 textes de LLM Guard, 57 de Promptfoo, 27 d'Akto (identifiants dans le relevé). Chez Promptfoo ce
   sont surtout des gabarits de persona (« DAN », jeu de rôle, mode développeur) : ils visent un chatbot, et aucune règle
@@ -218,20 +220,23 @@ Ce que cela dit, et ne dit pas :
 - Aucun texte tenu pour sain par sa source n'est signalé (22 textes).
 
 Les transformations de la Story 27.47 s'appliquent aux règles nouvelles : `TestPositiveCasesSurviveTransformations`
-retrouve les 60 cas positifs du corpus dans les treize transformations (58 pour les deux formes de texte replié : un
-faux historique dont on replie les lignes n'en est plus un). Pour cela la forme normalisée est lue aussi sans
+retrouve les 62 cas positifs du corpus dans les quatorze transformations (60 pour les deux formes de texte replié :
+un faux historique dont on replie les lignes n'en est plus un). Pour cela la forme normalisée est lue aussi sans
 dépliage : une règle définie par ses lignes (faux historique, étiquette en début de ligne) ne se retrouve que là.
 
 **Critère de garde d'un motif.** Chaque motif nouveau est mesuré seul sur les 151 392 fichiers des 34 dépôts. Il est
 gardé s'il signale au plus 75 fichiers en tout (0,05 %) et au plus 5 dans les 19 dépôts qui ne sont ni un cadre
 d'agents, ni une collection de prompts, ni un outil d'équipe rouge. Seuils posés pour cette mesure ; ils se discutent.
+Les motifs ont été mesurés un à un avant que les citations ne soient limitées à trois règles (voir plus bas) ; cette
+limite ajoute un fichier au premier motif de suppression du refus (21 au lieu de 20, dans un dépôt d'agents) et ne
+change aucune décision de garde.
 
 | Motif nouveau | Fichiers | Dont hors dépôts d'agents | Gardé |
 |---|---:|---:|---|
 | Préfixe imposé, anglais | 38 | 2 | oui |
 | Préfixe imposé, français | 0 | 0 | oui |
 | Faux historique (trois tours en début de ligne) | 45 | 2 | oui |
-| Suppression du refus : « never refuse / decline / apologize » | 20 | 1 | oui |
+| Suppression du refus : « never refuse / decline / apologize » | 21 | 1 | oui |
 | Suppression du refus : « answer… without disclaimers » | 2 | 0 | oui |
 | Suppression du refus : « do not include warnings » | 6 | 2 | oui |
 | Suppression du refus, français (deux motifs) | 0 | 0 | oui |
@@ -255,16 +260,24 @@ ordinaire de documentation) ; la forme large « hide… from users » (un seul f
 courante des documentations d'interface : la forme gardée exige un objet, action, étape ou instruction).
 
 **Citations.** Une formule courte entre guillemets au milieu d'une phrase n'est plus signalée
-(`injection/context.go`, contrôle écrit en Go : RE2 n'a pas d'assertion arrière). Effet sur les 34 dépôts : 8 fichiers
-cessent d'être signalés (6 pour `injection_instruction_override`, 2 pour `injection_message_markers`) ; un fichier qui
-cite une formule en porte souvent d'autres, hors guillemets. Sur le corpus de rappel, aucune consigne signalée ne
-cesse de l'être. Limite assumée : une consigne écrite entre guillemets au milieu d'une phrase passe.
+(`injection/context.go`, contrôle écrit en Go : RE2 n'a pas d'assertion arrière). Cela ne vaut que pour trois règles :
+`injection_instruction_override`, la formule la plus citée des documentations, et les deux règles de jetons de
+modèles, `injection_message_markers` et `injection_role_labels`. Effet sur les 34 dépôts : 8 fichiers cessent d'être
+signalés (6 pour `injection_instruction_override`, 2 pour `injection_message_markers`) et 2 ne le deviennent pas pour
+`injection_role_labels` ; un fichier qui cite une formule en porte souvent d'autres, hors guillemets. Sur le corpus de
+rappel, aucune consigne signalée ne cesse de l'être. Limite assumée : pour ces trois règles, une consigne écrite entre
+guillemets au milieu d'une phrase passe.
+
+Les neuf autres règles signalent une consigne citée comme une autre : un ordre d'envoyer des secrets ou de cacher une
+action à l'utilisateur, signalé entre guillemets par la v0.9.0, le reste. Leur appliquer la citation aussi n'aurait
+retiré qu'un fichier sur 151 392 (`injection_refusal_suppression`, dans un dépôt d'agents) : le bruit mesuré ne
+justifie pas d'ouvrir ce passage.
 
 **Faux positifs, par règle** (mêmes 151 392 fichiers) :
 
 | Fichiers signalés | v0.9.0 | Lectures (27.47) | Règles et citations (27.48b) |
 |---|---:|---:|---:|
-| Tous | 464 (0,306 %) | 478 (0,316 %) | 662 (0,437 %) |
+| Tous | 464 (0,306 %) | 478 (0,316 %) | 663 (0,438 %) |
 | `injection_instruction_override` | 280 | 288 | 282 |
 | `injection_role_switch` | 42 | 42 | 42 |
 | `injection_exfiltration` | 13 | 20 | 20 |
@@ -272,13 +285,13 @@ cesse de l'être. Limite assumée : une consigne écrite entre guillemets au mil
 | `injection_message_markers` | 153 | 153 | 151 |
 | `injection_forced_prefix` | | | 38 |
 | `injection_fake_history` | | | 45 |
-| `injection_refusal_suppression` | | | 25 |
+| `injection_refusal_suppression` | | | 26 |
 | `injection_payload_splitting` | | | 1 |
 | `injection_system_prompt_leak` | | | 53 |
 | `injection_filter_disable` | | | 51 |
 | `injection_role_labels` | | | 92 |
 
-Depuis la v0.9.0, 206 fichiers sont nouvellement signalés et 8 cessent de l'être. 189 de ces 206 sont dans les 15
+Depuis la v0.9.0, 207 fichiers sont nouvellement signalés et 8 cessent de l'être. 190 de ces 207 sont dans les 15
 dépôts d'agents et de prompts, où ce sont des consignes employées pour de bon (prompts d'application, gabarits de
 conversation, jeux d'essai d'équipe rouge) ; 17 sont dans les 19 autres dépôts, qui passent de 37 fichiers signalés à
 54. Un Groupe qui développe des applications à base de modèles de langage verra donc ces règles plus souvent qu'un
@@ -296,8 +309,18 @@ la seule raison de la charge) :
 | 64 Kio | consignes | 90,2 ms | 7,21 ms | ×12 |
 | 64 Kio | prose repliée | 74,5 ms | 9,33 ms | ×8 |
 
-La mesure entière des 34 dépôts prend 74 s de processeur à l'état final (865 s avant, 52 s avec les seules lectures).
-Pire cas connu : « send token @ » répété sur 1 Mio, où la porte du motif d'exfiltration s'ouvre à chaque mot, prend
-3,3 s (charge moyenne de 26) à 5,8 s (charge de 58) ; c'est l'ordre de grandeur du pire cas de la v0.9.0 (« send
+La mesure entière des 34 dépôts prend 68 à 74 s de processeur à l'état final (865 s avant, 52 s avec les seules
+lectures).
+
+Pire cas d'une lecture : « send token @ » répété sur 1 Mio, où la porte du motif d'exfiltration s'ouvre à chaque mot,
+prend 3,3 s (charge moyenne de 26) à 5,8 s (charge de 58) ; c'est l'ordre de grandeur du pire cas de la v0.9.0 (« send
 token » répété : 2,7 s). `TestWorstCasesAreLinear` le garde à un quart de cette taille, et les autres entrées de
 1 Mio, une contre chaque lecture, prennent moins de 0,3 s.
+
+Pire cas connu, toutes lectures : le même texte écrit avec des espaces insécables, un pourcentage à chaque mot et une
+fin de ligne de loin en loin. Chaque lecture (texte reçu, normalisé, décodé, décodé puis normalisé, et leurs formes
+dépliées) est alors un texte différent, relu en entier : 3,5 fois la durée par octet du pire cas d'une lecture à la
+relecture du 15 novembre (0,87 s pour 128 Kio contre 0,49 s pour 256 Kio, charge moyenne de 8 à 17), soit de l'ordre
+de 7 s pour 1 Mio sur la même machine. La durée reste linéaire, mais ce pire cas est plus long que celui de la
+v0.9.0 : un appelant qui a un budget de durée doit le faire respecter lui-même et tenir un dépassement pour un texte
+non lu. `TestWorstCasesAreLinear` garde ce cas à un seizième de la borne.
