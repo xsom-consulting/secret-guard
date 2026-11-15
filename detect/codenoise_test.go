@@ -122,6 +122,12 @@ func TestStructureIsWalked(t *testing.T) {
 				t.Errorf("%s : %d constat(s) %+v", name, len(got), got)
 				continue
 			}
+			// Dans du code aussi : le palier 2 ne retire pas une structure qui porte un littéral.
+			if strings.HasPrefix(text, "  ") {
+				if typed := assignmentFindings(t, text+"\n", "typescript"); len(typed) != 1 {
+					t.Errorf("%s (typescript) : %d constat(s)", name, len(typed))
+				}
+			}
 			value := literalStrong
 			if strings.Contains(text, literalWords) {
 				value = literalWords

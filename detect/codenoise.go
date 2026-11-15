@@ -961,7 +961,8 @@ func isFieldString(text []byte, start int) bool {
 
 // structureNoise : la valeur sans guillemets est une structure de code. Hors affectation nue d'environnement
 // (l'appelant l'a vérifié). Tableau et objet : partout ; appel, type, fonction : là où l'origine admet déjà une
-// référence de code (referenceEligible).
+// référence de code (referenceEligible). Rend vrai quand la valeur est jugée : constat écarté, ou gardé parce que
+// la structure porte un littéral.
 func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsedValue, secretType string, lang language) (noiseVerdict, bool) {
 	text := ctx.text
 	start, end := p.start, p.valueEnd
@@ -988,7 +989,10 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 		}
 		walk := ctx.walkStructure(v, open, secretType)
 		if !walk.judged || walk.firstLine {
-			return noiseVerdict{}, false
+			// Littéral crédible sur la première ligne, ou structure trop longue pour être lue : le constat d'origine est
+			// gardé, sans passer par le palier 2 (qui ne lit que le début de la structure, coupé par l'origine à la première
+			// virgule ou au premier dièse).
+			return keepFinding, true
 		}
 		return noiseVerdict{drop: true, resume: open + 1, literals: walk.literals}, true
 	}
