@@ -36,7 +36,8 @@ func sortCorpusFindings(findings []corpusFinding) {
 func loadInitialRules(t testing.TB) *Rules {
 	t.Helper()
 	p := loadInitialPack(t)
-	rules, err := LoadRules(&p)
+	// Toutes les règles, règles « à activer » comprises : le corpus éprouve chacune (TestOptInRules pour LoadRules).
+	rules, err := LoadRulesWithOptIn(&p, OptInRuleIDs())
 	if err != nil {
 		t.Fatalf("Pack initial refusé : %v", err)
 	}

@@ -90,11 +90,15 @@ var knownFamilies = map[string]bool{
 	familyEntropy: true,
 }
 
-// knownSecretTypes : types de secret de Secret Guard et, depuis la v0.7.0, des données personnelles (RULE_SECRET_TYPES).
+// knownSecretTypes : types de secret de Secret Guard et, depuis la v0.7.0, des données personnelles, depuis la v0.9.0,
+// des données à contexte (RULE_SECRET_TYPES).
 var knownSecretTypes = map[string]bool{
 	"private_key": true, "provider_token": true, "access_token": true, "jwt": true, "database_credentials": true,
 	"cloud_credential": true, "password": true, "api_key": true, "generic_secret": true, "high_entropy": true,
 	"iban": true, "fr_social_security_number": true, "fr_siret": true, "fr_siren": true, "payment_card_number": true,
+	// Données à contexte (v0.9.0).
+	"email_address": true, "phone_number": true, "passport_number": true, "payment_card_security_code": true,
+	"one_time_code": true, "internal_ip_address": true, "cloud_resource_address": true,
 }
 
 // maxScore : score de base le plus élevé d'une règle (schéma RulePack).
@@ -153,7 +157,13 @@ type Rules struct {
 // motif qui ne compile pas en RE2 ou qui reconnaît le texte vide, des bornes incohérentes, un score hors de 0..100,
 // un identifiant en double, ou si une règle dont le moteur porte la logique diffère de ce qu'il exécute, ou si une
 // famille du moteur n'a qu'une partie de ses règles. Le Pack n'est pas modifié ni retenu après l'appel.
-func LoadRules(p *pack.Pack) (*Rules, error) {
+//
+// Les règles « à activer » (OptInRuleIDs) sont contrôlées comme les autres, mais ne sont pas exécutées :
+// LoadRulesWithOptIn les active.
+func LoadRules(p *pack.Pack) (*Rules, error) { return loadRules(p, nil) }
+
+// loadRules est le chargement de LoadRules et de LoadRulesWithOptIn ; optIn : règles « à activer » à exécuter.
+func loadRules(p *pack.Pack, optIn map[string]bool) (*Rules, error) {
 	if p == nil || len(p.Rules) == 0 {
 		return nil, refuse("", RefusalNoRule)
 	}
@@ -177,10 +187,13 @@ func LoadRules(p *pack.Pack) (*Rules, error) {
 		if err != nil {
 			return nil, err
 		}
-		if _, isEngine := expected[spec.RuleID]; isEngine {
+		_, isEngine := expected[spec.RuleID]
+		if isEngine {
 			loaded.engine[spec.RuleID] = r
 		}
-		if r.family == familyFixedPattern {
+		// Règle « à activer » non nommée (optin.go) : contrôlée ci-dessus, connue de Has, jamais exécutée.
+		dormant := !isEngine && optInRules[spec.RuleID] && !optIn[spec.RuleID]
+		if r.family == familyFixedPattern && !dormant {
 			loaded.fixed = append(loaded.fixed, r)
 		}
 	}

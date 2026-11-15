@@ -11,12 +11,14 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { RulePack } from '../src/rule-pack.ts';
+import { CONTEXT_DATA_RULES } from '../rule-pack/context-data.ts';
 import { PERSONAL_DATA_RULES } from '../rule-pack/personal-data.ts';
 import { utf8Bytes } from './bytes.ts';
 import { corpusCaseOf, coverageProblems, expectedFor, type CaseSource, type EvaluatedCase } from './corpus.ts';
 import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from './harness.ts';
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
+import { contextDataCases, contextDataCoverageProblems, contextDataExpected } from './context-data.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
 import { providerRuleCases, providerRuleCoverageProblems, providerRuleExpected } from './provider-rules.ts';
@@ -128,7 +130,10 @@ async function main(): Promise<number> {
   const personalRuleIds = PERSONAL_DATA_RULES.map((rule) => rule.ruleId);
   // Règles de fournisseurs (v0.8.1) : jugées par la lecture de référence de `rule-pack/provider-rules.ts`.
   const providerRuleIds = new Set(PROVIDER_RULES.map((rule) => rule.ruleId));
-  const packRuleIds = allRuleIds.filter((id) => !personalRuleIds.includes(id) && !providerRuleIds.has(id));
+  // Règles de données à contexte (v0.9.0) : jugées par la lecture de référence de `rule-pack/context-data.ts`.
+  const contextRuleIds = CONTEXT_DATA_RULES.map((rule) => rule.ruleId);
+  const packRuleIds = allRuleIds.filter((id) => !personalRuleIds.includes(id) && !providerRuleIds.has(id) && !contextRuleIds.includes(id));
+  const missingContext = contextRuleIds.filter((id) => !allRuleIds.includes(id));
   const missingPersonal = personalRuleIds.filter((id) => !allRuleIds.includes(id));
   const missingProviders = [...providerRuleIds].filter((id) => !allRuleIds.includes(id));
   const upstream = await transpileUpstream(values.upstream, testImport);
@@ -168,6 +173,15 @@ async function main(): Promise<number> {
       written.push([source.file, corpusCaseOf(source, expected)]);
       sources.push(source);
     }
+    const context: EvaluatedCase[] = [];
+    for (const source of contextDataCases()) {
+      const expected = contextDataExpected(engine, source);
+      context.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
+      written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
+    problems.push(...missingContext.map((id) => `règle de données à contexte absente du Pack : ${id}`));
+    problems.push(...contextDataCoverageProblems(context));
     problems.push(...missingPersonal.map((id) => `règle de données personnelles absente du Pack : ${id}`));
     problems.push(...missingProviders.map((id) => `règle de fournisseur absente du Pack : ${id}`));
     problems.push(...providerRuleCoverageProblems(providers));

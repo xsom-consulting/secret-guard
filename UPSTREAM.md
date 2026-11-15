@@ -381,3 +381,12 @@ Copyright (c) 2026 XSOM CONSULTING ("xSOM")
 ```
 
 Le `LICENSE` de `secret-guard/packages/core`, copié dans `pack/initial/upstream/LICENSE`, est le texte Apache-2.0 seul, sans ligne de copyright propre. Le dépôt d'origine n'a pas de fichier `NOTICE` à ce commit. La licence n'accorde aucun droit sur les noms et marques « xSOM AI Guard » et « Secret Guard ».
+
+## Règles de données à contexte (v0.9.0)
+
+La technique du mot-clé de contexte obligatoire (une règle ne se déclenche que si un mot qui annonce la donnée est
+proche de la valeur) vient du projet Akto (`https://github.com/akto-api-security/akto`, licence MIT), lue au commit
+`6b7de940c28037d726776bc5f201fd9e572133a3` dans
+`apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
+cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP interne, ARN, bucket S3, RDS, DynamoDB) sont
+écrites ici en RE2, sans copie de motif, de mot-clé ni de code d'Akto.

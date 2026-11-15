@@ -20,8 +20,12 @@ func TestProviderRules(t *testing.T) {
 		if len(providerSubstituteLabels) != 294 {
 			t.Fatalf("%d règles de fournisseurs", len(providerSubstituteLabels))
 		}
-		// Les règles de fournisseurs ferment le Pack, dans l'ordre de leur table.
-		tail := p.Rules[len(p.Rules)-len(providerSubstituteLabels):]
+		// Les règles de fournisseurs suivent les 35 règles du catalogue et les 5 de données personnelles, dans l'ordre de
+		// leur table ; les règles de données à contexte (v0.9.0) ferment le Pack.
+		tail := p.Rules[40 : 40+len(providerSubstituteLabels)]
+		if len(p.Rules) != 40+len(providerSubstituteLabels)+len(contextSubstituteLabels) {
+			t.Fatalf("%d règles dans le Pack", len(p.Rules))
+		}
 		for i, label := range providerSubstituteLabels {
 			spec := tail[i]
 			if spec.RuleID != label.RuleID {

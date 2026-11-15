@@ -603,9 +603,11 @@ func TestNoExportedFunctionReturnsValue(t *testing.T) {
 		// étendue remplacée par un libellé (TestRedactLeavesNoValue).
 		bytesAllowed := map[string]bool{"Redact": true, "RedactAndRescan": true}
 		// Seules fonctions exportées qui rendent une autre tranche : les tables fermées des préfixes publics et des types
-		// de secret des Substituts, qui ne dépendent d'aucune valeur, et les étendues des Substituts d'un texte.
+		// de secret des Substituts, qui ne dépendent d'aucune valeur, les étendues des Substituts d'un texte, et la liste
+		// fermée des règles « à activer » (identifiants de règles).
 		slicesAllowed := map[string]string{
 			"SubstitutePrefixes": "string", "SubstituteLabels": "SubstituteLabel", "FindSubstitutes": "SubstituteSpan",
+			"OptInRuleIDs": "string",
 		}
 		checked := 0
 		for _, entry := range entries {

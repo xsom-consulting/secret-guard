@@ -62,6 +62,14 @@ func worstCaseInputs(fill func(string) []byte, size int) []worstCase {
 		{"suite de chiffres de 1 Mio", fill("0123456789"), nil},
 		{"IBAN valide répété", fill("FR76 3000 6000 0112 3456 7890 189 "), []error{errTooManyFindings}},
 		{"mot SIREN répété", fill("SIREN 1 "), nil},
+		// Données à contexte (v0.9.0) : mots-clés et candidats en chaîne, refusés par la forme de la valeur.
+		{"mots-clés de téléphone enchaînés", fill("tel 0"), nil},
+		{"adresses annoncées sans domaine", fill("email a@b "), nil},
+		{"codes annoncés trop courts", fill("otp 123 cvv 12 "), nil},
+		{"têtes d'ARN enchaînées", fill("arn:aws:s3:::"), nil},
+		{"étiquettes de domaine enchaînées devant un hôte S3", fill("a.b-c.s3.amazonaws.co "), nil},
+		{"hôte S3 répété", fill("ab-c.s3.amazonaws.com "), []error{errTooManyFindings}},
+		{"adresse interne répétée", fill("vpn 10.0.0.1 "), []error{errTooManyFindings}},
 	}
 }
 

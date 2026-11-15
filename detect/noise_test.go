@@ -22,8 +22,10 @@ type noiseCorpus struct {
 	} `json:"cases"`
 }
 
-// TestNoiseCorpus : chaque cas du corpus de bruit donne une analyse complète sans constat. Le diagnostic nomme le cas
-// et la règle, jamais le texte.
+// TestNoiseCorpus : chaque cas du corpus de bruit donne une analyse complète sans constat avec les règles que
+// LoadRules exécute. Avec les règles « à activer » en plus (LoadRulesWithOptIn), seules celles-ci peuvent se
+// déclencher, et chacune le fait au moins une fois : c'est le bruit qui la tient éteinte par défaut. Le diagnostic
+// nomme le cas et la règle, jamais le texte.
 func TestNoiseCorpus(t *testing.T) {
 	raw, err := os.ReadFile(noiseVectorsPath)
 	if err != nil {
@@ -36,7 +38,16 @@ func TestNoiseCorpus(t *testing.T) {
 	if corpus.FormatVersion != 1 || len(corpus.Cases) < 30 {
 		t.Fatalf("corpus de bruit : version %d, %d cas", corpus.FormatVersion, len(corpus.Cases))
 	}
-	rules := loadInitialRules(t)
+	p := loadInitialPack(t)
+	defaults, err := LoadRules(&p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	everything := loadInitialRules(t)
+	optIn := map[string]bool{}
+	for _, id := range OptInRuleIDs() {
+		optIn[id] = false
+	}
 	seen := map[string]bool{}
 	noisy := 0
 	for _, c := range corpus.Cases {
@@ -45,7 +56,8 @@ func TestNoiseCorpus(t *testing.T) {
 		}
 		seen[c.ID] = true
 		for _, workers := range []int{1, 0} {
-			result := Scan([]byte(c.Input), rules, Options{LanguageID: c.Language, Workers: workers})
+			options := Options{LanguageID: c.Language, Workers: workers}
+			result := Scan([]byte(c.Input), defaults, options)
 			if !result.Complete {
 				t.Errorf("%s : analyse incomplète (%v)", c.ID, result.Failure)
 				noisy++
@@ -55,7 +67,19 @@ func TestNoiseCorpus(t *testing.T) {
 				t.Errorf("%s : constat %s", c.ID, f.RuleID)
 				noisy++
 			}
+			for _, f := range Scan([]byte(c.Input), everything, options).Findings {
+				if _, known := optIn[f.RuleID]; !known {
+					t.Errorf("%s : constat %s avec les règles à activer", c.ID, f.RuleID)
+					continue
+				}
+				optIn[f.RuleID] = true
+			}
 		}
 	}
-	t.Logf("%d cas de bruit, %d constats ou analyses incomplètes", len(corpus.Cases), noisy)
+	for id, fired := range optIn {
+		if !fired {
+			t.Errorf("%s : règle à activer qu'aucun cas de bruit ne déclenche", id)
+		}
+	}
+	t.Logf("%d cas de bruit, %d constats ou analyses incomplètes, %d règles à activer", len(corpus.Cases), noisy, len(optIn))
 }

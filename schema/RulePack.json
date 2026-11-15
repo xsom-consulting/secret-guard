@@ -69,7 +69,14 @@
               "fr_social_security_number",
               "fr_siret",
               "fr_siren",
-              "payment_card_number"
+              "payment_card_number",
+              "email_address",
+              "phone_number",
+              "passport_number",
+              "payment_card_security_code",
+              "one_time_code",
+              "internal_ip_address",
+              "cloud_resource_address"
             ],
             "type": "string"
           },
