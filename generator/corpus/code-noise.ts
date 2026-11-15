@@ -414,7 +414,8 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
         if (next === '(') return walked(pathEnd);
         if (next === '[' && path.includes('.')) return walked(pathEnd);
         if (next === '<' && /[A-Za-z_${]/.test(text[pathEnd + 1] ?? '')) return { keep: false, resume: pathEnd + 1 };
-        if (next === ')' && /^[ \t]*(?:=>|->|\{|:(?!:))/.test(text.slice(pathEnd + 1))) return { keep: false, resume: pathEnd };
+        // Type d'un paramètre : flèche ou accolade après la parenthèse, ou « ): » sur une ligne qui finit en signature.
+        if (next === ')' && /^[ \t]*(?:=>|->|\{|:(?!:).*(?:\{|=>|;)[ \t]*$)/.test(text.slice(pathEnd + 1, lineEnd))) return { keep: false, resume: pathEnd };
       }
     }
   }

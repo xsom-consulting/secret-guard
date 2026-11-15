@@ -16,8 +16,8 @@
 //     n'a la forme d'un secret (secretShaped) n'est pas un constat.
 //
 // Garde-fous : jamais de filtre de structure ni de palier 2 dans un fichier dotenv ou sur une affectation nue
-// d'environnement ; le défaut littéral d'une expansion de shell reste signalé ; un mot de passe n'est jamais jugé
-// sur sa forme ; aucun marqueur de contournement n'est lu dans le texte. Travail borné par vue et par motif (spend) :
+// d'environnement ; le défaut littéral d'une expansion de shell reste signalé ; le palier 2 ne juge jamais un mot de
+// passe ; aucun marqueur de contournement n'est lu dans le texte. Travail borné par vue et par motif (spend) :
 // budget épuisé, le filtre ne s'applique plus et le constat d'origine est gardé.
 
 package detect
@@ -1064,12 +1064,17 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 		// Type générique : « Map<string, Session> ».
 		return noiseVerdict{drop: true, resume: pathEnd + 1}, true
 	case next == ')':
-		// Type d'un paramètre, suivi de la flèche, du type de retour ou du corps de la fonction : « nom: Type) => … »,
-		// « nom: Type): Retour { », « nom: type) -> Retour: ».
+		// Type d'un paramètre, suivi de la flèche, du corps de la fonction ou de son type de retour : « nom: Type) => … »,
+		// « nom: type) -> Retour: », « nom: Type) { », « nom: Type): Retour { ». Après « ): », la ligne doit finir comme
+		// une signature (accolade, flèche, point-virgule) : une phrase entre parenthèses n'en est pas une.
 		after := skipSpacesAndTabs(text, pathEnd+1)
 		rest := text[after:]
-		if bytes.HasPrefix(rest, []byte("=>")) || bytes.HasPrefix(rest, []byte("->")) || isAt(text, after, '{') ||
-			(isAt(text, after, ':') && !isAt(text, after+1, ':')) {
+		signature := bytes.HasPrefix(rest, []byte("=>")) || bytes.HasPrefix(rest, []byte("->")) || isAt(text, after, '{')
+		if !signature && isAt(text, after, ':') && !isAt(text, after+1, ':') {
+			tail := jsTrim(text[after+1 : max(after+1, lineEnd)])
+			signature = bytes.HasSuffix(tail, []byte("{")) || bytes.HasSuffix(tail, []byte("=>")) || bytes.HasSuffix(tail, []byte(";"))
+		}
+		if signature {
 			return noiseVerdict{drop: true, resume: pathEnd}, true
 		}
 	}
