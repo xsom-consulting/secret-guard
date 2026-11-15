@@ -893,6 +893,96 @@ licence MIT, « Copyright (c) 2019 Zachary Rice ») : seule l'idée est reprise,
 
 Le texte de la licence MIT de Betterleaks n'est reproduit qu'une fois, plus haut : « Licence de Betterleaks ».
 
+## Décodage à plusieurs couches et vue UTF-16 (v0.10.0)
+
+Deux écarts d'analyse ajoutés en v0.10.0, sans origine dans Secret Guard, qui lit une couche de chaque encodage et
+reçoit un texte déjà décodé. Lot L19 de l'Epic 27 de xSOM Fleet (stories 27.45 et 27.46).
+
+### Décodage à plusieurs couches (`detect/scan.go`, `detect/views.go`, `detect/encoding.go`)
+
+- **Base64** : les candidats base64 d'un texte décodé sont décodés à leur tour (`scanState.decodedText`, puis
+  `base64Layer`), fenêtres de lignes jointes comprises, jusqu'à trois couches (`maxDecodeLayers`). Le constat garde
+  l'étendue du candidat de la couche extérieure dans la source et l'encodage `base64`.
+- **Pourcentage** : une vue par couche restante, jusqu'à trois (`deeperPercentViews` : « %2541 », « %41 », « A »),
+  ajoutées après les vues de l'origine, dont l'ordre ne change pas. Encodage `percent`.
+- **Base64 d'UTF-16** : un texte décodé qui n'est pas de l'UTF-8, ou qui porte un octet nul, est lu en UTF-16 quand
+  il en a la forme (`utf16Text`) : charge d'une commande PowerShell encodée. L'origine refuse ce texte.
+- **Score** : 5 points de moins par couche (`layerPenalty`), la première comprise comme à l'origine.
+- **Budgets** : ceux de l'origine, inchangés et partagés par toutes les couches (128 décodages, 262 144 octets
+  décodés, 128 fenêtres, 16 Mio de vues). Budget épuisé : analyse incomplète, donc blocage, jamais un candidat
+  ignoré. La profondeur, elle, n'est pas un budget : une quatrième couche n'est pas décodée et l'analyse reste
+  complète (l'avertissement d'entropie de la couche extérieure demeure).
+- **Aucune valeur nouvelle du champ `encoding`** : il appartient au contrat des Événements de xSOM Fleet.
+
+**Corpus de parité** : deux cas tirés des tests d'origine éprouvaient l'arrêt à une couche, et changent :
+`upstream/scan.test.ts > … > detects exactly one Base64 layer #2` (avertissement d'entropie à 35, désormais
+`contextual_password` en `base64` à 60) et `upstream/security.test.ts > … > does not recursively decode nested
+Base64 #1` (désormais `github_token` en `base64` à 85). Leur entrée reste celle de l'origine ; leur résultat attendu
+vient de la seconde écriture `generator/corpus/layered.ts` (l'entrée est décodée couche après couche dans le
+générateur, et le moteur d'origine juge chaque texte décodé), jamais d'une édition à la main. Leur texte masqué
+(`vectors/redact.json`) est celui de `redact` d'origine sur ces constats. Les 1 860 autres cas et les 617 autres
+vecteurs du masquage sont inchangés, octet pour octet (`--check` de l'export d'origine avant la modification :
+« Corpus identique : 1862 cas, 17 fichiers », « Vecteurs identiques : 619 cas »).
+
+**Cas de Betterleaks** : les 18 cas de `TestDecode` (`internal/codec/decoder_test.go`, commit
+`b4b1c4455987636400ce693bd9d8a8e2cf375ed9`, licence MIT, « Copyright (c) 2026 Zachary Rice », texte de la licence :
+« Licence de Betterleaks ») sont repris dans `TestBetterleaksDecoderCases` (`detect/encoding_test.go`) : noms et
+textes attendus repris, entrées encodées refaites à l'exécution, noms sensibles assemblés par morceaux. 14 cas sont
+lus (base64 standard et URL, pourcentage, texte sans rien à décoder) ; 4 sont marqués reportés et sautés
+(hexadécimal, « U+XXXX », « \\uXXXX » à barre doublée, mélange avec de l'hexadécimal) : la vue hexadécimale et les
+échappements étendus ne sont pas dans ce lot. Aucun code de Betterleaks n'est repris ; rien n'est repris de
+TruffleHog (AGPL-3.0), dont seule l'idée d'une lecture UTF-16 est retenue.
+
+### Vue UTF-16 (`detect/utf16.go`)
+
+Un contenu UTF-16 est analysé une seconde fois dans sa vue UTF-16 (`utf16View`, puis toutes les vues et tous les
+décodages ordinaires sur elle), dans les mêmes budgets. Chaque caractère de la vue garde l'étendue de ses deux octets
+(quatre pour une paire de substitution) : un constat est ramené aux octets de la source, et la valeur dont est tirée
+l'Empreinte locale est le texte en UTF-8, la même que pour le même secret dans un fichier UTF-8. Caractères accentués
+gardés ; substitut isolé et octet final sans pendant écrits U+FFFD.
+
+- **Déclenchement** : marque d'ordre (FF FE, FE FF) ; sans marque, une parité qui porte un octet nul dans une paire
+  sur huit au moins et quatre fois plus que l'autre. Un texte sans octet nul ni marque ne coûte qu'une recherche
+  d'octet.
+- **Encodage du constat** : `normalized` (aucune valeur nouvelle). Choix par défaut, à confirmer par Julian.
+- **Limites connues** : UTF-16 sans marque fait surtout de caractères hors Latin-1 (pas assez d'octets nuls) ;
+  passage UTF-16 au milieu d'un fichier d'un autre encodage ; UTF-32. Les règles du client (`custom`) et les paquets
+  `hidden`, `mentions` et `injection` ne lisent pas cette vue.
+- **Expurgation** : inchangée. Une entrée UTF-16 sans marque et en ASCII est de l'UTF-8 valide : le Substitut
+  remplace exactement les octets du jeton (`vectors/expurgate.json`, `utf16/petit-boutien-sans-marque`), écrit en
+  UTF-8 au milieu du texte UTF-16. Avec une marque d'ordre ou un caractère accentué, l'entrée n'est pas de l'UTF-8 :
+  l'expurgation la refuse comme avant (`ErrEncoding`, cas `utf16/petit-boutien-marque-refuse`), le constat, lui,
+  est rendu par l'analyse.
+
+### Vérification, et ce qui reste à lancer
+
+Lancé le 15 novembre 2026 : `TestLayeredDecoding`, `TestBetterleaksDecoderCases`, `TestUTF16View` (nouveaux),
+les autres essais de `detect/scan_test.go` et `detect/encoding_test.go`, `TestParity`, `TestRedactParity`,
+`TestExpurgateVectors` (44 cas) ; `npm run typecheck` du générateur. `TestParityWorkers` a été lancé avant la
+régénération du corpus (mêmes deux cas en écart), pas après.
+
+À lancer (non lancé dans ce lot, consigne d'économie) :
+
+- `go test -run '^$' -bench 'BenchmarkScan64KiB' -count=3 ./detect`, avant (commit `12394e7`) et après : le hook de
+  xSOM Fleet a un budget de durée, et chaque texte décodé cherche désormais des candidats base64 ;
+- `go run ./tools/bruit` : les couches débitent le même budget de 128 décodages, un fichier riche en base64 peut
+  donc passer d'une analyse complète à une analyse incomplète ;
+- `go test -count=1 ./...` dans les deux modules, `golangci-lint run`, `go run ./tools/depguardcheck`,
+  `go run ./tools/spdxcheck`, `node --test wasm/parity.test.mjs`, les essais Vitest du générateur.
+
+### Questions pour Julian
+
+1. La vue UTF-16 rend ses constats avec l'encodage `normalized`. Est-ce la bonne valeur du contrat, ou faut-il une
+   valeur `utf16` dans le contrat des Événements ?
+2. L'expurgation refuse une entrée UTF-16 à marque d'ordre ou à caractères accentués (hors UTF-8), et écrit sinon un
+   Substitut en UTF-8 dans un texte UTF-16. Faut-il qu'elle écrive le Substitut en UTF-16 et accepte ces entrées
+   (`expurgation/expurgate.go`, positions UTF-16 des Substitutions à redéfinir) ?
+3. Une quatrième couche n'est pas décodée et ne bloque pas. Faut-il qu'un candidat plausible à la profondeur
+   maximale rende l'analyse incomplète (blocages en plus sur tout texte décodé qui porte un mot de 20 caractères) ?
+4. Les cas nouveaux (double et triple base64, double pourcentage, base64 d'UTF-16, fichiers UTF-16) sont éprouvés
+   par des essais Go, pas encore par des cas du corpus `vectors/detection/views.json` : la seconde écriture du
+   générateur ne juge aujourd'hui que le base64 entier. À étendre avec la matrice d'encodages (lot L27) ?
+
 ## Identifiants européens et français, règle composée AWS (v0.10.0)
 
 Quinze règles s'ajoutent à la fin du Pack initial, après les règles de données à contexte de la v0.9.0

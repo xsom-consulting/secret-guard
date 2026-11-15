@@ -1838,6 +1838,85 @@
           }
         ]
       }
+    },
+    {
+      "id": "utf16/petit-boutien-sans-marque",
+      "input": [
+        "agBlAHQA",
+        "bwBuACAA",
+        "OgAgAGcA",
+        "aABwAF8A",
+        "YQBCADMA",
+        "ZABhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "YQBCADMA",
+        "ZABhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "YQBCADMA",
+        "ZABhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "IAA7ACAA",
+        "ZgBpAG4A",
+        "DQAKAA=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "j\u0000e\u0000t\u0000o\u0000n\u0000 \u0000:\u0000 \u0000",
+          "[secret masqué ",
+          "par xSOM n°1 : ",
+          "jeton GitHub, pa",
+          "s la vraie valeu",
+          "r] \u0000;\u0000 \u0000f\u0000i\u0000n\u0000\r\u0000",
+          "\n\u0000"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 16,
+            "byteEnd": 96,
+            "utf16Start": 16,
+            "utf16End": 96,
+            "ordinal": 1,
+            "replacement": "[secret masqué par xSOM n°1 : jeton GitHub, pas la vraie valeur]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "utf16/petit-boutien-marque-refuse",
+      "input": [
+        "//5qAGUA",
+        "dABvAG4A",
+        "IAA6ACAA",
+        "ZwBoAHAA",
+        "XwBhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "YQBCADMA",
+        "ZABhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "YQBCADMA",
+        "ZABhAEIA",
+        "MwBkAGEA",
+        "QgAzAGQA",
+        "YQBCADMA",
+        "ZAAgADsA",
+        "IABmAGkA",
+        "bgANAAoA"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "incomplete",
+        "text": null,
+        "substitutions": []
+      }
     }
   ]
 }

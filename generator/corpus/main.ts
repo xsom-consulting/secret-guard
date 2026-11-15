@@ -19,6 +19,7 @@ import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from '.
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
 import { codeNoiseCases, codeNoiseCoverageProblems, codeNoiseExpected, codeNoiseUpstream } from './code-noise.ts';
+import { LAYERED_UPSTREAM_CASES, layeredExpected } from './layered.ts';
 import { contextDataCases, contextDataCoverageProblems, contextDataExpected } from './context-data.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
@@ -148,9 +149,13 @@ async function main(): Promise<number> {
     const evaluated: EvaluatedCase[] = [];
     const written: [string, CorpusCase][] = [];
     for (const source of sources) {
-      const expected = expectedFor(engine, source.bytes, source.languageId);
+      // Décodage à plusieurs couches (v0.10.0) : deux cas d'origine jugés par la seconde écriture de `corpus/layered.ts`.
+      const expected = LAYERED_UPSTREAM_CASES.has(source.id) ? layeredExpected(engine, source) : expectedFor(engine, source.bytes, source.languageId);
       evaluated.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected });
       written.push([source.file, corpusCaseOf(source, expected)]);
+    }
+    for (const id of LAYERED_UPSTREAM_CASES) {
+      if (!sources.some((source) => source.id === id)) problems.push(`cas rejugé absent des tests d’origine : ${id}`);
     }
     const personal: EvaluatedCase[] = [];
     for (const source of personalDataCases()) {

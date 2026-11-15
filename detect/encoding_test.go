@@ -6,7 +6,9 @@ package detect
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -302,4 +304,75 @@ func TestJWTBudgetAlreadyExhausted(t *testing.T) {
 			}
 		}
 	})
+}
+
+// TestBetterleaksDecoderCases reprend les 18 cas de TestDecode de Betterleaks (internal/codec/decoder_test.go, MIT,
+// avis dans NOTICE et UPSTREAM.md) : le texte que leur décodeur écrit doit se lire dans une vue ou dans un texte
+// décodé de ce moteur. Les entrées encodées sont refaites à l'exécution à partir du texte attendu, et les noms
+// sensibles assemblés par morceaux. Les cas hexadécimaux et « U+XXXX » sont reportés (vue hexadécimale et
+// échappements étendus hors de ce lot) : ils sont gardés ici, marqués, pour le jour où ces vues existent.
+func TestBetterleaksDecoderCases(t *testing.T) {
+	std := func(text string) string { return base64.StdEncoding.EncodeToString([]byte(text)) }
+	raw := func(text string) string { return base64.RawURLEncoding.EncodeToString([]byte(text)) }
+	word := "sec" + "ret"
+	label := "tok" + "en" + ": "
+	longer, value := "longer-encoded-"+word+"-test", "test-"+word+"-value"
+	name := "some-encoded-" + word
+	encapsulated := "this encapsulated " + word
+	underscores := "b64urlsafe-test-" + word + "-underscores??"
+	hello := `hello world`
+	for _, c := range []struct {
+		name, chunk, want string
+		deferred          bool
+	}{
+		{"only b64 chunk", std(longer), longer, false},
+		{"mixed content", label + std(longer), longer, false},
+		{"no chunk", "", "", false},
+		{"env var", name + "=" + std(value), value, false},
+		{"has longer b64 inside", name + `="` + std(longer) + `"`, longer, false},
+		{"many possible substrings", "Many substrings in this slack message could be base64 decoded\n\t\t\t\tbut only " + std(encapsulated) + " should be decoded.", encapsulated, false},
+		{"b64-url-safe: only b64 chunk", raw(longer), longer, false},
+		{"b64-url-safe: mixed content", label + raw(longer), longer, false},
+		{"b64-url-safe: env var", name + "=" + std(value), value, false},
+		{"b64-url-safe: has longer b64 inside", name + `="` + raw(longer) + `"`, longer, false},
+		{"b64-url-safe: hyphen url b64", raw("gitleaks>>finds-" + word + "s"), "gitleaks>>finds-" + word + "s", false},
+		{"b64-url-safe: underscore url b64", raw(underscores), underscores, false},
+		{"invalid base64 string", "a3d3fa7c2bb99e469ba55e5834ce79ee4853a8a3", "", false},
+		{"url encoded value", word + "%3D%22q%24%21%40%23%24%25%5E%26%2A%28%20asdf%22", `="q$!@#$%^&*( asdf"`, false},
+		{"hex encoded value", word + `="` + strings.ToUpper(hex.EncodeToString([]byte("FishMapHunky!!!634"))) + `"`, "FishMapHunky!!!634", true},
+		{"unicode encoded value", word + "=" + "U+0061 U+0062 U+0063 U+0064 U+0065 U+0066", "abcdef", true},
+		{"unicode encoded value backslashed", word + "=" + strings.ReplaceAll(hello, `\`, `\\`), "hello world", true},
+		{"unicode encoded value backslashed mixed w/ hex", word + "=" + hello + " 6C6F76656C792070656F706C65206F66206561727468", "lovely people of earth", true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			text, err := buildTextViews([]byte(c.chunk), newViewBudget())
+			if err != nil {
+				t.Fatal(err)
+			}
+			var read []string
+			for _, v := range append([]*view{text.canonical}, text.transformed...) {
+				if v != text.canonical {
+					read = append(read, string(v.text))
+				}
+				err := forEachBase64Candidate(v, &decodeBudget{}, map[sourceRange]struct{}{}, func(_, _ int, decoded string) error {
+					read = append(read, decoded)
+					return nil
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			found := slices.ContainsFunc(read, func(decoded string) bool { return strings.Contains(decoded, c.want) })
+			switch {
+			case c.deferred && found:
+				t.Fatal("cas reporté désormais lu : retirer la marque")
+			case c.deferred:
+				t.Skip("reporté : vue hexadécimale et échappements étendus hors de ce lot")
+			case c.want == "" && len(read) != 0:
+				t.Fatalf("%d texte(s) décodé(s), aucun attendu", len(read))
+			case c.want != "" && !found:
+				t.Fatal("le texte attendu n'est lu dans aucune vue ni aucun texte décodé")
+			}
+		})
+	}
 }
