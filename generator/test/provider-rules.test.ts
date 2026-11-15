@@ -175,7 +175,8 @@ describe('règles reprises de Betterleaks', () => {
     expect(ids(`jeton ${['xoxe', digits(13), digits(13), digits(13), 'a1B2c3D4e5F6g7H8i9J0k1L2m3N4'].join('-')} fin`)).toEqual(['slack_other_token']);
     expect(ids(`jeton ${['xapp', '1', 'A0B1C2D3E4F', digits(13), hex].join('-')} fin`)).toEqual(['slack_app_token']);
     expect(ids('message : xoxo-my-dear-friends-and-family fin')).toEqual([]);
-    expect(ids(`carte : ${['xoxo', '2026-11-15-cafe0123456789ab'].join('-')} fin`)).toEqual([]);
+    // Valeur assemblée à l'exécution : écrite d'un bloc, la recherche de secrets du dépôt la prendrait pour un jeton.
+    expect(ids(`carte : ${['xoxo', '2026', '11', '15', 'cafe0123456789ab'].join('-')} fin`)).toEqual([]);
     // Un identifiant de code qui commence comme un préfixe de fournisseur n'est pas un jeton.
     for (const name of ['dvc_server_hostname', 'prf_hmac_sha256_expand_label', 'tss_thread_specific_storage_key', 'lip_sync_animation_controller', 'persona_production_database_connection_url']) {
       expect(ids(`const value = ${name};`), name).toEqual([]);
