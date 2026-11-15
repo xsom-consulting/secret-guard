@@ -160,8 +160,11 @@ Constats d'entropie de xSOM Fleet par forme de valeur :
 - Le banc ne dit rien du rappel : ce sont le corpus de parité (`TestParity`) et les essais de jetons aléatoires
   (`TestEntropyKeepsTokens`, `TestEntropyKeepsTokensBesideNames`, `TestEntropyNameRarelyMatchesTokens`) qui prouvent
   qu'un jeton reste détecté.
-- Vitesse de l'analyse après la Story 27.6 : non mesurée dans ce lot (la forme d'identifiant généré n'est essayée
-  que sur un candidat d'entropie déjà refusé comme nom).
+- Vitesse de l'analyse après la Story 27.6 : aucun écart mesurable. `BenchmarkScan/64KiB/propre`
+  (`-benchtime 30x -count 5`, deux passes alternées, médianes) : 19,9 ms puis 16,3 ms avant, 18,0 ms puis 16,0 ms
+  après. La machine était partagée et chargée ce jour-là : ces durées sont plus longues que celles du haut de la
+  page et ne se comparent qu'entre elles. La forme d'identifiant généré n'est essayée que sur un candidat d'entropie
+  déjà refusé comme nom.
 
 ### Rejouer
 
