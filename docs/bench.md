@@ -217,6 +217,11 @@ Ce que cela dit, et ne dit pas :
   ne les prend pour cible. Chez Akto, des demandes de code malveillant et des textes encodés deux fois.
 - Aucun texte tenu pour sain par sa source n'est signalé (22 textes).
 
+Les transformations de la Story 27.47 s'appliquent aux règles nouvelles : `TestPositiveCasesSurviveTransformations`
+retrouve les 60 cas positifs du corpus dans les treize transformations (58 pour les deux formes de texte replié : un
+faux historique dont on replie les lignes n'en est plus un). Pour cela la forme normalisée est lue aussi sans
+dépliage : une règle définie par ses lignes (faux historique, étiquette en début de ligne) ne se retrouve que là.
+
 **Critère de garde d'un motif.** Chaque motif nouveau est mesuré seul sur les 151 392 fichiers des 34 dépôts. Il est
 gardé s'il signale au plus 75 fichiers en tout (0,05 %) et au plus 5 dans les 19 dépôts qui ne sont ni un cadre
 d'agents, ni une collection de prompts, ni un outil d'équipe rouge. Seuils posés pour cette mesure ; ils se discutent.
