@@ -33,8 +33,8 @@ const entropyHexWordMax = 24
 // isEntropyName dit si value, candidat d'entropie, a la forme d'un nom : sans « + » ni « = », une suite de mots
 // séparés par « / », « - » ou « _ », dont chacun est un mot de nom (nameTokenLetters : identifiant de code, mot de
 // dossier, nombre), un identifiant généré long (isGeneratedIdentifier) ou un mot hexadécimal court (isShortHexWord),
-// et dont un au moins est un mot de nom d'au moins 4 lettres ou un identifiant généré long. Une valeur faite seulement de chiffres hexadécimaux n'en est jamais un : elle garde le seuil de
-// l'hexadécimal (hasStrongEntropy).
+// et dont un au moins est un mot de nom d'au moins 4 lettres ou un identifiant généré long. Une valeur faite seulement
+// de chiffres hexadécimaux n'en est jamais un : elle garde le seuil de l'hexadécimal (hasStrongEntropy).
 //
 // Une suite aléatoire en base64 n'a presque jamais cette forme (TestEntropyNameRarelyMatchesTokens). Ce qu'elle fait
 // perdre : l'avertissement d'entropie sur une phrase de passe écrite en casse de chameau (« Cheval… Agrafe… ») sans nom
@@ -115,13 +115,24 @@ const (
 //   - un pour trois, de 4 lettres en moyenne, avec huit mots réguliers au moins.
 //
 // C'est la forme des noms de types générés depuis un schéma (« …RequestItemsElemAiServiceMistralLeChat »,
-// « …ElemCurrencyEUR », « …ElemAlgEd25519 ») et des noms d'essais (« TestFR16LoopbackListenerIsExclusive »), jamais
-// celle d'un jeton : chacun de ses caractères devrait tomber dans la classe attendue, et ses « mots » feraient
-// 3,7 lettres en moyenne. Mesure du 15 novembre 2026 sur 10 millions de suites alphanumériques aléatoires par
-// longueur, comptées quand elles ont cette forme sans avoir déjà celle d'un nom (nameTokenLetters, entre
-// parenthèses) : 20 caractères, 0 (1 439) ; 24, 146 (262) ; 28, 84 (34) ; 32, 16 (5) ; 36, 18 (0) ; 40, 7 (0) ;
-// 48, 0 (0). TestEntropyNameRarelyMatchesTokens garde la borne : 1 pour 1 000 à 20 caractères, 1 pour 100 000 à 32,
-// 1 pour un million à 48.
+// « …ElemCurrencyEUR », « …ElemAlgEd25519 ») et des noms d'essais (« TestFR16LoopbackListenerIsExclusive »), presque
+// jamais celle d'un jeton alphanumérique : chacun de ses caractères devrait tomber dans la classe attendue, et ses
+// « mots » feraient 3,7 lettres en moyenne. Mesure du 15 novembre 2026 sur 10 millions de suites alphanumériques
+// aléatoires par longueur, comptées quand elles ont cette forme sans avoir déjà celle d'un nom (nameTokenLetters,
+// entre parenthèses) : 20 caractères, 0 (1 439) ; 24, 146 (262) ; 28, 84 (34) ; 32, 16 (5) ; 36, 18 (0) ;
+// 40, 7 (0) ; 48, 0 (0). Mesure refaite à la relecture sur 50 millions de suites de 32 caractères : 113 (46), soit 3 pour un
+// million en tout. TestEntropyNameRarelyMatchesTokens garde la borne : 1 pour 1 000 à 20 caractères, 1 pour 100 000
+// à 32, 1 pour un million à 48.
+//
+// Perte acceptée, mesurée à la relecture : une suite aléatoire de lettres seules en casse mêlée, sans aucun chiffre,
+// a cette forme bien plus souvent. Sur 5 millions de suites par longueur : 24 caractères, 3 472 (1 976) ; 32,
+// 1 546 (157) ; 40, 1 529 (12) ; 48, 722 (0), soit 3 pour 10 000 à 32 et à 40 caractères, où la forme d'avant en
+// laissait passer 31 puis 2 pour un million. Les branches à sept et à huit mots en font plus de la moitié à 40
+// caractères et au-delà, pour 22 des 349 mots d'identifiants réels que cette forme admet dans le banc de bruit. Un
+// jeton alphanumérique de 40 caractères n'a aucun chiffre qu'une fois sur 1 100 environ ; un jeton tiré dans les
+// lettres seules perd donc son avertissement d'entropie 3 fois sur 10 000 (le seuil de 4,3 bits en écarte déjà
+// bien plus : 12 sur 100 à 32 caractères). TestEntropyNameRarelyMatchesLetters garde la borne : 2 pour 1 000 à
+// 24 caractères, 1 pour 1 000 à 32, 40 et 48.
 func isGeneratedIdentifier(word []byte) bool {
 	regular, irregular, letters, ok := generatedWords(word)
 	if !ok || regular < generatedMinWords {

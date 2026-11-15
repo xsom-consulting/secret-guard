@@ -151,7 +151,7 @@ const (
 // Un jeton alphanumérique aléatoire de 16 caractères n'a l'une de ces formes qu'avec une probabilité inférieure à
 // 10⁻⁹ (chaque caractère un chiffre, ou un chiffre hexadécimal d'une même casse). Ce qui n'est plus signalé : un
 // secret fait de chiffres seuls dans un chemin, et une clé hexadécimale de 32, 40 ou 64 chiffres accolée à des mots
-// par un tiret (seule dans son segment, elle ne l'était déjà pas).
+// par un tiret ou un souligné (seule dans son segment, elle ne l'était déjà pas).
 func isPublicID(word []byte) bool {
 	letters := 0
 	for letters < len(word) && isUpper(word[letters]) {

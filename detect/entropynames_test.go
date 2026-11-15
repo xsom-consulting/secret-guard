@@ -102,7 +102,7 @@ func TestIsGeneratedIdentifier(t *testing.T) {
 // jamais la forme d'un nom ; un tel jeton garde son constat d'entropie.
 func TestEntropyNameRarelyMatchesTokens(t *testing.T) {
 	// 500 000 tirages de trois suites par longueur : assez pour que la borne ne dépende pas du tirage (le taux mesuré
-	// sur 10 millions de jetons alphanumériques est de 1,4 pour 10 000 à 20 caractères, 2 pour un million à 32, et
+	// sur 10 millions de jetons alphanumériques est de 1,4 pour 10 000 à 20 caractères, 3 pour un million à 32, et
 	// aucun à 48 : entropynames.go).
 	const samples = 500_000
 	for _, n := range []int{20, 32, 48} {
@@ -125,6 +125,34 @@ func TestEntropyNameRarelyMatchesTokens(t *testing.T) {
 		// Au plus 1 pour 1 000 à 20 caractères, 1 pour 100 000 à 32, 1 pour un million à 48.
 		if limit := map[int]int{20: 3 * samples / 1000, 32: 3 * samples / 100_000, 48: 3 * samples / 1_000_000}[n]; matched > limit {
 			t.Fatalf("%d caractères : %d suites aléatoires sur %d ont la forme d'un nom", n, matched, 3*samples)
+		}
+	}
+}
+
+// TestEntropyNameRarelyMatchesLetters : une suite aléatoire de lettres seules en casse mêlée (un jeton sans aucun
+// chiffre) a plus souvent la forme d'un nom qu'un jeton alphanumérique, surtout depuis isGeneratedIdentifier. La
+// perte est bornée : 2 pour 1 000 à 24 caractères, 1 pour 1 000 à 32, 40 et 48 (taux mesurés sur 5 millions de
+// suites : 1,1 pour 1 000 à 24 caractères, 3 pour 10 000 à 32 et à 40, 1,4 pour 10 000 à 48 : entropynames.go).
+func TestEntropyNameRarelyMatchesLetters(t *testing.T) {
+	const samples = 200_000
+	for _, n := range []int{24, 32, 40, 48} {
+		matched := 0
+		for i := 0; i < samples; i++ {
+			if isEntropyName([]byte(uniformLetters(t, n))) {
+				matched++
+			}
+		}
+		t.Logf("%d lettres : %d suites aléatoires sur %d ont la forme d'un nom", n, matched, samples)
+		limit := samples / 1000
+		if n == 24 {
+			limit = 2 * samples / 1000
+		}
+		if matched > limit {
+			t.Fatalf("%d lettres : %d suites aléatoires sur %d ont la forme d'un nom, %d au plus", n, matched, samples, limit)
+		}
+		// La borne mesure bien quelque chose : la forme n'est pas inatteignable pour une suite de lettres.
+		if n <= 40 && matched == 0 {
+			t.Fatalf("%d lettres : aucune suite sur %d n'a la forme d'un nom, mesure à revoir", n, samples)
 		}
 	}
 }

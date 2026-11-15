@@ -159,7 +159,10 @@ Constats d'entropie de xSOM Fleet par forme de valeur :
   en casse de chameau » prend aussi une charge base64 sans chiffre ni signe.
 - Le banc ne dit rien du rappel : ce sont le corpus de parité (`TestParity`) et les essais de jetons aléatoires
   (`TestEntropyKeepsTokens`, `TestEntropyKeepsTokensBesideNames`, `TestEntropyNameRarelyMatchesTokens`) qui prouvent
-  qu'un jeton reste détecté.
+  qu'un jeton reste détecté. Coût mesuré de la Story 27.6 sur le rappel : un jeton aléatoire fait de lettres seules en
+  casse mêlée, sans aucun chiffre, a la forme d'un identifiant généré 3 fois sur 10 000 à 32 et à 40 caractères (31
+  puis 2 pour un million avant) et perd alors son avertissement d'entropie ; un jeton alphanumérique, 3 fois sur un
+  million à 32 caractères (`TestEntropyNameRarelyMatchesLetters`, détail dans `UPSTREAM.md`).
 - Vitesse de l'analyse après la Story 27.6 : aucun écart mesurable. `BenchmarkScan/64KiB/propre`
   (`-benchtime 30x -count 5`, deux passes alternées, médianes) : 19,9 ms puis 16,3 ms avant, 18,0 ms puis 16,0 ms
   après. La machine était partagée et chargée ce jour-là : ces durées sont plus longues que celles du haut de la
