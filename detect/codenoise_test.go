@@ -491,3 +491,65 @@ func TestBasicAuthKeepsCredentials(t *testing.T) {
 		}
 	}
 }
+
+// TestEncryptedEnvelopeIsNotASecret : une valeur chiffrée (sops, Spring Cloud Config, Ansible Vault, chiffrement de
+// transit de Vault, age, PGP) n'est pas un constat d'affectation, quel que soit le langage, dotenv compris.
+func TestEncryptedEnvelopeIsNotASecret(t *testing.T) {
+	cipherHex := strings.Repeat("0f1e2d3c", 4)
+	vaultBody := strings.Repeat("6231336439623665", 5)
+	upper := strings.ToUpper(namePassword)
+	cases := []noiseCase{
+		{"sops", `    ` + namePassword + `: ENC[AES256_GCM,data:Zm9vYmFy,iv:YmFyYmF6,tag:cXV4cXV4,type:str]`, "yaml"},
+		{"sops entre guillemets", `"` + namePassword + `": "ENC[AES256_GCM,data:Zm9vYmFy,iv:YmFyYmF6,tag:cXV4cXV4,type:str]",`, "json"},
+		{"sops dans un fichier dotenv", upper + `=ENC[AES256_GCM,data:Zm9vYmFy,iv:YmFyYmF6,tag:cXV4cXV4,type:str]`, "dotenv"},
+		{"Spring Cloud Config", `spring.datasource.` + namePassword + `={cipher}` + cipherHex, "properties"},
+		{"Spring Cloud Config entre guillemets", `  ` + namePassword + `: '{cipher}` + cipherHex + `'`, "yaml"},
+		{"chiffrement de transit de Vault", `  db_` + namePassword + `: vault:v1:8SDd3WHDOjf7mq69`, "yaml"},
+		{"chiffrement de transit, variable d'environnement", `DB_` + upper + `=vault:v12:8SDd3WHDOjf7mq69CyCq`, ""},
+		{"en-tête Ansible Vault entre guillemets", namePassword + `: "$ANSIBLE_VAULT;1.1;AES256"`, "yaml"},
+		{"bloc Ansible Vault", "db_" + namePassword + ": !vault |\n          $ANSIBLE_VAULT;1.1;AES256\n          " + vaultBody + "\n          " + vaultBody, "yaml"},
+		{"message PGP", namePassword + ": |\n  -----BEGIN PGP MESSAGE-----\n  hQEMA5vJ\n  -----END PGP MESSAGE-----", "yaml"},
+		{"fichier age", nameToken + ": |\n  -----BEGIN AGE ENCRYPTED FILE-----\n  YWdlLWVuY3J5cHRpb24\n  -----END AGE ENCRYPTED FILE-----", "yaml"},
+		{"message PGP dans un heredoc", "export " + upper + "=$(cat <<EOF\n-----BEGIN PGP MESSAGE-----\nhQEMA5vJ\n-----END PGP MESSAGE-----\nEOF\n)", "shellscript"},
+	}
+	for _, c := range cases {
+		for _, language := range []string{"", c.language} {
+			if got := assignmentFindings(t, c.text+"\n", language); len(got) != 0 {
+				t.Errorf("%s (langage %q) : %d constat(s) d'affectation, règle %s", c.name, language, len(got), got[0].RuleID)
+			}
+		}
+	}
+}
+
+// TestEncryptedEnvelopeGuards : une marque d'enveloppe sans texte chiffré derrière elle, ou suivie d'un littéral,
+// garde son constat.
+func TestEncryptedEnvelopeGuards(t *testing.T) {
+	cases := []noiseCase{
+		{"marque sops sans données", namePassword + `: ENC[` + literalStrong + `]`, "yaml"},
+		{"marque Spring suivie d'un mot court", namePassword + `={cipher}` + "sesame", "properties"},
+		{"marque Spring suivie d'un littéral à signes", namePassword + `: '{cipher}` + literalStrong + `'`, "yaml"},
+		{"préfixe de transit sans version", namePassword + `: vault:` + literalStrong, "yaml"},
+		{"préfixe de transit suivi d'un littéral à signes", namePassword + `: vault:v1:` + literalStrong, "yaml"},
+		{"bloc ordinaire", namePassword + ": |\n  " + literalStrong + "\n", "yaml"},
+	}
+	for _, c := range cases {
+		for _, language := range []string{"", c.language} {
+			if got := assignmentFindings(t, c.text+"\n", language); len(got) == 0 {
+				t.Errorf("%s (langage %q) : aucun constat d'affectation", c.name, language)
+			}
+		}
+	}
+}
+
+// TestPGPPrivateKeyIsNotAnEnvelope : une clé privée PGP n'est pas un message chiffré ; elle garde un constat (règle
+// des clés privées ou affectation).
+func TestPGPPrivateKeyIsNotAnEnvelope(t *testing.T) {
+	block := "PGP PRIVATE " + "KEY BLOCK-----"
+	text := "private_" + "key: |\n  -----BEGIN " + block + "\n  lQOYBF\n  -----END " + block + "\n"
+	for _, language := range []string{"", "yaml"} {
+		result := Scan([]byte(text), loadInitialRules(t), Options{LanguageID: language})
+		if !result.Complete || len(result.Findings) == 0 {
+			t.Errorf("langage %q : aucun constat", language)
+		}
+	}
+}

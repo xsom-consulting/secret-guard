@@ -34,6 +34,15 @@ Composants tiers / third-party components:
   Provider rules of the initial Pack, since v0.8.1: patterns taken and modified from the detection rules of
   Titus (Praetorian Security, Inc., Apache-2.0), themselves derived from NoseyParker (Praetorian Security, Inc.,
   Apache-2.0) and Kingfisher (MongoDB, Inc., Apache-2.0). Changes: UPSTREAM.md, "Règles de fournisseurs".
+- Valeurs publiques connues et valeurs chiffrées (detect/publicvalues.go, detect/codenoise.go), depuis la v0.10.0 :
+  liste de formes de clés publiques et de clés d'essai reprise de Betterleaks
+  (https://github.com/betterleaks/betterleaks, rules/generic/filter.go, commit
+  b4b1c4455987636400ce693bd9d8a8e2cf375ed9), et formes d'enveloppes chiffrées reprises de
+  rules/generic/password.go du même commit, Copyright (c) 2026 Zachary Rice, licence MIT.
+  Licence reproduite et modifications : UPSTREAM.md, « Code ordinaire ».
+  Known public values and encrypted values, since v0.10.0: list of public and test key shapes taken from
+  Betterleaks (rules/generic/filter.go), and encrypted envelope shapes taken from rules/generic/password.go of the
+  same commit, Copyright (c) 2026 Zachary Rice, MIT License. License text and changes: UPSTREAM.md, "Code ordinaire".
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.
 - Données Unicode / Unicode data (Unicode License v3), Copyright (c) 1991-2026 Unicode, Inc.

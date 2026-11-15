@@ -24,6 +24,7 @@ package detect
 
 import (
 	"bytes"
+	"strings"
 )
 
 const (
@@ -809,11 +810,23 @@ var functionKeywords = [][]byte{[]byte("function"), []byte("async"), []byte("lam
 // l'en-tête du fichier). secretType : type du nom ; lang : langage de l'analyse.
 func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parsedValue, secretType string, lang language) noiseVerdict {
 	text := ctx.text
-	if p.kind == kindRegex || p.kind == kindMultiline {
+	if p.kind == kindRegex {
 		return keepFinding
 	}
-	if !ctx.spend(max(p.end, ctx.nextLineBreak(p.start)) - m.start + 64) {
+	if p.kind == kindMultiline {
+		// Bloc YAML, heredoc, chaîne à trois guillemets : seul l'en-tête d'une enveloppe chiffrée est lu.
+		if isEncryptedBlock(text[p.start:p.valueEnd]) {
+			return noiseVerdict{drop: true}
+		}
 		return keepFinding
+	}
+	lineEnd := ctx.nextLineBreak(p.start)
+	if !ctx.spend(max(p.end, lineEnd) - m.start + 64) {
+		return keepFinding
+	}
+	// Valeur chiffrée, partout (dotenv compris) : ce qui est écrit n'est pas le secret.
+	if isEncryptedEnvelope(text, p, lineEnd) {
+		return noiseVerdict{drop: true}
 	}
 	start, end := p.start, p.valueEnd
 
@@ -822,6 +835,12 @@ func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parse
 	// La forme est jugée sur toute la ligne : la lecture d'origine coupe la valeur à la première virgule ou au dièse.
 	if p.kind == kindUnquoted && crossesLine(text, m.start, start) && !hasSecretWord(v, start, max(end, ctx.nextLineBreak(start))) {
 		return noiseVerdict{drop: true, resume: ctx.lineStart(start)}
+	}
+
+	// Valeur publique connue (clé publiable, clé de site, jeton public d'essai : publicvalues.go), partout, sous un nom
+	// de clé d'API ou de jeton seulement.
+	if (secretType == "api_key" || secretType == "access_token") && isPublicValue(text, start, end) {
+		return noiseVerdict{drop: true}
 	}
 
 	// Références et gabarits, partout (dotenv compris).
@@ -1038,4 +1057,85 @@ func isDigits(value []byte) bool {
 		}
 	}
 	return len(value) > 0
+}
+
+// encryptedHeaders : en-têtes de valeurs chiffrées dont la suite n'est pas lue.
+var encryptedHeaders = [][]byte{
+	[]byte("$ANSIBLE_VAULT;"), []byte("!vault"), []byte("-----BEGIN AGE ENCRYPTED FILE-----"),
+	[]byte("-----BEGIN PGP MESSAGE-----"), []byte("age-encryption.org/v"),
+}
+
+func hasEncryptedHeader(value []byte) bool {
+	for _, header := range encryptedHeaders {
+		if bytes.HasPrefix(value, header) {
+			return true
+		}
+	}
+	return false
+}
+
+// isEncryptedBlock dit si une valeur de plusieurs lignes est une enveloppe chiffrée : son début, ou sa première ligne
+// après l'indicateur de bloc (« | », « <<FIN »), est un en-tête de encryptedHeaders.
+func isEncryptedBlock(value []byte) bool {
+	head := jsTrim(value[:min(len(value), 256)])
+	if hasEncryptedHeader(head) {
+		return true
+	}
+	lineBreak := bytes.IndexByte(head[:min(len(head), 64)], '\n')
+	return lineBreak >= 0 && hasEncryptedHeader(jsTrim(head[lineBreak+1:]))
+}
+
+// isEncryptedEnvelope dit si la valeur d'une ligne est une enveloppe chiffrée : ce qui est écrit n'est pas le secret.
+// Formes : sops (« ENC[AES256_GCM,data:…] »), Spring Cloud Config (« {cipher}… »), Ansible Vault (en-tête
+// « $ANSIBLE_VAULT;… », étiquette YAML « !vault »), chiffrement de transit de Vault (« vault:v1:… »), age et PGP
+// (en-tête d'armure). Idée et formes reprises de Betterleaks, rules/generic/password.go (MIT ; UPSTREAM.md, « Code
+// ordinaire »), resserrées : le texte chiffré doit suivre la marque. Une valeur sans guillemets est lue jusqu'à la fin
+// de sa ligne (la lecture d'origine la coupe à la première virgule ou accolade), puis réduite à son premier mot.
+func isEncryptedEnvelope(text []byte, p *parsedValue, lineEnd int) bool {
+	end := p.valueEnd
+	if p.kind == kindUnquoted || p.kind == kindPlaceholder {
+		end = max(end, lineEnd)
+	}
+	value := jsTrim(text[p.start:min(end, len(text))])
+	if hasEncryptedHeader(value) {
+		return true
+	}
+	if p.kind != kindQuoted {
+		if space := bytes.IndexAny(value, " \t"); space >= 0 {
+			value = value[:space]
+		}
+	}
+	switch {
+	case bytes.HasPrefix(value, []byte("ENC[")):
+		// sops : « ENC[CHIFFRE,data:…,iv:…,tag:…,type:str] ».
+		body := value[4:]
+		cipher := 0
+		for cipher < len(body) && (isASCIIUpper(body[cipher]) || isASCIIDigit(body[cipher]) || body[cipher] == '_') {
+			cipher++
+		}
+		return cipher > 0 && bytes.HasPrefix(body[cipher:], []byte(",data:")) && body[len(body)-1] == ']'
+	case len(value) > 8 && bytes.EqualFold(value[:8], []byte("{cipher}")):
+		return isCipherText(value[8:], 16, "+/=")
+	case bytes.HasPrefix(value, []byte("vault:v")):
+		rest := value[7:]
+		digits := 0
+		for digits < len(rest) && isASCIIDigit(rest[digits]) {
+			digits++
+		}
+		return digits > 0 && digits < len(rest) && rest[digits] == ':' && isCipherText(rest[digits+1:], 8, "+/=_-")
+	}
+	return false
+}
+
+// isCipherText dit si value est faite d'au moins minimum lettres, chiffres ou signes de extra, et de rien d'autre.
+func isCipherText(value []byte, minimum int, extra string) bool {
+	if len(value) < minimum {
+		return false
+	}
+	for _, c := range value {
+		if !isASCIIAlphanumeric(c) && strings.IndexByte(extra, c) < 0 {
+			return false
+		}
+	}
+	return true
 }

@@ -390,3 +390,47 @@ proche de la valeur) vient du projet Akto (`https://github.com/akto-api-security
 `apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
 cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP interne, ARN, bucket S3, RDS, DynamoDB) sont
 écrites ici en RE2, sans copie de motif, de mot-clé ni de code d'Akto.
+
+## Code ordinaire (v0.10.0)
+
+Écarts d'analyse ajoutés en v0.10.0 pour que du code ordinaire ne soit plus bloqué (`detect/codenoise.go`,
+`detect/publicvalues.go`). Cette section est celle du lot « les affectations ne bloquent plus le code ordinaire ».
+
+### Reprise de Betterleaks (licence MIT)
+
+Dépôt `https://github.com/betterleaks/betterleaks`, commit `b4b1c4455987636400ce693bd9d8a8e2cf375ed9` du
+13 novembre 2026, licence MIT, « Copyright (c) 2026 Zachary Rice ».
+
+| Élément d'origine | Dans ce dépôt | Ce qui est repris | Ce qui change |
+|---|---|---|---|
+| `rules/generic/filter.go`, `testAndPublicAPIFilters` (65 formes de clés publiques et de clés d'essai : 22 par leur motif seul, 43 avec des mots-clés) | `detect/publicvalues.go`, `publicForms` | les 65 motifs et leurs mots-clés, tels quels (`\@` et `\/` écrits sans barre oblique inverse ; les deux valeurs fixes assemblées par morceaux) | motifs ancrés aux deux bouts et compilés par RE2 ; un mot-clé ne compte que sur la ligne et **avant** la valeur (à l'origine : à proximité) ; les affectations n'appliquent la liste qu'aux noms de clé d'API et de jeton, jamais à un mot de passe ni à un nom qui porte « secret » ; l'entropie l'applique par un seul appel (`scanEntropy`) ; les quatre formes que l’origine garde en commentaire (clés secrètes et jeton d’accès d’essai) ne sont pas reprises |
+| `rules/generic/password.go`, `isEncryptedValue` (enveloppes chiffrées) | `detect/codenoise.go`, `isEncryptedEnvelope`, `isEncryptedBlock` | l'idée, et six formes : sops (`ENC[…]`), Spring Cloud Config (`{cipher}…`), Ansible Vault (`$ANSIBLE_VAULT;`, étiquette `!vault`), chiffrement de transit de Vault (`vault:vN:…`), age, PGP (en-têtes d'armure) | aucun motif copié : lecture écrite à la main, resserrée (la marque doit être suivie de texte chiffré : `,data:` et crochet fermant pour sops, 16 caractères de texte chiffré après `{cipher}`, 8 après `vault:vN:`) ; les autres formes de l'origine (OpenSSL salé, Fernet, JWE, PASETO, DPAPI, `ENCRYPTED PRIVATE KEY`) ne sont pas reprises |
+
+Le code qui applique ces listes est écrit pour ce module ; aucun essai de Betterleaks n'est repris. Rien n'est repris
+de TruffleHog (AGPL-3.0). L'idée d'écarter une référence (`$1`, `${NOM}`, `{{ … }}`, `${{ … }}`) vient aussi de la
+liste des valeurs ignorées de Gitleaks (`config/gitleaks.toml`, commit `5f6ec56cfa6f8c67648d863582c7ae2f206d5c1c`,
+licence MIT, « Copyright (c) 2019 Zachary Rice ») : seule l'idée est reprise, sans motif ni code.
+
+```text
+MIT License
+
+Copyright (c) 2026 Zachary Rice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
