@@ -7,14 +7,15 @@
 //
 //   - le texte normalisé (NFKC : pleine chasse, espaces insécables et typographiques, ligatures) ;
 //   - le texte normalisé où une fin de ligne simple vaut une espace (texte replié ; une ligne vide, une puce, un
-//     titre, une ligne de tableau, une ligne de code restent des coupures) ;
+//     titre, une ligne de tableau, une ligne de code, une fin de ligne bordée de plus de maxUnwrapRun octets
+//     d'espaces restent des coupures) ;
 //   - le texte décodé une fois : suites %XX et échappements de chaîne (\uXXXX, \xXX, \n, \t, \", \\…) d'une part,
 //     blocs base64 (alphabet standard ou URL, d'un bloc ou à lignes rejointes) dont le contenu est du texte d'autre
 //     part ; chaque texte décodé est lu à son tour normalisé et déplié. Rien n'est décodé deux fois.
 //
 // Chaque vue garde la correspondance de ses octets avec ceux de la source (suites recopiées, morceaux remplacés) : un
-// constat est toujours rendu en octets, ligne et colonne de la source. Un bloc base64 est un tout : un constat dans son texte décodé désigne le
-// bloc entier.
+// constat est toujours rendu en octets, ligne et colonne de la source. Un bloc base64 est un tout : un constat dans
+// son texte décodé désigne le bloc entier.
 //
 // Le paquet ne dépend pas de detect : ces lectures sont écrites ici, plus simples que celles du moteur de détection
 // (pas de fenêtres de lignes jointes, pas de budget de décodage : chaque lecture est un parcours linéaire du texte, et
@@ -125,8 +126,9 @@ func (v *view) unchanged(lo, hi int) bool {
 // vue lue avant elle, où un motif trouve donc la même chose :
 //   - dans la source, pour une vue qui en dérive directement, quand ces octets en sont recopiés tels quels ;
 //   - dans la même forme (normalisée, ou normalisée et dépliée) de la source, pour celle d'un texte décodé, quand
-//     aucun de ces octets ne vient d'un décodage : normaliser et déplier ne dépendent que des octets voisins, et un décodage ne change ni un
-//     début de bloc ni une fin de ligne de la source.
+//     aucun de ces octets ne vient d'un décodage : normaliser et déplier ne dépendent que d'octets proches
+//     (maxUnwrapRun), tous dans l'étendue que l'appelant donne (gate.scan), et un décodage ne retire ni un début de
+//     bloc ni une fin de ligne de la source.
 func (v *view) seen(lo, hi int) bool {
 	if !v.afterDecoding {
 		return v.unchanged(lo, hi)

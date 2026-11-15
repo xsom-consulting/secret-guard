@@ -145,7 +145,11 @@ Sur le corpus de rappel, ces lectures ne changent aucun compte : ses textes sont
 obligatoires : une seule lecture du texte relève ces mots, et le motif n'est exécuté qu'à ces endroits, sur une fenêtre
 bornée (`injection/gate.go`). Preuves que rien n'est perdu : `TestGateFindsEveryMatch` (chaque correspondance d'un
 motif cherché sans porte est rendue à la même étendue), `TestFindEqualsUngatedSearch` (même rapport qu'une recherche
-sans porte à chaque position de chaque lecture), `FuzzGateParity`.
+sans porte à chaque position de chaque lecture), `FuzzGateParity`. La relecture du lot a trouvé un texte où cette
+égalité était fausse (un point-virgule écrit en pourcentage, 48 espaces ou plus, une fin de ligne, puis un faux
+historique à ligne repliée : aucune lecture ne le trouvait) ; il est corrigé et gardé par
+`TestSeenWindowCoversUnwrapDecision`. Ces essais comparent des textes choisis et tirés au hasard : ils ne sont pas une
+preuve pour tout texte.
 
 **Durée.** `go test -run XXX -bench 'BenchmarkFind/' -benchtime 20x -count 5 ./injection`, médiane des cinq passes,
 Apple M2 Pro, Go 1.27.2. Texte de banc (`injection/bench_test.go`) : lignes de code, de journal, de configuration et
@@ -186,7 +190,8 @@ employée.
 Aucun fichier signalé avant ne cesse de l'être. Les 14 fichiers de plus viennent tous du texte déplié : une phrase
 qui continue à la ligne suivante (journal des modifications, commentaire de documentation, prompt d'agent). Une
 première version, qui dépliait aussi les lignes de code, en ajoutait 22 : une fin de ligne après `{`, `}`, `(`, `[`,
-`;`, `=` ou `\`, ou devant `}`, `)`, `]`, n'est donc pas dépliée. La durée de la mesure entière est passée de 865 s à
+`;`, `=` ou `\`, ou devant `}`, `)`, `]`, n'est donc pas dépliée. Depuis la relecture du lot, une fin de ligne bordée
+de plus de 32 octets d'espaces ne l'est pas non plus (aucun fichier signalé ne change sur les 34 dépôts). La durée de la mesure entière est passée de 865 s à
 52 s de processeur.
 
 ### Règles des familles manquées et citations (Story 27.48b)
