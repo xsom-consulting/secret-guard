@@ -13,7 +13,9 @@
 //     texte sans guillemets le restent.
 //
 // La citation est un compromis mesuré (docs/bench.md) : elle retire du bruit des documentations, et laisse passer
-// une consigne qu'un attaquant prendrait soin d'écrire entre guillemets au milieu d'une phrase.
+// une consigne qu'un attaquant prendrait soin d'écrire entre guillemets au milieu d'une phrase. Elle ne vaut donc que
+// pour les règles dont la mesure montre ce bruit (mentionRules) : un ordre d'envoyer des secrets ou de cacher une
+// action reste signalé entre guillemets, comme avant la v0.10.0.
 
 package injection
 
@@ -30,6 +32,11 @@ const (
 	contextMargin = 8
 )
 
+// mentionRules sont les règles pour lesquelles une formule citée est une mention : la formule d'annulation, la plus
+// citée des documentations, et les jetons de modèles (balises de tours de parole, étiquettes de rôle). Ce sont celles
+// dont la mesure montre le bruit (docs/bench.md, « Citations »).
+var mentionRules = map[Rule]bool{InstructionOverride: true, MessageMarkers: true, RoleLabels: true}
+
 // accept dit si la correspondance [start, end) du motif dans text est gardée.
 func (p *pattern) accept(text []byte, start, end int) bool {
 	if p.before != nil {
@@ -41,7 +48,7 @@ func (p *pattern) accept(text []byte, start, end int) bool {
 			return false
 		}
 	}
-	return !quotedMention(text, start, end)
+	return !mentionRules[p.rule] || !quotedMention(text, start, end)
 }
 
 // blankBefore rend la longueur de l'espace qui finit à l'octet i (exclu) : espace, tabulation, espace insécable

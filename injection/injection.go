@@ -12,10 +12,12 @@
 // par les formes ci-dessous ; une absence de constat n'est pas une preuve d'innocuité. Ce qu'il signale sur des
 // textes d'attaque publics et sur des dépôts sains est mesuré, pas promis : docs/bench.md.
 //
-// Une formule courte citée entre guillemets au milieu d'une phrase (« les attaquants écrivent “ignore all previous
-// instructions” dans une page ») est une mention : elle n'est pas signalée (context.go). Un texte qui emploie la
-// formule sans guillemets, qui la donne comme valeur (après « : » ou « = », en début de ligne) ou qui la cite sur
-// plus d'une phrase reste signalé, documentation sur l'injection de prompt comprise.
+// Une formule d'annulation ou un jeton de modèle (balise de tour de parole, étiquette de rôle), cité entre guillemets
+// au milieu d'une phrase (« les attaquants écrivent “ignore all previous instructions” dans une page »), est une
+// mention : il n'est pas signalé (context.go). Un texte qui emploie la formule sans guillemets, qui la donne comme
+// valeur (après « : » ou « = », en début de ligne) ou qui la cite sur plus d'une phrase reste signalé, documentation
+// sur l'injection de prompt comprise ; les autres règles (envoi de secrets, dissimulation…) signalent aussi une
+// consigne citée.
 //
 // Le texte est lu tel quel, puis normalisé et déplié (pleine chasse, espaces insécables, texte replié sur plusieurs
 // lignes), puis décodé une fois (pourcentages, échappements de chaîne, base64) : views.go. Une consigne repliée par
