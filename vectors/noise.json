@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "about": "Corpus de bruit du moteur de détection : textes ordinaires qui ne doivent rien signaler (analyse complète, aucun constat). Faux positifs relevés sur des Postes réels ; identifiants hexadécimaux et identifiants d'objets synthétiques. Cas « contexte/ » (v0.9.0) : textes proches des mots-clés des règles de données à contexte, et adresses d'essai annoncées par leur champ, que seule une règle « à activer » signale. Cas « vecu/ » (v0.10.0) : code ordinaire qu'une affectation à nom sensible faisait bloquer (script shell qui passe une variable à une option, workflow de CI, tableau, objet, appel, type, gabarit, valeur chiffrée, commandes date et docker run), chacun sans langage puis avec le langage de son fichier. Rejoué par TestNoiseCorpus à chaque version.",
+  "about": "Corpus de bruit du moteur de détection : textes ordinaires qui ne doivent rien signaler (analyse complète, aucun constat). Faux positifs relevés sur des Postes réels ; identifiants hexadécimaux et identifiants d'objets synthétiques. Cas « contexte/ » (v0.9.0) : textes proches des mots-clés des règles de données à contexte, et adresses d'essai annoncées par leur champ, que seule une règle « à activer » signale ; depuis la v0.10.0, adresses postales d'un jeu d'essai et d'un pied de page (règle « à activer » fr_postal_address), numéros à forme d'identifiant européen sans leur mot-clé. Cas « vecu/ » (v0.10.0) : code ordinaire qu'une affectation à nom sensible faisait bloquer (script shell qui passe une variable à une option, workflow de CI, tableau, objet, appel, type, gabarit, valeur chiffrée, commandes date et docker run), chacun sans langage puis avec le langage de son fichier. Rejoué par TestNoiseCorpus à chaque version.",
   "cases": [
     {"id":"licence/nom-seul","input":"LICENSE-PolyForm-Small-Business-1.0.0"},
     {"id":"licence/chemin-relatif","input":"deploy/licenses/secret-guard/LICENSE-PolyForm-Small-Business-1.0.0"},
@@ -57,6 +57,10 @@
     {"id":"contexte/politique-aws-geree","input":"\"PolicyArn\": \"arn:aws:iam::aws:policy/ReadOnlyAccess\""},
     {"id":"contexte/dynamodb-local","input":"AWS_ENDPOINT_URL=http://dynamodb.local:8000"},
     {"id":"contexte/nom-de-cle-azure","input":"SharedAccessKeyName=RootManageSharedAccessKey"},
+    {"id":"contexte/adresse-postale-jeu-d-essai","input":"const company = { name: 'Exemple SAS', address: '12 rue des Essais, 99000 Villefictive' };","language":"typescript"},
+    {"id":"contexte/adresse-postale-pied-de-page","input":"Exemple SAS, 5 avenue du Corpus, 99100 Saint-Exemple. Tous droits réservés."},
+    {"id":"contexte/plaque-en-minuscules","input":"plaque de 100 km, template ab-123-cd, immatriculation à venir"},
+    {"id":"contexte/numero-sans-mot-cle","input":"dossier 44051401359, commande 943 476 5919, lot 12345678Z"},
     {"id":"vecu/ts-01-apikeys-tableau-de-chaines","input":"  apiKeys: [\"cle-a\", \"cle-b\"],\n"},
     {"id":"vecu/ts-01-apikeys-tableau-de-chaines/typescript","input":"  apiKeys: [\"cle-a\", \"cle-b\"],\n","language":"typescript"},
     {"id":"vecu/ts-02-apikeys-tableau-vide","input":"  apiKeys: [],\n"},

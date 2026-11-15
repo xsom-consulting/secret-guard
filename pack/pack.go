@@ -57,6 +57,13 @@ const (
 	SecretTypeOneTimeCode             SecretType = "one_time_code"
 	SecretTypeInternalIPAddress       SecretType = "internal_ip_address"
 	SecretTypeCloudResourceAddress    SecretType = "cloud_resource_address"
+	// Identifiants européens et français (v0.10.0) : identifiant national d'une personne, numéro de TVA, compte
+	// bancaire (RIB), plaque d'immatriculation, adresse postale, voir docs/rule-pack.md.
+	SecretTypeNationalIdentifier       SecretType = "national_identifier"
+	SecretTypeVATNumber                SecretType = "vat_number"
+	SecretTypeBankAccountNumber        SecretType = "bank_account_number"
+	SecretTypeVehicleRegistrationPlate SecretType = "vehicle_registration_plate"
+	SecretTypePostalAddress            SecretType = "postal_address"
 )
 
 // SecretTypes rend la liste fermée des types de secret, dans l'ordre du schéma.
@@ -67,7 +74,8 @@ func SecretTypes() []SecretType {
 		SecretTypeGenericSecret, SecretTypeHighEntropy, SecretTypeIBAN, SecretTypeFrSocialSecurity, SecretTypeFrSiret,
 		SecretTypeFrSiren, SecretTypePaymentCardNumber, SecretTypeEmailAddress, SecretTypePhoneNumber,
 		SecretTypePassportNumber, SecretTypePaymentCardSecurityCode, SecretTypeOneTimeCode, SecretTypeInternalIPAddress,
-		SecretTypeCloudResourceAddress,
+		SecretTypeCloudResourceAddress, SecretTypeNationalIdentifier, SecretTypeVATNumber, SecretTypeBankAccountNumber,
+		SecretTypeVehicleRegistrationPlate, SecretTypePostalAddress,
 	}
 }
 

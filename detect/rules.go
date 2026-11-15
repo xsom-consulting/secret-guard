@@ -99,6 +99,9 @@ var knownSecretTypes = map[string]bool{
 	// Données à contexte (v0.9.0).
 	"email_address": true, "phone_number": true, "passport_number": true, "payment_card_security_code": true,
 	"one_time_code": true, "internal_ip_address": true, "cloud_resource_address": true,
+	// Identifiants européens et français (v0.10.0).
+	"national_identifier": true, "vat_number": true, "bank_account_number": true, "vehicle_registration_plate": true,
+	"postal_address": true,
 }
 
 // maxScore : score de base le plus élevé d'une règle (schéma RulePack).

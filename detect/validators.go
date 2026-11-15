@@ -28,6 +28,19 @@ var validators = map[string]validator{
 	validatorSiret: plainValidator(isValidSiret),
 	validatorSiren: plainValidator(isValidSiren),
 	validatorCard:  plainValidator(isValidPaymentCard),
+	// Identifiants européens et français à somme de contrôle (v0.10.0, personaldata.go).
+	validatorSpanishNIF:        plainValidator(isValidSpanishNIF),
+	validatorSpanishNIE:        plainValidator(isValidSpanishNIE),
+	validatorItalianFiscalCode: plainValidator(isValidItalianFiscalCode),
+	validatorItalianVAT:        plainValidator(isValidItalianVAT),
+	validatorGermanTaxID:       plainValidator(isValidGermanTaxID),
+	validatorGermanVAT:         plainValidator(isValidGermanVAT),
+	validatorPESEL:             plainValidator(isValidPESEL),
+	validatorNHS:               plainValidator(isValidNHSNumber),
+	validatorPersonnummer:      plainValidator(isValidPersonnummer),
+	validatorFinnishIdentity:   plainValidator(isValidFinnishIdentityCode),
+	validatorFrenchVAT:         plainValidator(isValidFrenchVAT),
+	validatorRIB:               plainValidator(isValidRIB),
 	// Vraisemblance d'un jeton de fournisseur (v0.10.0) : noms connus, sans fonction ici. Le contrôle est appliqué par
 	// scanFixedPattern depuis rule.entropyFloor (tokenEntropyFloors) : il ne décode rien, ne débite aucun budget et
 	// s'exécute aussi dans un texte décodé de base64, où les validateurs à budget ne s'exécutent pas.

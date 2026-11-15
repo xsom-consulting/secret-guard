@@ -96,3 +96,14 @@ commit c558c421157c546ec417cf23778ce81a3a8f35fd), both Copyright 2026 Cisco Syst
 Apache License, Version 2.0. The technique names come from Giskard (https://github.com/Giskard-AI/giskard-oss,
 Apache License, Version 2.0); no Giskard template, data or code is used.
 Changes: UPSTREAM.md, "Règles du paquet injection".
+
+European identifiers with a check key (detect, v0.10.0)
+The value shapes, check-key algorithms and native context words of the rules es_nif, es_nie, it_fiscal_code, it_vat,
+de_tax_id, de_vat, pl_pesel, uk_nhs, se_personnummer and fi_personal_identity_code, and the list of the 76 countries
+of the IBAN length table, are taken and modified from Presidio (https://github.com/data-privacy-stack/presidio,
+presidio-analyzer/presidio_analyzer/predefined_recognizers, commit fd78e974fbf9e15dad1f90de4fc125db39ef4200),
+Copyright (c) Presidio Contributors, MIT License. Patterns are rewritten for RE2, the context keyword and the check key
+are mandatory, and the IBAN lengths follow the ISO 13616 registry.
+The idea of a compound rule (an AWS access key ID and its secret key in the same window) comes from TruffleHog
+(https://github.com/trufflesecurity/trufflehog, AGPL-3.0): no line, pattern, threshold or list of TruffleHog is used.
+MIT permission notice and changes: UPSTREAM.md, "Identifiants européens et français, règle composée AWS".

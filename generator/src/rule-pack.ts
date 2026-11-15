@@ -19,7 +19,8 @@ export type RuleFamily = z.infer<typeof RuleFamily>;
 /**
  * Types de secret que produisent les règles du catalogue (`SecretType` de Secret Guard, hors types d'échec), puis, depuis
  * la v0.7.0, les types des règles de données personnelles ajoutées par xSOM, et, depuis la v0.9.0, ceux des règles de
- * données à contexte (données personnelles annoncées, identifiants d'infrastructure).
+ * données à contexte (données personnelles annoncées, identifiants d'infrastructure), et, depuis la v0.10.0, ceux des
+ * identifiants européens et français.
  */
 export const RULE_SECRET_TYPES = [
   'private_key',
@@ -46,6 +47,13 @@ export const RULE_SECRET_TYPES = [
   'one_time_code',
   'internal_ip_address',
   'cloud_resource_address',
+  // Identifiants européens et français (v0.10.0, `rule-pack/context-data.ts`) : identifiant national d'une personne,
+  // numéro de TVA, compte bancaire (RIB), plaque d'immatriculation, adresse postale.
+  'national_identifier',
+  'vat_number',
+  'bank_account_number',
+  'vehicle_registration_plate',
+  'postal_address',
 ] as const;
 export const RuleSecretType = z.enum(RULE_SECRET_TYPES);
 export type RuleSecretType = z.infer<typeof RuleSecretType>;
@@ -64,6 +72,22 @@ export const RULE_VALIDATORS = [
   'fr_siret_luhn',
   'fr_siren_luhn',
   'payment_card_luhn',
+  // Identifiants européens (v0.10.0), contrôles repris de Presidio (MIT) : NIF et NIE espagnols (lettre, modulo 23),
+  // code fiscal italien (caractère de contrôle), TVA italienne (Luhn), identifiant fiscal et TVA allemands
+  // (ISO 7064 MOD 11,10), PESEL, NHS (modulo 11), personnummer suédois (Luhn), identifiant finlandais (modulo 31).
+  'es_nif_mod23',
+  'es_nie_mod23',
+  'it_fiscal_code_check',
+  'it_vat_luhn',
+  'de_tax_id_iso7064',
+  'de_vat_iso7064',
+  'pl_pesel_check',
+  'uk_nhs_mod11',
+  'se_personnummer_luhn',
+  'fi_hetu_mod31',
+  // Identifiants français (v0.10.0) : TVA intracommunautaire (clé dérivée du SIREN), RIB (clé modulo 97).
+  'fr_vat_key',
+  'fr_rib_key',
   // Vraisemblance d'un jeton de fournisseur (v0.10.0) : au moins 6 octets distincts et une entropie de Shannon d'au
   // moins NN dixièmes de bit par octet (`rule-pack/provider-rules.ts`, `detect/validators.go`).
   'token_entropy_25', 'token_entropy_26', 'token_entropy_27', 'token_entropy_28',

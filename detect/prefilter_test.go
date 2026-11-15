@@ -137,6 +137,34 @@ func TestPrefilterInitialPack(t *testing.T) {
 			"aws_s3_bucket":           {"amazonaws.com", "s3://"},
 			"aws_rds_endpoint":        digitSuffixes(".rds.amazonaws.com"),
 			"aws_dynamodb_endpoint":   digitSuffixes(".amazonaws.com"),
+			// Identifiants européens et français (v0.10.0) : mots-clés du contexte, en français, en anglais et dans la
+			// langue du pays ; un littéral qui en contient un autre n'est pas gardé.
+			"es_nif":         {" espagnole", "dni", "documento nacional de identidad", "nif", "spanish id card", "spanish identity card"},
+			"es_nie":         {"foreigner id number", "foreigner identification number", "identit", "mero de identidad de extranjero", "nie"},
+			"it_fiscal_code": {"code fiscal italien", "codice fiscale", "italian fiscal code", "italian tax code"},
+			"it_vat":         {"italian vat", "p iva", "p. iva", "p.iva", "partita iva", "piva", "tva italienne"},
+			"de_tax_id": {
+				"german tax id", "identifiant fiscal allemand", "idnr", "steuer-id", "steuerid", "steuerliche identifikationsnummer",
+			},
+			"de_vat":          {"german vat", "tva allemande", "umsatzsteuer-id", "umsatzsteuerid", "ust-id", "ustid"},
+			"pl_pesel":        {"pesel"},
+			"uk_nhs":          {"national health service", "nhs"},
+			"se_personnummer": {"personal identity number", "personnummer", "ro personnel su", "samordningsnummer", "swedish personal id number"},
+			"fi_personal_identity_code": {
+				"finnish personal id code", "henkil", "hetu", "identifiant personnel finlandais", "personal identity code", "personbeteckning",
+			},
+			// TVA française : sans mot-clé, « FR » et le premier chiffre de la clé.
+			"fr_vat": {"FR0", "FR1", "FR2", "FR3", "FR4", "FR5", "FR6", "FR7", "FR8", "FR9"},
+			"fr_rib": {" bancaire", "bank account details", "rib"},
+			"fr_license_plate": {
+				"IMMATRICUL", "Immatricul", "PLAQUE", "PLATE", "Plaque", "Plate", "REGISTRATION", "Registration", "immatricul", "plaque",
+				"plate", "registration",
+			},
+			"fr_postal_address": {
+				"all", "avenue", "boulevard", "chemin", "cours", "faubourg", "impasse", "passage", "place", "quai", "route", "rue",
+				"sentier", "square",
+			},
+			"aws_access_key_pair": {"AKIA", "ASIA"},
 		}
 		rules := loadInitialRules(t)
 		p := loadInitialPack(t)

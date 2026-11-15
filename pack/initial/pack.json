@@ -4113,6 +4113,156 @@
       "pattern": "\\b(?:streams\\.)?dynamodb\\.[a-z]{2}(?:-[a-z]+){1,2}-[0-9]\\.amazonaws\\.com(?:\\.cn)?\\b",
       "minLength": 0,
       "maxLength": 0
+    },
+    {
+      "ruleId": "es_nif",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "es_nif_mod23",
+      "pattern": "(?i:(?:\\bdni\\b|\\bnif\\b|documento nacional de identidad|carte d.identit. espagnole|spanish (?:id|identity) card)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{7,8}-?[a-z]))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "es_nie",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "es_nie_mod23",
+      "pattern": "(?i:(?:\\bnie\\b|n.mero de identidad de extranjero|num.ro d.identit. d..tranger|foreigner (?:identity|identification|id) number)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([xyz]-?[0-9]{7}-?[a-z]))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "it_fiscal_code",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "it_fiscal_code_check",
+      "pattern": "(?i:(?:codice fiscale|code fiscal italien|italian (?:fiscal|tax) code)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([a-z]{6}[0-9lmnp-v]{2}[a-ehlmpr-t][0-9lmnp-v]{2}[a-z][0-9lmnp-v]{3}[a-z]))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "it_vat",
+      "family": "fixed_pattern",
+      "secretType": "vat_number",
+      "score": 35,
+      "validator": "it_vat_luhn",
+      "pattern": "(?i:(?:partita iva|\\bp\\.? ?iva|tva italienne|italian vat)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?(?:it)?([0-9]{11}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "de_tax_id",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "de_tax_id_iso7064",
+      "pattern": "(?i:(?:steuer-?id(?:nr)?|steueridentifikationsnummer|steuerliche identifikationsnummer|\\bidnr|identifiant fiscal allemand|german tax id(?:entification)?)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([1-9][0-9](?: ?[0-9]{3}){3}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "de_vat",
+      "family": "fixed_pattern",
+      "secretType": "vat_number",
+      "score": 35,
+      "validator": "de_vat_iso7064",
+      "pattern": "(?i:(?:ust-?id(?:nr)?|umsatzsteuer-?id(?:entifikationsnummer)?|tva allemande|german vat)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?(de ?[0-9]{9}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "pl_pesel",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "pl_pesel_check",
+      "pattern": "(?i:(?:\\bpesel)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{11}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "uk_nhs",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "uk_nhs_mod11",
+      "pattern": "(?i:(?:\\bnhs\\b|national health service)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{3}[ -]?[0-9]{3}[ -]?[0-9]{4}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "se_personnummer",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "se_personnummer_luhn",
+      "pattern": "(?i:(?:personnummer|samordningsnummer|personal identity number|num.ro personnel su.dois|swedish personal (?:identity|id) number)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?((?:[0-9]{2})?[0-9]{6}[-+]?[0-9]{4}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fi_personal_identity_code",
+      "family": "fixed_pattern",
+      "secretType": "national_identifier",
+      "score": 60,
+      "validator": "fi_hetu_mod31",
+      "pattern": "(?i:(?:\\bhetu\\b|henkil.tunnus|personbeteckning|personal identity code|identifiant personnel finlandais|finnish personal (?:identity|id) code)(?:[ \\t_-]*(?:number|num.ro|nummer|numero|num|no|nr|n°|#|id|code))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{6}[-+a-fu-y][0-9]{3}[0-9a-y]))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fr_vat",
+      "family": "fixed_pattern",
+      "secretType": "vat_number",
+      "score": 35,
+      "validator": "fr_vat_key",
+      "pattern": "\\bFR[0-9][0-9] ?[0-9]{3} ?[0-9]{3} ?[0-9]{3}\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fr_rib",
+      "family": "fixed_pattern",
+      "secretType": "bank_account_number",
+      "score": 45,
+      "validator": "fr_rib_key",
+      "pattern": "(?i:(?:\\brib\\b|relev. d.identit. bancaire|coordonn.es bancaires|bank account details)[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{5}[ -]?[0-9]{5}[ -]?[0-9a-z]{11}[ -]?[0-9]{2}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fr_license_plate",
+      "family": "fixed_pattern",
+      "secretType": "vehicle_registration_plate",
+      "score": 30,
+      "validator": "",
+      "pattern": "\\b(?:Immatricul|Plaque|Plate|Registration|immatricul|plaque|plate|registration|IMMATRICUL|PLAQUE|PLATE|REGISTRATION)[^\\n0-9]{0,30}?\\b([A-HJ-NP-TV-Z]{2}[ -]?[0-9]{3}[ -]?[A-HJ-NP-TV-Z]{2})\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "fr_postal_address",
+      "family": "fixed_pattern",
+      "secretType": "postal_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "\\b([0-9]{1,4}(?: ?(?i:bis|ter))?,? (?i:rue|avenue|boulevard|chemin|impasse|all.e|place|quai|route|cours|square|passage|faubourg|sentier) [^\\n]{1,60}?,?[ \\n][0-9]{5} [A-ZÀ-Ý][A-Za-zà-ÿ'’-]+(?:[ -][A-ZÀ-Ý][A-Za-zà-ÿ'’-]+){0,3})",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_access_key_pair",
+      "family": "fixed_pattern",
+      "secretType": "cloud_credential",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\b((?:AKIA|ASIA)[A-Z2-7]{16}\\b(?:.|\\n){0,199}?[^A-Za-z0-9+/][A-Za-z0-9+/]{40})(?:[^A-Za-z0-9+/]|$)",
+      "minLength": 0,
+      "maxLength": 0
     }
   ]
 }

@@ -11,14 +11,25 @@ import (
 	"github.com/xsom-consulting/secret-guard/pack"
 )
 
-// contextRuleScores : règles de données à contexte du Pack initial (v0.9.0), dans l'ordre du Pack, et leur score.
+// contextRuleScores : règles de données à contexte du Pack initial (v0.9.0, puis identifiants européens et français
+// et règle composée AWS de la v0.10.0), dans l'ordre du Pack, leur score et leur validateur nommé (vide : aucun).
 var contextRuleScores = []struct {
-	id    string
-	score int
+	id        string
+	score     int
+	validator string
 }{
-	{"email_address", 30}, {"phone_number", 30}, {"passport_number", 60}, {"payment_card_security_code", 70},
-	{"one_time_code", 45}, {"azure_shared_access_key", 95}, {"internal_ip_address", 30}, {"aws_arn", 30},
-	{"aws_s3_bucket", 30}, {"aws_rds_endpoint", 30}, {"aws_dynamodb_endpoint", 25},
+	{"email_address", 30, ""}, {"phone_number", 30, ""}, {"passport_number", 60, ""},
+	{"payment_card_security_code", 70, ""}, {"one_time_code", 45, ""}, {"azure_shared_access_key", 95, ""},
+	{"internal_ip_address", 30, ""}, {"aws_arn", 30, ""}, {"aws_s3_bucket", 30, ""}, {"aws_rds_endpoint", 30, ""},
+	{"aws_dynamodb_endpoint", 25, ""},
+	// Identifiants européens à somme de contrôle, portés de Presidio (v0.10.0).
+	{"es_nif", 60, "es_nif_mod23"}, {"es_nie", 60, "es_nie_mod23"}, {"it_fiscal_code", 60, "it_fiscal_code_check"},
+	{"it_vat", 35, "it_vat_luhn"}, {"de_tax_id", 60, "de_tax_id_iso7064"}, {"de_vat", 35, "de_vat_iso7064"},
+	{"pl_pesel", 60, "pl_pesel_check"}, {"uk_nhs", 60, "uk_nhs_mod11"}, {"se_personnummer", 60, "se_personnummer_luhn"},
+	{"fi_personal_identity_code", 60, "fi_hetu_mod31"},
+	// Identifiants français (v0.10.0), puis règle composée AWS.
+	{"fr_vat", 35, "fr_vat_key"}, {"fr_rib", 45, "fr_rib_key"}, {"fr_license_plate", 30, ""},
+	{"fr_postal_address", 30, ""}, {"aws_access_key_pair", 95, ""},
 }
 
 // mailbox assemble une adresse d'essai (domaine réservé) : jamais écrite d'un bloc dans le dépôt.
@@ -32,7 +43,7 @@ func TestContextRules(t *testing.T) {
 	for _, r := range rules.fixed {
 		byID[r.id] = r
 	}
-	t.Run("chaque règle est une règle « motif seul » sans validateur, à porte, à un groupe capturant au plus, avec son score et son libellé de Substitut", func(t *testing.T) {
+	t.Run("chaque règle est une règle « motif seul », à porte, à un groupe capturant au plus, avec son score, son validateur et son libellé de Substitut", func(t *testing.T) {
 		if len(contextSubstituteLabels) != len(contextRuleScores) {
 			t.Fatalf("%d libellés, %d règles", len(contextSubstituteLabels), len(contextRuleScores))
 		}
@@ -44,7 +55,7 @@ func TestContextRules(t *testing.T) {
 				t.Fatalf("règle %d : %s dans le Pack, %s dans la table des libellés, %s attendue", i, spec.RuleID, label.RuleID, want.id)
 			}
 			r := byID[spec.RuleID]
-			if r == nil || string(spec.Family) != familyFixedPattern || spec.Validator != "" || spec.MinLength != 0 || spec.MaxLength != 0 {
+			if r == nil || string(spec.Family) != familyFixedPattern || spec.Validator != want.validator || spec.MinLength != 0 || spec.MaxLength != 0 {
 				t.Fatalf("%s : famille %s, validateur %q, bornes %d et %d", spec.RuleID, spec.Family, spec.Validator, spec.MinLength, spec.MaxLength)
 			}
 			if spec.Score != want.score {
@@ -136,7 +147,7 @@ func TestOptInRules(t *testing.T) {
 	}
 	t.Run("la liste fermée est celle du générateur, faite de règles « motif seul » du Pack initial, et rendue en copie", func(t *testing.T) {
 		ids := OptInRuleIDs()
-		if !slices.Equal(ids, []string{"email_address"}) {
+		if !slices.Equal(ids, []string{"email_address", "fr_postal_address"}) {
 			t.Fatalf("règles à activer %v", ids)
 		}
 		for _, id := range ids {
