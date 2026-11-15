@@ -136,14 +136,34 @@ function quotedStrings(text: string, from: number, to: number, data: boolean): Q
 function credible(q: Quoted, secretType: string): boolean {
   if (q.field) return false;
   if (strictShaped(q.content)) return true;
-  return q.data && secretType === PASSWORD && q.content.length >= 8 && !/\s/.test(q.content) && !/^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^@?]*$/.test(q.content);
+  if (secretType !== PASSWORD || q.content.length < 8 || /\s/.test(q.content) || /^[A-Za-z][A-Za-z0-9+.-]*:\/\/[^@?]*$/.test(q.content)) return false;
+  // Donnée (tableau, objet) : un mot suffit. Code (argument d'un appel, gabarit) : lettres et chiffres, hors nom de constante et date.
+  return q.data || (/[A-Za-z]/.test(q.content) && /[0-9]/.test(q.content) && !/^[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+$/.test(q.content) && !/^\d{4}-\d{2}-\d{2}(?:T[0-9:.Z+-]{5,})?$/.test(q.content));
 }
 
 function hasCredible(text: string, from: number, to: number, secretType: string, data: boolean, words: boolean): boolean {
   if (quotedStrings(text, from, to, data).some((q) => credible(q, secretType))) return true;
   if (!words) return false;
   const bare = text.slice(from, to).replace(/(["'`])(?:\\.|(?!\1)[^\\\n])*\1/g, ' ');
-  return bare.split(/[\s()[\]{},;:=]+/).some((word) => strictShaped(word));
+  // Dans une donnée, un mot nu suivi de « : » (pas « :: ») est le nom d'un champ, et un chemin d'identifiants à
+  // plusieurs éléments sans forte entropie est une référence.
+  const path = /^[A-Za-z_$][A-Za-z0-9_$]*(?:(?:\?\.|\.|->)[A-Za-z_$][A-Za-z0-9_$]*)+$/;
+  return [...bare.matchAll(/[^\s()[\]{},;:=]+/g)].some(
+    (word) => strictShaped(word[0]) && !(data && (/^[ \t]*:(?!:)/.test(bare.slice(word.index + word[0].length)) || (path.test(word[0]) && !strongEntropy(word[0])))),
+  );
+}
+
+/** Chevron ouvert en `open` fermé avant `lineEnd`, et non suivi d'une lettre, d'un chiffre, de « _ » ou de « $ ». */
+function genericClosed(text: string, open: number, lineEnd: number): boolean {
+  let depth = 0;
+  for (let i = open; i < Math.min(lineEnd, open + 512); i += 1) {
+    if (text[i] === '<') depth += 1;
+    else if (text[i] === '>') {
+      depth -= 1;
+      if (depth === 0) return !/[A-Za-z0-9_$]/.test(text[i + 1] ?? '');
+    }
+  }
+  return false;
 }
 
 /** Position qui suit la fermeture de l'ouverture `text[open]`, sur la même ligne ; -1 sinon. */
@@ -242,13 +262,15 @@ function interpolation(text: string, start: number, end: number, secretType: str
 
 /** Valeur chiffrée. */
 function encryptedEnvelope(value: string, quoted: boolean): boolean {
-  const headers = ['$ANSIBLE_VAULT;', '!vault', '-----BEGIN AGE ENCRYPTED FILE-----', '-----BEGIN PGP MESSAGE-----', 'age-encryption.org/v'];
+  const headers = ['-----BEGIN AGE ENCRYPTED FILE-----', '-----BEGIN PGP MESSAGE-----', 'age-encryption.org/v'];
+  // Ansible Vault : en-tête suivi du numéro de version du format ; étiquette suivie d'un indicateur de bloc ou de rien.
+  const header = (text: string): boolean => headers.some((known) => text.startsWith(known)) || /^\$ANSIBLE_VAULT;[0-9]/.test(text) || /^!vault[ \t]*(?:[|>\r\n]|$)/.test(text);
   const trimmed = value.trim();
-  if (headers.some((header) => trimmed.startsWith(header))) return true;
+  if (header(trimmed)) return true;
   const firstLine = trimmed.indexOf('\n');
-  if (firstLine >= 0) return firstLine < 64 && headers.some((header) => trimmed.slice(firstLine + 1).trim().startsWith(header));
+  if (firstLine >= 0) return firstLine < 64 && header(trimmed.slice(firstLine + 1).trim());
   const word = quoted ? trimmed : (trimmed.split(/[ \t]/)[0] ?? '');
-  return /^ENC\[[A-Z0-9_]+,data:.*\]$/.test(word) || /^\{cipher\}[A-Za-z0-9+/=]{16,}$/i.test(word) || /^vault:v[0-9]+:[A-Za-z0-9+/=_-]{8,}$/.test(word);
+  return /^ENC\[[A-Z0-9_]+,data:.*\]$/.test(word) || /^\{cipher\}[A-Za-z0-9+/=]{64,}$/i.test(word) || /^vault:v[0-9]+:[A-Za-z0-9+/=_-]{40,}$/.test(word);
 }
 
 /** Formes de valeurs publiques que ces cas éprouvent (la liste entière est dans `detect/publicvalues.go`). */
@@ -307,7 +329,9 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
   const secretType = finding.secretType;
 
   // Valeur de plusieurs lignes (bloc YAML, heredoc) : seul l'en-tête d'une enveloppe chiffrée est lu.
-  if (span.includes('\n')) return encryptedEnvelope(span, false) ? { keep: false } : KEEP;
+  // Le constat d'affectation tombe ; la valeur est relue pour les autres règles (un texte chiffré long garde
+  // l'avertissement d'entropie, que le constat d'affectation recouvrait).
+  if (span.includes('\n')) return encryptedEnvelope(span, false) ? { keep: false, resume: finding.start } : KEEP;
 
   // Étendue de la valeur lue.
   let valueStart = finding.start;
@@ -321,7 +345,7 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
   const unquotedEnd = quoted ? valueEnd : finding.start + (/^[^,;#}\r\n]*/.exec(text.slice(finding.start, lineEnd))?.[0] ?? '').replace(/[ \t]+$/, '').length;
   const placeholder = !quoted && /^(?:\$\{\{|\$\{|\{\{)/.test(span);
 
-  if (encryptedEnvelope(quoted ? text.slice(valueStart, valueEnd) : text.slice(finding.start, lineEnd), quoted)) return { keep: false };
+  if (encryptedEnvelope(quoted ? text.slice(valueStart, valueEnd) : text.slice(finding.start, lineEnd), quoted)) return { keep: false, resume: finding.start };
 
   // Valeur sans guillemets lue à la ligne suivante ; sous un mot de passe, seule une ligne qui est elle-même un champ.
   const mappingEntry = /^["']?[A-Za-z0-9_.-]+["']?[ \t]*:(?:[ \t]|$)/.test(text.slice(finding.start, lineEnd));
@@ -364,16 +388,22 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
       ? CODE_LANGUAGES.has(language) || STRUCTURED_LANGUAGES.has(language)
       : lead.includes(':') || /^\s*[a-z_][A-Za-z0-9_.-]*\s*:?=\s*$/.test(linePrefix) || /\b(?:const|final|let|mut|readonly|return|static|type|interface|enum|var)\b/.test(linePrefix);
 
+  // Du code (palier 2, et mots nus d'une structure) : langage de code déclaré, ou mot-clé de déclaration sur la ligne.
+  const code = language !== undefined ? CODE_LANGUAGES.has(language) : /\b(?:const|let|var|return|readonly|public|private|protected|type|interface|enum)\b/.test(linePrefix);
+
   // Structures.
   if (!quoted && !placeholder) {
     const skipped = /^[!*&.]*(?:(?:await|new|return|yield|typeof|void|not|throw|delete)[ \t]+)?/.exec(text.slice(finding.start, unquotedEnd))?.[0].length ?? 0;
     const i = finding.start + skipped;
-    const walked = (open: number): Verdict => {
+    // data : liste ou objet écrit pour lui-même (hors d'un code reconnu, un mot nu y est un littéral).
+    const walked = (open: number, data: boolean): Verdict => {
       const closing = balancedEnd(text, open, lineEnd);
       if (closing >= 0 && closing < text.length && !/[\s,;)\]}.?:]/.test(text[closing] ?? ' ')) return KEEP;
-      const bracketed = /^[([{][ \t]*([^\s"'`()[\]{},;:=]+)[ \t]*[)\]}]/.exec(text.slice(open, lineEnd));
+      // Seul mot nu de la structure, fermée ou jamais fermée sur la ligne.
+      const bracketed = /^[([{][ \t]*([^\s"'`()[\]{},;:=]+)[ \t]*(?:[)\]}]|\r?$)/.exec(text.slice(open, lineEnd));
       const word = bracketed?.[1] ?? '';
-      if (hasCredible(text, open, lineEnd, secretType, true, false) || (bracketed !== null && (strictShaped(word) || (secretType === PASSWORD && word.length >= 8)))) return KEEP;
+      // Mots nus : ceux de la structure, pas ceux de la suite de la ligne.
+      if ((data && !code && hasCredible(text, open, closing >= 0 ? closing : lineEnd, secretType, true, true)) || hasCredible(text, open, lineEnd, secretType, true, false) || (bracketed !== null && (strictShaped(word) || (secretType === PASSWORD && word.length >= 8)))) return KEEP;
       // Lignes suivantes, jusqu'à la fermeture de la structure.
       let depth = 0;
       let end = -1;
@@ -402,18 +432,18 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
       return { keep: false, resume: open + 1, literals };
     };
     const c = text[i] ?? '';
-    if (c === '[' || (c === '{' && text[i + 1] !== '{')) return walked(i);
+    if (c === '[' || (c === '{' && text[i + 1] !== '{')) return walked(i, true);
     if (eligible) {
-      if (c === '(') return walked(i);
-      const keyword = /^(?:function|async|lambda|func|fn)(?![A-Za-z0-9_$])/.exec(text.slice(i, unquotedEnd));
+      if (c === '(') return walked(i, false);
+      const keyword = /^(?:function|async|lambda|func|fn)(?=[ \t(*:<])/.exec(text.slice(i, unquotedEnd));
       if (keyword !== null) return { keep: false, resume: i + keyword[0].length };
       const path = /^[A-Za-z_$][A-Za-z0-9_$]*(?:(?:\?\.|\.|::|->)[A-Za-z_$][A-Za-z0-9_$]*)*/.exec(text.slice(i))?.[0] ?? '';
       const pathEnd = i + path.length;
       const next = text[pathEnd] ?? '';
       if (path !== '') {
-        if (next === '(') return walked(pathEnd);
-        if (next === '[' && path.includes('.')) return walked(pathEnd);
-        if (next === '<' && /[A-Za-z_${]/.test(text[pathEnd + 1] ?? '')) return { keep: false, resume: pathEnd + 1 };
+        if (next === '(') return walked(pathEnd, false);
+        if (next === '[' && path.includes('.')) return walked(pathEnd, false);
+        if (next === '<' && /[A-Za-z_${]/.test(text[pathEnd + 1] ?? '') && genericClosed(text, pathEnd, lineEnd)) return { keep: false, resume: pathEnd + 1 };
         // Type d'un paramètre : flèche ou accolade après la parenthèse, ou « ): » sur une ligne qui finit en signature.
         if (next === ')' && /^[ \t]*(?:=>|->|\{|:(?!:).*(?:\{|=>|;)[ \t]*$)/.test(text.slice(pathEnd + 1, lineEnd))) return { keep: false, resume: pathEnd };
       }
@@ -421,8 +451,9 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
   }
 
   // Palier 2 : du code seulement.
-  const code = language !== undefined ? CODE_LANGUAGES.has(language) : /\b(?:const|let|var|return|readonly|public|private|protected|type|interface|enum)\b/.test(linePrefix);
   if (!SHAPE_JUDGED.has(secretType) || !code || hasSecretWord(text.slice(valueStart, Math.max(quoted ? valueEnd : unquotedEnd, quotedTail ? valueEnd : finding.end)))) return KEEP;
+  // Suite de l'expression, que le constat d'origine couvre : une chaîne à forme de secret y garde le constat.
+  if (quotedTail && quotedStrings(text, valueEnd + 1, finding.end, false).some((q) => secretShaped(q.content))) return KEEP;
   if (quoted && concatTail(text, valueEnd + 1)) return KEEP;
   return { keep: false, resume: valueStart };
 }
@@ -506,7 +537,10 @@ function drafts(): Draft[] {
   const supabase = `sb_publishable_${at('supabase', ALNUM, 31)}`;
   const bugsnag = at('bugsnag', ALNUM, 32);
   const stripe = `pk_live_${at('stripe', ALNUM, 24)}`;
-  const cipherHex = at('cipher', '0123456789abcdef', 32);
+  const hex = '0123456789abcdef';
+  const cipherHex = at('cipher', hex, 64);
+  const transit = `${at('transit', ALNUM, 42)}==`;
+  const defaultWord = `${at('defaut-appel/a', LOWER, 7)}${at('defaut-appel/b', DIGITS, 2)}`;
   const pair = (user: string, secret: string): string => [user, secret].join(':');
   return [
     // Références de shell et de CI.
@@ -556,6 +590,16 @@ function drafts(): Draft[] {
     kept('structure/tableau-dotenv', RULE.token, `${upperToken}=[${WORDS}]`, 'dotenv'),
     kept('structure/objet-environnement', RULE.token, `export ${upperToken}={"a":"b"}`),
     kept('structure/accolades-et-texte-colle', RULE.password, `spring.datasource.${PASSWORD}={label}${strong('colle')}`, 'properties'),
+    // Relecture du lot : mots nus d'une liste ou d'un objet en ligne, valeurs prises pour une structure ou une fonction.
+    kept('structure/liste-en-ligne-de-mots-nus', RULE.apiKey, `${API_KEY}: [${strong('nus/a')}, ${strong('nus/b')}]`, 'yaml'),
+    kept('structure/objet-en-ligne-a-valeur-nue', RULE.secret, `${SECRET}: { value: ${strong('nue')}, version: 2 }`, 'yaml'),
+    noise('structure/tableau-d-identifiants-a-chiffre', RULE.apiKey, `  ${API_KEY}: [primaryKey2, fallbackKey3],`, 'typescript'),
+    kept('structure/crochet-jamais-ferme', RULE.password, `spring.datasource.${PASSWORD}=[${strong('ouvert')}`, 'properties'),
+    kept('structure/appel-a-defaut-de-mot-de-passe', RULE.password, `${PASSWORD} = settings.get("db", "${defaultWord}")`, 'python'),
+    kept('structure/mot-cle-de-fonction-colle', RULE.password, `${PASSWORD}: async-${strong('colle-fn')}`, 'yaml'),
+    kept('structure/chevron-jamais-ferme', RULE.password, `${PASSWORD}: Abc<${plain('chevron')}`, 'yaml'),
+    noise('structure/chemin-d-identifiants-sans-langage', RULE.secret, `\t"sans ${SECRET}": {Language: i18n.French, Clock: fixedClock{now}},`),
+    noise('structure/mot-de-la-suite-de-la-ligne', RULE.apiKey, `      expect(request).toContain('POST /{{ path }}?api_${'k' + 'ey'}=[REDACTED] HTTP/1.1');`),
     // Valeur lue à la ligne suivante.
     noise('ligne-suivante/cle-de-section', RULE.token, `    secrets:\n      NPM_${upperToken}:\n        required: true`, 'yaml'),
     noise('ligne-suivante/case-puis-instruction', RULE.token, `\tcase n == "${AUTH.toLowerCase()}":\n\t\treturn kind, true`, 'go'),
@@ -573,6 +617,8 @@ function drafts(): Draft[] {
     kept('code/lettres-sans-chiffre', RULE.apiKey, `  ${API_KEY}: "${at('lettres', LOWER + UPPER, 20)}",`, 'typescript'),
     kept('code/affectation-d-environnement', RULE.apiKey, `API_${'KEY'} = "test-key"`, 'python'),
     kept('code/yaml', RULE.token, `${TOKEN}: fixture`, 'yaml'),
+    kept('code/suite-de-l-expression', RULE.token, `const ${TOKEN} = "abc" as const, other = "${strong('suite')}";`, 'typescript'),
+    kept('code/expression-conditionnelle', RULE.token, `${TOKEN} = "dev" if debug else "${strong('condition')}"`, 'python'),
     // Option d'utilisateur.
     noise('option/date', RULE.cli, `date ${USER_OPTION} ${['+%H', '%M', '%S'].join(':')}`),
     noise('option/docker-run', RULE.cli, `docker run --rm ${USER_OPTION} ${pair('1000', '1000')} alpine id`),
@@ -581,10 +627,14 @@ function drafts(): Draft[] {
     // Valeurs chiffrées.
     noise('chiffre/sops', RULE.password, `    ${PASSWORD}: ENC[AES256_GCM,data:Zm9vYmFy,iv:YmFyYmF6,tag:cXV4cXV4,type:str]`, 'yaml'),
     noise('chiffre/spring', RULE.password, `spring.datasource.${PASSWORD}={cipher}${cipherHex}`, 'properties'),
-    noise('chiffre/transit-de-vault', RULE.password, `  db_${PASSWORD}: vault:v1:${at('transit', ALNUM, 16)}`, 'yaml'),
+    // Texte chiffré de longueur réelle : le constat d'affectation tombe, l'avertissement d'entropie reste.
+    kept('chiffre/transit-de-vault-avertissement-d-entropie', RULE.entropy, `  db_${PASSWORD}: vault:v1:${transit}`, 'yaml'),
     noise('chiffre/message-pgp', RULE.password, `${PASSWORD}: |\n  -----BEGIN PGP MESSAGE-----\n  hQEMA5vJ\n  -----END PGP MESSAGE-----`, 'yaml'),
     kept('chiffre/marque-sans-donnees', RULE.password, `${PASSWORD}: ENC[${strong('marque')}]`, 'yaml'),
     kept('chiffre/spring-suivi-d-un-litteral', RULE.password, `  ${PASSWORD}: '{cipher}${strong('spring')}'`, 'yaml'),
+    kept('chiffre/spring-texte-court', RULE.password, `spring.datasource.${PASSWORD}={cipher}${at('cipher-court', hex, 32)}`, 'properties'),
+    kept('chiffre/transit-texte-court', RULE.password, `  db_${PASSWORD}: vault:v1:${at('transit-court', ALNUM, 16)}`, 'yaml'),
+    kept('chiffre/etiquette-ansible-suivie-d-un-mot', RULE.password, `${PASSWORD}: !vault ${plain('etiquette')}`, 'yaml'),
     // Valeurs publiques connues.
     noise('public/cle-de-projet', RULE.apiKey, `posthog.init({ ${API_KEY}: "${posthog}" })`),
     noise('public/cle-publiable', RULE.apiKey, `const ${API_KEY} = "${supabase}";`),

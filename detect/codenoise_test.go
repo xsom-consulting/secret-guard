@@ -20,6 +20,8 @@ var (
 	nameAuth     = "Authori" + "zation"
 	// literalStrong : littéral de forme stricte (chiffre, trois classes de caractères).
 	literalStrong = "Xy7#" + "kLm9" + "Qr2v"
+	// literalDefault : mot de passe de lettres et de chiffres, deux classes de caractères.
+	literalDefault = "hunter2" + "hunter2"
 	// literalWords : mot de passe fait de mots, sans chiffre.
 	literalWords = "not-a-real-" + namePassword
 )
@@ -169,6 +171,19 @@ func TestStructureIsWalked(t *testing.T) {
 			t.Errorf("constats %+v, attendu un mot de passe sur [%d,%d)", got, want[0], want[1])
 		}
 	})
+	t.Run("mot nu : identifiant dans du code, nom de champ hors du code", func(t *testing.T) {
+		for name, c := range map[string]noiseCase{
+			"identifiants à chiffre dans un tableau":   {text: "  " + nameAPIKey + ": [primaryKey2, fallbackKey3],\n", language: "typescript"},
+			"identifiants sur une ligne à déclaration": {text: "const " + nameAPIKey + " = [primaryKey2, fallbackKey3];\n"},
+			"nom de champ nu à chiffre":                {text: nameSecret + ": { keyRef2A: kv, version: 2 }\n", language: "yaml"},
+			"chemin d'identifiants sans langage":       {text: "\t\"sans " + nameSecret + "\": {Language: i18n.French, Clock: fixedClock{now}},\n"},
+			"mot de la suite de la ligne":              {text: "      expect(request).toContain('POST /{{ path }}?api_" + "key=[REDACTED] HTTP/1.1');\n"},
+		} {
+			if got := assignmentFindings(t, c.text, c.language); len(got) != 0 {
+				t.Errorf("%s : constats %+v", name, got)
+			}
+		}
+	})
 	t.Run("argument d'un appel : un nom n'est pas un littéral", func(t *testing.T) {
 		text := "  " + namePassword + ": t(\"login.field.label\"),\n"
 		if got := assignmentFindings(t, text, ""); len(got) != 0 {
@@ -204,6 +219,19 @@ func TestAssignmentNoiseGuards(t *testing.T) {
 		{"mot de passe seul élément d'une liste en ligne", namePassword + ": [sesameouvretoi]", "yaml"},
 		{"accolades suivies d'un texte collé", namePassword + `={label}` + literalStrong, "properties"},
 		{"crochets suivis d'un texte collé", namePassword + `: [a]` + literalWords, "yaml"},
+		// Relecture du lot : valeurs prises pour une structure ou une fonction.
+		{"crochet jamais fermé", namePassword + `=[` + literalStrong, "properties"},
+		{"accolade jamais fermée", namePassword + `: {` + literalStrong, ""},
+		{"mot de passe jamais fermé, fait d'un mot", namePassword + `=[sesameouvretoi`, "properties"},
+		{"mot-clé de fonction collé à un tiret", namePassword + `: async-Storm42!`, "yaml"},
+		{"mot-clé de fonction collé à un dièse", namePassword + `: func#Abc12345`, "yaml"},
+		{"chevron jamais fermé", namePassword + `: Pass<Word123`, "yaml"},
+		{"chevron fermé suivi d'un texte collé", namePassword + `: Abc<def>ghi1`, "yaml"},
+		{"défaut d'une lecture d'environnement", namePassword + ` = os.environ.get("DB_VALUE", "` + literalDefault + `")`, "python"},
+		{"mot de passe en argument d'un appel", namePassword + ` = settings.get("db", "` + literalDefault + `")`, "python"},
+		{"liste en ligne de mots nus", nameAPIKey + `: [` + literalStrong + `, ` + literalStrong + `]`, "yaml"},
+		{"liste en ligne de mots nus sous un mot de passe", namePassword + `: [ ` + literalStrong + `, autre ]`, "yaml"},
+		{"objet en ligne à valeur nue", nameSecret + `: { value: ` + literalStrong + `, version: 2 }`, "yaml"},
 	}
 	for _, c := range cases {
 		for _, language := range []string{"", c.language} {
@@ -318,6 +346,7 @@ func TestCodeNoiseWorstCases(t *testing.T) {
 // déclaration), une valeur dont aucun mot n'a la forme d'un secret n'est ni une clé d'API, ni un jeton, ni un secret
 // générique.
 func TestCodeValueWithoutSecretShape(t *testing.T) {
+	refresh := "refresh" + strings.ToUpper(nameToken[:1]) + nameToken[1:]
 	cases := []noiseCase{
 		{"valeur d'essai courte", `  ` + nameAPIKey + `: "test",`, "typescript"},
 		{"valeur d'essai en mots", `    ` + strings.ToLower(nameAPIKey) + ` = 'test-key'`, "python"},
@@ -329,6 +358,7 @@ func TestCodeValueWithoutSecretShape(t *testing.T) {
 		{"libellé", `const ` + nameToken + ` = "jeton d'enrôlement absent";`, ""},
 		{"déclaration à valeur d'essai", `const ` + nameAPIKey + ` = "test-key";`, ""},
 		{"retour d'une valeur d'essai", `  return { ` + nameToken + `: "fixture" };`, ""},
+		{"comparaison suivie d'une référence", `  if (typeof inner.` + refresh + ` === 'string' && inner.` + refresh + `) {`, "typescript"},
 	}
 	for _, c := range cases {
 		if got := assignmentFindings(t, c.text+"\n", c.language); len(got) != 0 {
@@ -354,6 +384,8 @@ func TestCodeValueGuards(t *testing.T) {
 		{"valeur à forme de secret déclarée", `const ` + nameToken + ` = "` + literalStrong + `";`, ""},
 		{"lettres et deux chiffres sur dix caractères", `  ` + nameAPIKey + `: "fixturekey42",`, "typescript"},
 		{"chaîne prolongée par une concaténation", `const ` + nameToken + ` = "gh" + stored;`, "typescript"},
+		{"suite de l'expression à forme de secret", `const ` + nameToken + ` = "abc" as const, other = "` + literalStrong + `";`, "typescript"},
+		{"expression conditionnelle dont l'autre branche est un littéral", nameToken + ` = "dev" if debug else "` + literalStrong + `"`, "python"},
 	}
 	for _, c := range cases {
 		if got := assignmentFindings(t, c.text+"\n", c.language); len(got) == 0 {
@@ -510,7 +542,8 @@ func TestBasicAuthKeepsCredentials(t *testing.T) {
 // TestEncryptedEnvelopeIsNotASecret : une valeur chiffrée (sops, Spring Cloud Config, Ansible Vault, chiffrement de
 // transit de Vault, age, PGP) n'est pas un constat d'affectation, quel que soit le langage, dotenv compris.
 func TestEncryptedEnvelopeIsNotASecret(t *testing.T) {
-	cipherHex := strings.Repeat("0f1e2d3c", 4)
+	cipherHex := strings.Repeat("0f1e2d3c", 8)
+	transit := strings.Repeat("8SDd3WHDOjf7mq69", 3)[:42] + "=="
 	vaultBody := strings.Repeat("6231336439623665", 5)
 	upper := strings.ToUpper(namePassword)
 	cases := []noiseCase{
@@ -519,8 +552,8 @@ func TestEncryptedEnvelopeIsNotASecret(t *testing.T) {
 		{"sops dans un fichier dotenv", upper + `=ENC[AES256_GCM,data:Zm9vYmFy,iv:YmFyYmF6,tag:cXV4cXV4,type:str]`, "dotenv"},
 		{"Spring Cloud Config", `spring.datasource.` + namePassword + `={cipher}` + cipherHex, "properties"},
 		{"Spring Cloud Config entre guillemets", `  ` + namePassword + `: '{cipher}` + cipherHex + `'`, "yaml"},
-		{"chiffrement de transit de Vault", `  db_` + namePassword + `: vault:v1:8SDd3WHDOjf7mq69`, "yaml"},
-		{"chiffrement de transit, variable d'environnement", `DB_` + upper + `=vault:v12:8SDd3WHDOjf7mq69CyCq`, ""},
+		{"chiffrement de transit de Vault", `  db_` + namePassword + `: vault:v1:` + transit, "yaml"},
+		{"chiffrement de transit, variable d'environnement", `DB_` + upper + `=vault:v12:` + transit, ""},
 		{"en-tête Ansible Vault entre guillemets", namePassword + `: "$ANSIBLE_VAULT;1.1;AES256"`, "yaml"},
 		{"bloc Ansible Vault", "db_" + namePassword + ": !vault |\n          $ANSIBLE_VAULT;1.1;AES256\n          " + vaultBody + "\n          " + vaultBody, "yaml"},
 		{"message PGP", namePassword + ": |\n  -----BEGIN PGP MESSAGE-----\n  hQEMA5vJ\n  -----END PGP MESSAGE-----", "yaml"},
@@ -546,6 +579,11 @@ func TestEncryptedEnvelopeGuards(t *testing.T) {
 		{"préfixe de transit sans version", namePassword + `: vault:` + literalStrong, "yaml"},
 		{"préfixe de transit suivi d'un littéral à signes", namePassword + `: vault:v1:` + literalStrong, "yaml"},
 		{"bloc ordinaire", namePassword + ": |\n  " + literalStrong + "\n", "yaml"},
+		// Marque suivie d'un texte trop court pour être chiffré, ou d'un autre texte que celui du format.
+		{"marque Spring suivie de 32 lettres et chiffres", namePassword + `={cipher}` + strings.Repeat("Sesame42", 4), "properties"},
+		{"préfixe de transit suivi de 16 lettres et chiffres", namePassword + `: vault:v1:` + strings.Repeat("Sesame42", 2), "yaml"},
+		{"étiquette Ansible Vault suivie d'un mot", namePassword + `: !vault ` + strings.Repeat("Sesame42", 2), "yaml"},
+		{"en-tête Ansible Vault sans version", namePassword + `: "$ANSIBLE_VAULT;` + strings.Repeat("Sesame42", 2) + `"`, "yaml"},
 	}
 	for _, c := range cases {
 		for _, language := range []string{"", c.language} {

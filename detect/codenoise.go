@@ -279,16 +279,22 @@ func isPlainLocator(value []byte) bool {
 // forme stricte, ou, pour un mot de passe (qui peut être un mot) porté par une donnée (data : élément d'un tableau,
 // valeur d'un objet), au moins 8 unités sans espace : le corpus d'origine garde l'objet JSON qui porte un mot de passe
 // fait de mots (« allows a JSON Schema type descriptor but blocks a JSON secret object »). L'argument d'un appel et la
-// chaîne d'un gabarit sont du code (nom d'une variable d'environnement, clé de traduction) : forme stricte seulement.
+// chaîne d'un gabarit sont du code (nom d'une variable d'environnement, clé de traduction) : forme stricte, ou, sous un
+// mot de passe, au moins 8 unités sans espace qui mêlent lettres et chiffres (le défaut d'une lecture d'environnement,
+// « getenv("NOM", "motdepasse1") »), hors nom de constante et date.
 func credibleLiteral(v *view, start, end int, secretType string, data bool) bool {
 	if strictShaped(v, start, end) {
 		return true
 	}
-	if !data || secretType != "password" {
+	if secretType != "password" {
 		return false
 	}
 	value := v.text[start:end]
-	return utf16Units(value) >= 8 && !classesOf(value).spaced && !isPlainLocator(value)
+	c := classesOf(value)
+	if utf16Units(value) < 8 || c.spaced || isPlainLocator(value) {
+		return false
+	}
+	return data || (c.digits > 0 && (c.lower || c.upper) && !isConstantName(value) && !isTimestamp(value))
 }
 
 // nesting suit l'imbrication des parenthèses, crochets et accolades d'une structure parcourue. data dit si la
@@ -531,7 +537,9 @@ func expansionReference(v *view, i, limit int, secretType string) (reference, bo
 
 // hasCredibleLiteral dit si v.text[start:end] porte une chaîne entre guillemets crédible (credibleLiteral) qui n'est
 // pas le nom d'un champ. data : la région est une donnée (voir nesting). words : un mot nu de forme stricte compte
-// aussi (commande de shell, où un mot sans guillemets est un littéral ; ailleurs, c'est un identifiant).
+// aussi : commande de shell et liste ou objet en ligne hors d'un code reconnu (YAML), où un mot sans guillemets est un
+// littéral ; dans du code, c'est un identifiant. Dans une donnée, le nom d'un champ (suivi de « : ») et le chemin
+// d'identifiants (« i18n.French ») ne comptent pas.
 func hasCredibleLiteral(v *view, start, end int, secretType string, data, words bool) bool {
 	text := v.text
 	nest := nesting{base: data}
@@ -553,7 +561,9 @@ func hasCredibleLiteral(v *view, start, end int, secretType string, data, words 
 			for i < end && isBareWordByte(text[i]) {
 				i++
 			}
-			if words && strictShaped(v, wordStart, i) {
+			// Dans une donnée, ni le nom d'un champ ni un chemin d'identifiants.
+			if words && strictShaped(v, wordStart, i) &&
+				(!data || (!isBareFieldName(text, i, end) && !isReferencePath(v, wordStart, i))) {
 				return true
 			}
 		default:
@@ -569,9 +579,28 @@ func hasCredibleLiteral(v *view, start, end int, secretType string, data, words 
 	return false
 }
 
+// isBareFieldName dit si le mot nu qui finit en wordEnd est le nom d'un champ : suivi, espaces sautées, de « : » (pas
+// « :: ») avant limit.
+func isBareFieldName(text []byte, wordEnd, limit int) bool {
+	after := skipSpacesAndTabs(text, wordEnd)
+	return after < limit && text[after] == ':' && !isAt(text, after+1, ':')
+}
+
+// isReferencePath dit si le mot nu v.text[start:end] est un chemin d'identifiants à plusieurs éléments (« a.b »,
+// « a->b ») sans forte entropie : la référence d'une propriété, pas un littéral.
+func isReferencePath(v *view, start, end int) bool {
+	word := v.text[start:end]
+	if identPathEnd(word, 0) != len(word) || (bytes.IndexByte(word, '.') < 0 && !bytes.Contains(word, []byte("->"))) {
+		return false
+	}
+	return !hasStrongEntropy(v, start, end)
+}
+
 // isBracketedWord dit si l'ouverture en open ne porte, jusqu'à sa fermeture sur la ligne, qu'un seul mot nu de forme
 // stricte (« [Xy7…] », « (Xy7…) ») : un littéral écrit entre crochets ou parenthèses dans une phrase, ou le seul élément
 // d'une liste YAML en ligne, pas une structure de code. Sous un mot de passe, qui peut être un mot, 8 unités suffisent.
+// L'ouverture jamais fermée, suivie de ce seul mot jusqu'à la fin de la ligne (« [Xy7… »), compte aussi : c'est une
+// valeur qui commence par un crochet, pas une structure.
 func isBracketedWord(v *view, open, lineEnd int, secretType string) bool {
 	text := v.text
 	start := skipSpacesAndTabs(text, open+1)
@@ -580,7 +609,7 @@ func isBracketedWord(v *view, open, lineEnd int, secretType string) bool {
 		end++
 	}
 	closing := skipSpacesAndTabs(text, end)
-	if end == start || closing >= lineEnd || bytes.IndexByte([]byte(")]}"), text[closing]) < 0 {
+	if end == start || (closing < lineEnd && bytes.IndexByte([]byte(")]}"), text[closing]) < 0) {
 		return false
 	}
 	return strictShaped(v, start, end) || (secretType == "password" && utf16Units(text[start:end]) >= 8)
@@ -656,11 +685,12 @@ type structureWalk struct {
 
 // walkStructure parcourt la structure ouverte en open (« [ », « { » ou « ( »).
 //
-// Première ligne, jusqu'à sa fin (ce que couvre le constat d'origine) : un littéral crédible, chaîne ou mot nu, garde
-// ce constat. Lignes suivantes, jusqu'à la fermeture de la structure : chaque chaîne crédible qui n'est ni le nom d'un
-// champ ni la valeur d'un champ au nom sensible est rendue pour un constat à elle. Bornes : structureWalkBytes, et
-// le budget de la vue.
-func (ctx *contextualText) walkStructure(v *view, open int, secretType string) structureWalk {
+// Première ligne, jusqu'à sa fin (ce que couvre le constat d'origine) : un littéral crédible garde ce constat. C'est
+// une chaîne, le seul mot nu de la structure (isBracketedWord), ou, quand words est vrai (liste ou objet hors d'un code
+// reconnu : en YAML, « [a, b] » porte des littéraux, pas des identifiants), tout mot nu de forme stricte. Lignes
+// suivantes, jusqu'à la fermeture de la structure : chaque chaîne crédible qui n'est ni le nom d'un champ ni la valeur
+// d'un champ au nom sensible est rendue pour un constat à elle. Bornes : structureWalkBytes, et le budget de la vue.
+func (ctx *contextualText) walkStructure(v *view, open int, secretType string, words bool) structureWalk {
 	text := ctx.text
 	lineEnd := ctx.nextLineBreak(open)
 	limit := min(len(text), open+structureWalkBytes)
@@ -673,6 +703,16 @@ func (ctx *contextualText) walkStructure(v *view, open int, secretType string) s
 	}
 	if hasCredibleLiteral(v, open, lineEnd, secretType, true, false) || isBracketedWord(v, open, lineEnd, secretType) {
 		return structureWalk{judged: true, firstLine: true}
+	}
+	if words {
+		// Mots nus : ceux de la structure, pas ceux de la suite de la ligne.
+		wordsEnd := lineEnd
+		if closing, ok := balancedEnd(text, open, lineEnd); ok {
+			wordsEnd = closing
+		}
+		if hasCredibleLiteral(v, open, wordsEnd, secretType, true, true) {
+			return structureWalk{judged: true, firstLine: true}
+		}
 	}
 	walk := structureWalk{}
 	nest := nesting{base: true}
@@ -895,11 +935,36 @@ func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parse
 	if !shapeJudgedTypes[secretType] || !ctx.codeContext(m, lang) || hasSecretWord(v, start, max(end, p.end)) {
 		return keepFinding
 	}
+	// Suite de l'expression, que le constat d'origine couvre (hasExpressionTail : « "essai" if debug else "…" ») : une
+	// chaîne à forme de secret y garde le constat. Les mots nus de la suite sont du code, ils ne comptent pas.
+	if p.kind == kindQuoted && hasExpressionTail(text, p) && hasShapedString(v, p.end+1, expressionEnd(text, p.end)) {
+		return keepFinding
+	}
 	if p.kind == kindQuoted && concatTail(text, min(end+1, len(text))) {
 		// Chaîne prolongée par une concaténation : l'autre opérande peut porter le secret.
 		return keepFinding
 	}
 	return noiseVerdict{drop: true, resume: start}
+}
+
+// hasShapedString dit si v.text[start:end] porte une chaîne entre guillemets, fermée sur la ligne, dont le contenu a
+// la forme d'un secret.
+func hasShapedString(v *view, start, end int) bool {
+	text := v.text
+	for i := start; i < end; i++ {
+		if !isQuote(text[i]) {
+			continue
+		}
+		closing := closingQuote(text, i, end)
+		if closing < 0 {
+			continue
+		}
+		if secretShaped(v, i+1, closing) {
+			return true
+		}
+		i = closing
+	}
+	return false
 }
 
 // shapeJudgedTypes : types de secret jugés sur la forme de la valeur par le palier 2.
@@ -1013,14 +1078,16 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 		// Rien après l'opérateur ou le mot qui précède l'expression.
 		return noiseVerdict{}, false
 	}
-	walked := func(open int) (noiseVerdict, bool) {
+	// data : la structure est une liste ou un objet écrit pour lui-même, pas une liste d'arguments ni un accès indexé.
+	walked := func(open int, data bool) (noiseVerdict, bool) {
 		// Fermée sur la ligne et suivie d'un signe collé (« {a}b », « nom(1)! ») : ce n'est pas une structure reconnue,
 		// le constat d'origine reste.
 		if closing, ok := balancedEnd(text, open, lineEnd); ok && closing < len(text) && !isLineSpace(text[closing]) &&
 			bytes.IndexByte([]byte(",;)]}.?:"), text[closing]) < 0 {
 			return noiseVerdict{}, false
 		}
-		walk := ctx.walkStructure(v, open, secretType)
+		// Liste ou objet hors d'un code reconnu : un mot nu y est un littéral (YAML). Dans du code, c'est un identifiant.
+		walk := ctx.walkStructure(v, open, secretType, data && !ctx.codeContext(m, lang))
 		if !walk.judged || walk.firstLine {
 			// Littéral crédible sur la première ligne, ou structure trop longue pour être lue : le constat d'origine est
 			// gardé, sans passer par le palier 2 (qui ne lit que le début de la structure, coupé par l'origine à la première
@@ -1034,17 +1101,21 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 			// Un Substitut commence par « [ » : la lecture d'origine (résidu d'une expurgation) reste la règle.
 			return noiseVerdict{}, false
 		}
-		return walked(i)
+		return walked(i, true)
 	}
 	if !ctx.referenceEligible(m, lang) {
 		return noiseVerdict{}, false
 	}
 	if text[i] == '(' {
 		// Fonction fléchée, signature ou expression entre parenthèses : « (a, b) => … », « (a): T », « (await f()).x ».
-		return walked(i)
+		return walked(i, false)
 	}
 	for _, word := range functionKeywords {
-		if bytes.HasPrefix(text[i:end], word) && i+len(word) < len(text) && !isIdentByte(text[i+len(word)]) {
+		// Suivi de ce qui ouvre une fonction : espace, liste de paramètres, « * » d'un générateur, « : » d'une lambda
+		// sans paramètre, « < » d'un paramètre de type. Un mot collé à un autre signe (« fn-… », « async-… ») est une
+		// valeur.
+		if bytes.HasPrefix(text[i:end], word) && i+len(word) < len(text) &&
+			bytes.IndexByte([]byte(" \t(*:<"), text[i+len(word)]) >= 0 {
 			return noiseVerdict{drop: true, resume: i + len(word)}, true
 		}
 	}
@@ -1055,14 +1126,17 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 	switch next := text[pathEnd]; {
 	case next == '(':
 		// Appel : la liste d'arguments est parcourue.
-		return walked(pathEnd)
+		return walked(pathEnd, false)
 	case next == '[' && bytes.IndexByte(text[i:pathEnd], '.') >= 0:
 		// Accès indexé à une propriété : « a.b[c] ». Un nom seul suivi de crochets (« Optional[str] ») reste à
 		// l'origine, dont le corpus garde le constat.
-		return walked(pathEnd)
+		return walked(pathEnd, false)
 	case next == '<' && pathEnd+1 < len(text) && (isIdentStart(text[pathEnd+1]) || text[pathEnd+1] == '{'):
-		// Type générique : « Map<string, Session> ».
-		return noiseVerdict{drop: true, resume: pathEnd + 1}, true
+		// Type générique : « Map<string, Session> », fermé sur la ligne et non suivi d'une lettre ou d'un chiffre collé
+		// (« Abc<def>ghi » et « Abc<def » sont des valeurs qui portent un chevron).
+		if genericClosed(text, pathEnd, lineEnd) {
+			return noiseVerdict{drop: true, resume: pathEnd + 1}, true
+		}
 	case next == ')':
 		// Type d'un paramètre, suivi de la flèche, du corps de la fonction ou de son type de retour : « nom: Type) => … »,
 		// « nom: type) -> Retour: », « nom: Type) { », « nom: Type): Retour { ». Après « ): », la ligne doit finir comme
@@ -1079,6 +1153,24 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 		}
 	}
 	return noiseVerdict{}, false
+}
+
+// genericClosed dit si le chevron ouvert en open est fermé avant lineEnd, et si ce qui suit sa fermeture n'est ni une
+// lettre, ni un chiffre, ni « _ », ni « $ ».
+func genericClosed(text []byte, open, lineEnd int) bool {
+	depth := 0
+	for i := open; i < min(lineEnd, open+referenceBytes); i++ {
+		switch text[i] {
+		case '<':
+			depth++
+		case '>':
+			depth--
+			if depth == 0 {
+				return i+1 >= len(text) || !isIdentByte(text[i+1])
+			}
+		}
+	}
+	return false
 }
 
 // basicAuthNoise dit si l'argument de l'option d'utilisateur (courte ou longue) n'est pas un couple utilisateur et mot
@@ -1103,15 +1195,30 @@ func isDigits(value []byte) bool {
 
 // encryptedHeaders : en-têtes de valeurs chiffrées dont la suite n'est pas lue.
 var encryptedHeaders = [][]byte{
-	[]byte("$ANSIBLE_VAULT;"), []byte("!vault"), []byte("-----BEGIN AGE ENCRYPTED FILE-----"),
-	[]byte("-----BEGIN PGP MESSAGE-----"), []byte("age-encryption.org/v"),
+	[]byte("-----BEGIN AGE ENCRYPTED FILE-----"), []byte("-----BEGIN PGP MESSAGE-----"), []byte("age-encryption.org/v"),
 }
 
+// Marques d'Ansible Vault : en-tête du texte chiffré (suivi du numéro de version du format) et étiquette YAML (suivie
+// d'un indicateur de bloc ou de la fin de la ligne).
+var (
+	ansibleVaultHeader = []byte("$ANSIBLE_VAULT;")
+	ansibleVaultTag    = []byte("!vault")
+)
+
+// hasEncryptedHeader dit si value commence par l'en-tête d'une valeur chiffrée. Une marque d'Ansible Vault suivie d'un
+// autre texte (« !vault motdepasse », « $ANSIBLE_VAULT;motdepasse ») n'en est pas une.
 func hasEncryptedHeader(value []byte) bool {
 	for _, header := range encryptedHeaders {
 		if bytes.HasPrefix(value, header) {
 			return true
 		}
+	}
+	if bytes.HasPrefix(value, ansibleVaultHeader) {
+		return len(value) > len(ansibleVaultHeader) && isASCIIDigit(value[len(ansibleVaultHeader)])
+	}
+	if bytes.HasPrefix(value, ansibleVaultTag) {
+		after := skipSpacesAndTabs(value, len(ansibleVaultTag))
+		return after >= len(value) || bytes.IndexByte([]byte("|>\r\n"), value[after]) >= 0
 	}
 	return false
 }
@@ -1157,17 +1264,27 @@ func isEncryptedEnvelope(text []byte, p *parsedValue, lineEnd int) bool {
 		}
 		return cipher > 0 && bytes.HasPrefix(body[cipher:], []byte(",data:")) && body[len(body)-1] == ']'
 	case len(value) > 8 && bytes.EqualFold(value[:8], []byte("{cipher}")):
-		return isCipherText(value[8:], 16, "+/=")
+		return isCipherText(value[8:], cipherTextMin, "+/=")
 	case bytes.HasPrefix(value, []byte("vault:v")):
 		rest := value[7:]
 		digits := 0
 		for digits < len(rest) && isASCIIDigit(rest[digits]) {
 			digits++
 		}
-		return digits > 0 && digits < len(rest) && rest[digits] == ':' && isCipherText(rest[digits+1:], 8, "+/=_-")
+		return digits > 0 && digits < len(rest) && rest[digits] == ':' && isCipherText(rest[digits+1:], transitTextMin, "+/=_-")
 	}
 	return false
 }
+
+const (
+	// cipherTextMin : plus court texte tenu pour chiffré après « {cipher} ». Spring écrit au moins 64 caractères
+	// hexadécimaux (vecteur d'initialisation et un bloc AES) ; un mot de passe plus court précédé de la marque garde
+	// son constat.
+	cipherTextMin = 64
+	// transitTextMin : plus court texte tenu pour chiffré après « vault:vN: ». Vault écrit au moins 40 caractères
+	// (nonce de 12 octets et sceau de 16, en base64).
+	transitTextMin = 40
+)
 
 // isCipherText dit si value est faite d'au moins minimum lettres, chiffres ou signes de extra, et de rien d'autre.
 func isCipherText(value []byte, minimum int, extra string) bool {
