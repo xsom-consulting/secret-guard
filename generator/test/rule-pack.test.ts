@@ -11,7 +11,9 @@ import {
   translationOf,
   VALUE_BOUNDS,
 } from '../rule-pack/catalog.ts';
-import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
+import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_BETTERLEAKS_COMMIT,
+  PROVIDER_BETTERLEAKS_REPOSITORY,
+  PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
 import {
   buildContextRulesGo,
   CONTEXT_DATA_RULES,
@@ -148,17 +150,23 @@ describe('Pack initial', () => {
     expect(Object.keys(VALUE_BOUNDS).sort()).toEqual(['basic_auth_url', 'cli_basic_auth', 'database_url_credentials', 'jwt']);
   });
 
-  it('règles de fournisseurs : reprises de Titus, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
+  it('règles de fournisseurs : reprises de Titus et de Betterleaks, « motif seul », un groupe capturant au plus, libellés écrits avec le Pack', () => {
     expect(providerRules).toEqual(PROVIDER_RULES);
-    expect(providerRules).toHaveLength(294);
+    expect(providerRules).toHaveLength(360);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_REPOSITORY);
     expect(upstreamNotes).toContain(PROVIDER_UPSTREAM_COMMIT);
+    // Règles reprises de Betterleaks (v0.10.0, MIT) : dépôt, commit et licence cités dans UPSTREAM.md et NOTICE.
+    for (const notes of [upstreamNotes, readFileSync(new URL('../../NOTICE', import.meta.url), 'utf8')]) {
+      expect(notes).toContain(PROVIDER_BETTERLEAKS_REPOSITORY);
+      expect(notes).toContain(PROVIDER_BETTERLEAKS_COMMIT);
+      expect(notes).toContain('MIT');
+    }
     const earlier = new Set([...catalogRules, ...personalRules].map((rule) => rule.ruleId));
     const ids = new Set<string>();
     for (const rule of PROVIDER_RULE_SOURCES) {
       expect(earlier.has(rule.ruleId) || ids.has(rule.ruleId), rule.ruleId).toBe(false);
       ids.add(rule.ruleId);
-      expect(rule.upstream, rule.ruleId).toMatch(/^(?:np|kingfisher|titus)\.[a-z0-9._-]+$/);
+      expect(rule.upstream, rule.ruleId).toMatch(/^(?:np|kingfisher|titus|betterleaks)\.[a-z0-9._-]+$/);
       expect([80, 95], rule.ruleId).toContain(rule.score);
       // Un seul groupe capturant (la valeur) ; aucun groupe nommé ; le motif se lit aussi en JavaScript.
       expect((rule.pattern.match(/\((?!\?)/g) ?? []).length, rule.ruleId).toBeLessThanOrEqual(1);

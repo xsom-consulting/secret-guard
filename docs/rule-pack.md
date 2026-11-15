@@ -14,7 +14,7 @@ Objets fermés ; chaînes et entiers seulement.
 | `minAgentVersion` | semver `MAJEUR.MINEUR.CORRECTIF`, sans pré-version ni métadonnées : version minimale du programme qui exécute le Pack (le moteur ne la juge pas) ; `0.0.0` pour le Pack initial |
 | `packVersion` | entier de 1 à 2^53 − 1 |
 | `issuedAt` | horodatage UTC `AAAA-MM-JJTHH:MM:SS[.mmm]Z` qui existe (forme et calendrier vérifiés par `pack.Decode`) |
-| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (334 dans le Pack initial de la v0.8.1) |
+| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (411 dans le Pack initial de la v0.10.0) |
 
 Règle :
 
@@ -24,7 +24,7 @@ Règle :
 | `family` | `fixed_pattern` (motif seul), `private_key` (clé privée), `credential_url` (URL à identifiants), `contextual_assignment` (affectation contextuelle), `entropy` (entropie) |
 | `secretType` | type de secret de Secret Guard (`private_key`, `provider_token`, `access_token`, `jwt`, `database_credentials`, `cloud_credential`, `password`, `api_key`, `generic_secret`, `high_entropy`) ou, depuis la v0.7.0, type de donnée personnelle (`iban`, `fr_social_security_number`, `fr_siret`, `fr_siren`, `payment_card_number`) |
 | `score` | entier de 0 à 100, score de base de la règle (avant pénalité d'encodage, logique du moteur) |
-| `validator` | validateur nommé de la liste fermée `RULE_VALIDATORS` (`generator/src/rule-pack.ts`) : `jwt_structure` (`isStructurallyValidJwt`) ; depuis la v0.7.0 `iban_mod97`, `fr_nir_key`, `fr_siret_luhn`, `fr_siren_luhn`, `payment_card_luhn` (section « Règles de données personnelles ») ; ou chaîne vide sans validateur ; tout autre nom est refusé |
+| `validator` | validateur nommé de la liste fermée `RULE_VALIDATORS` (`generator/src/rule-pack.ts`) : `jwt_structure` (`isStructurallyValidJwt`) ; depuis la v0.7.0 `iban_mod97`, `fr_nir_key`, `fr_siret_luhn`, `fr_siren_luhn`, `payment_card_luhn` (section « Règles de données personnelles ») ; depuis la v0.10.0 `token_entropy_25` à `token_entropy_45` (section « Vraisemblance d'un jeton de fournisseur ») ; ou chaîne vide sans validateur ; tout autre nom est refusé |
 | `pattern` | motif en syntaxe RE2 ; obligatoire (non vide) pour les familles `fixed_pattern`, `private_key`, `credential_url` et `entropy` (`RULE_FAMILIES_WITH_PATTERN`) ; vide admis seulement pour `contextual_assignment`, quand la règle combine plusieurs motifs de `rules.ts` (logique du moteur) |
 | `minLength`, `maxLength` | bornes de longueur, en caractères, de la valeur détectée, reportées des répétitions de plus de 1 000 du motif d'origine et contrôlées en code ; voir « Bornes de longueur » |
 
@@ -60,12 +60,23 @@ Les validateurs ne s'exécutent pas dans un texte décodé de base64 (`allowStru
 
 ### Règles de fournisseurs (v0.8.1)
 
-294 règles « motif seul » (`fixed_pattern`, type de secret `provider_token`, sans validateur ni borne) s'ajoutent après les règles de données personnelles. Leur source est `generator/rule-pack/provider-rules.json` (une règle par ligne : identifiant, règle d'origine, libellés de Substitut, score, motif RE2, forme d'une valeur d'essai), entretenue à la main depuis la reprise des règles de Titus (UPSTREAM.md, « Règles de fournisseurs ») ; `npm run pack:initial` en écrit le Pack et la table Go des libellés (`detect/substitute_providers.go`).
+360 règles « motif seul » (`fixed_pattern`, type de secret `provider_token`, sans borne) s'ajoutent après les règles de données personnelles : 294 depuis la v0.8.1, reprises de Titus, et 66 depuis la v0.10.0, reprises de Betterleaks. Leur source est `generator/rule-pack/provider-rules.json` (une règle par ligne : identifiant, règle d'origine, libellés de Substitut, score, validateur de vraisemblance facultatif, motif RE2, forme d'une valeur d'essai et d'un presque positif), entretenue à la main depuis ces reprises (UPSTREAM.md, « Règles de fournisseurs » et « Règles reprises de Betterleaks, vraisemblance et banc de comparaison ») ; `npm run pack:initial` en écrit le Pack et la table Go des libellés (`detect/substitute_providers.go`).
 
-- Score 95 : la valeur porte un préfixe fixe du fournisseur. Score 80 : le motif exige le nom du fournisseur avant la valeur, à quelques dizaines de caractères au plus.
+- Score 95 (177 règles) : la valeur porte un préfixe fixe du fournisseur. Score 80 (183 règles) : le motif exige le nom du fournisseur avant la valeur, à quelques dizaines de caractères au plus.
 - La valeur détectée est l'unique groupe capturant du motif. Un motif peut replier la casse (`(?i:…)`) et porter des drapeaux de groupe (`(?s:…)`, `(?-m:…)`).
 - Chaque règle doit avoir une porte littérale (`TestProviderRules`) : un littéral d'au moins trois octets présent dans toute correspondance. Une règle sans porte s'exécuterait sur tout texte.
-- Ajouter une règle : une ligne dans `provider-rules.json`, puis `npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout>` et les tests ; un moteur plus ancien exécute la règle (famille connue), mais écrit le libellé de repli « secret » dans ses Substituts.
+- Ajouter une règle : une ligne dans `provider-rules.json`, puis `npm run pack:initial`, `npm run vectors:detection -- --upstream <checkout>`, `node corpus/provider-noise.ts` et les tests ; un moteur plus ancien exécute la règle (famille connue) si elle ne porte pas de validateur qu'il ignore, mais écrit le libellé de repli « secret » dans ses Substituts.
+
+### Vraisemblance d'un jeton de fournisseur (v0.10.0)
+
+Une règle de fournisseur reconnaît une forme ; une valeur faite d'un caractère répété a la forme et n'est pas un jeton. Deux contrôles, du code du moteur (`detect/validators.go`), sans champ nouveau dans le Pack :
+
+- **D'office**, pour toute règle « motif seul » de type `provider_token` hors des quinze règles du catalogue d'origine (dont la parité fixe le comportement) : une valeur de moins de 6 octets distincts, ou d'entropie de Shannon inférieure à 3,0 bits par octet, n'est pas un constat. Une règle de ce type ajoutée par un Pack y est soumise.
+- **Par validateur nommé** `token_entropy_NN`, NN de 25 à 45 : au moins 6 octets distincts et une entropie d'au moins NN dixièmes de bit par octet. Le seuil nommé remplace le seuil d'office (il peut être plus bas : `token_entropy_26` pour vingt chiffres hexadécimaux) et s'applique à une règle « motif seul » de n'importe quel type. Les 183 règles à proximité du Pack initial en portent un, et 48 règles à préfixe fixe.
+
+Le contrôle porte sur la valeur détectée entière (octets du texte de la vue), ne décode rien, ne débite aucun budget, et s'exécute aussi dans un texte décodé de base64. Choisir un seuil : pas plus haut que ce que 99,5 % de valeurs tirées de la forme du motif passent (`generator/test/provider-rules.test.ts` le vérifie pour chaque règle du Pack initial) ; un seuil de 3,5 écarte 19 % des clés de 32 chiffres hexadécimaux. Quand la clé réelle du fournisseur est hexadécimale alors que le motif admet tout l'alphabet alphanumérique, la forme se tire en hexadécimal (`HEX_KEY_RULES` du même test, treize règles du Pack initial).
+
+**Version minimale.** Un moteur antérieur à la v0.10.0 ne connaît pas ces validateurs et refuse le Pack en entier (`unknown_validator`). Un Pack signé qui en porte un doit donc déclarer en `minAgentVersion` la première version du programme qui embarque le moteur v0.10.0 ; le Pack initial, embarqué avec son moteur, garde `0.0.0`.
 
 ### Groupes de capture
 
@@ -112,6 +123,6 @@ Refusés (`UnsupportedPatternError`), parce que le sens diffère ou n'existe pas
 
 `LoadRules` (`detect/rules.go`) charge le Pack décodé et le refuse en entier (`PackError`, `ErrPackUnusable`, raison en liste fermée `PackRefusal`) si une règle a une famille, un type de secret ou un validateur inconnus du moteur, un motif qui ne compile pas en RE2 ou qui reconnaît le texte vide, des bornes incohérentes, un score hors de 0 à 100 ou un identifiant en double, ou si une famille du moteur n'a qu'une partie de ses règles (les deux règles de clé privée, les deux d'URL, les sept `contextual_<type>` vont ensemble).
 
-- **Règles « motif seul »** (`fixed_pattern`, sauf `jwt`) : exécutées telles que le Pack les décrit (motif, groupe capturant 1, type de secret, score, validateur, bornes `minLength`/`maxLength` en unités UTF-16 de la valeur détectée, 0 = absente). Une telle règle peut être ajoutée par un Pack sans changer le moteur.
+- **Règles « motif seul »** (`fixed_pattern`, sauf `jwt`) : exécutées telles que le Pack les décrit (motif, groupe capturant 1, type de secret, score, validateur, bornes `minLength`/`maxLength` en unités UTF-16 de la valeur détectée, 0 = absente), avec, pour le type `provider_token`, le contrôle de vraisemblance d'office (section « Vraisemblance d'un jeton de fournisseur »). Une telle règle peut être ajoutée par un Pack sans changer le moteur.
 - **Règles du moteur** (familles `private_key`, `credential_url`, `contextual_assignment`, `entropy`, et `jwt`) : leur logique est du code du moteur, activé par `ruleId` ; une règle absente du Pack n'est pas exécutée, et une règle présente doit être exactement celle que le moteur exécute (famille, type de secret, validateur, motif, bornes), sinon le Pack est refusé (`engine_rule_mismatch`) ; un identifiant inconnu dans ces familles est refusé (`unknown_engine_rule`). Le score de base vient du Pack. Les attentes du moteur (`engineRules`) et ses motifs auxiliaires sont générés depuis la même copie de `rules.ts`, par la même traduction (`generator/rule-pack/engine-patterns.ts`, écrit avec `pack/initial/pack.json` par `npm run pack:initial` dans `detect/engine_patterns.go`).
 - **Bornes au-delà de RE2** : le Pack porte la somme ; le moteur applique celle de chaque partie comme la répétition de JavaScript (segments de `jwt` : 4..2 048, 4..8 192, 8..4 096, la signature coupée à la dernière limite de mot ; queue d'une URL : 2 048 unités ; mot de passe de `cli_basic_auth` : 1 024 unités, refusé entre guillemets, coupé sans guillemets).

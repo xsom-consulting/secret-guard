@@ -78,7 +78,7 @@ Portage en Go, sans copie de code d'origine dans le dépôt (la copie figée `pa
 
 ## Règles de fournisseurs (v0.8.1)
 
-**Origine.** Les 294 règles de fournisseurs du Pack initial (`generator/rule-pack/provider-rules.json`, puis `pack/initial/pack.json`) reprennent des motifs des règles de détection de Titus : dépôt `praetorian-inc/titus`, dossier `pkg/rule/rules/` (318 fichiers YAML), commit `b3964d4352ac2f84af11d1396e864bdc772f2b92` du 12 novembre 2026, Apache License, Version 2.0. Ces règles sont elles-mêmes dérivées de NoseyParker (`praetorian-inc/noseyparker`, identifiants `np.*`) et de Kingfisher (`mongodb/kingfisher`, identifiants `kingfisher.*`), sous la même licence ; avis reproduits dans `NOTICE`. Chaque règle du Pack garde l'identifiant de sa règle d'origine (champ `upstream` de `provider-rules.json`). Seuls les motifs (et, pour en tirer des valeurs d'essai, leur forme) sont repris : ni les exemples publiés avec les règles, ni leurs appels de validation, ni leur code.
+**Origine.** Les 294 premières règles de fournisseurs du Pack initial (`generator/rule-pack/provider-rules.json`, puis `pack/initial/pack.json` ; les 66 suivantes, depuis la v0.10.0, viennent de Betterleaks : dernière section de ce fichier) reprennent des motifs des règles de détection de Titus : dépôt `praetorian-inc/titus`, dossier `pkg/rule/rules/` (318 fichiers YAML), commit `b3964d4352ac2f84af11d1396e864bdc772f2b92` du 12 novembre 2026, Apache License, Version 2.0. Ces règles sont elles-mêmes dérivées de NoseyParker (`praetorian-inc/noseyparker`, identifiants `np.*`) et de Kingfisher (`mongodb/kingfisher`, identifiants `kingfisher.*`), sous la même licence ; avis reproduits dans `NOTICE`. Chaque règle du Pack garde l'identifiant de sa règle d'origine (champ `upstream` de `provider-rules.json`). Seuls les motifs (et, pour en tirer des valeurs d'essai, leur forme) sont repris : ni les exemples publiés avec les règles, ni leurs appels de validation, ni leur code.
 
 **Sélection.** Des 508 règles d'origine qui ont un motif et un exemple, 294 sont retenues. Sont écartées : 54 dont RE2 ne lit pas le motif (regards avant ou arrière, répétitions de plus de 1 000) ; 48 dont chaque exemple est déjà trouvé par une règle dédiée du Pack (GitHub, GitLab, OpenAI, Slack, Stripe, SendGrid, npm, Hugging Face, Shopify, DigitalOcean, Google, URL à identifiants, clés privées, cartes bancaires…) ; 92 par liste : clés publiques, identifiants et valeurs non secrètes (clé publiable Stripe, jeton public Mapbox, clé de projet PostHog, clés PubNub, DSN Sentry, identifiants de client, de compte ou de clé, variable chiffrée Travis CI…), règles génériques et constructions de code que les affectations du moteur lisent déjà (`np.generic.*`, en-têtes HTTP, chaînes de connexion, appels de connexion à une base, fichiers de configuration), doublons entre règles d'origine et mots-clés trop faibles (`lob`, `exa`) ; 20 dont aucune valeur d'essai ne pouvait être construite depuis le motif.
 
@@ -88,7 +88,7 @@ Portage en Go, sans copie de code d'origine dans le dépôt (la copie figée `pa
 - *Limite de mot de tête* ajoutée devant un préfixe quand les exemples d'origine la tiennent (`apify_api_…`, `sbp_…`, `pa-…`) : un préfixe au milieu d'un mot n'est pas une clé.
 - *Alias de moins de trois lettres retirés* du nom du fournisseur (`dd`, `pd`, `ic`, `zd`, `mg`, `mc`, `cio`, `bx`, `mm`, `tn`, `wpe`), sources de bruit et sans porte littérale possible ; pour Datadog, `dd` reste admis dans `DD_API_KEY` et `DD_APP_KEY` (ou `DD_APPLICATION_KEY`).
 - *Préfixe de 1Password* (`ops_eyJ`) : casse du jeton réel.
-- *Aucun contrôle hors motif.* Les règles d'origine portent une entropie minimale, des exigences de classes de caractères et un appel de validation au fournisseur : rien de cela n'est repris (le moteur n'ouvre aucune connexion ; le schéma `RulePack` n'a pas ces champs).
+- *Aucun contrôle hors motif* jusqu'à la v0.9.0. Les règles d'origine portent une entropie minimale, des exigences de classes de caractères et un appel de validation au fournisseur : rien de cela n'était repris (le moteur n'ouvre aucune connexion ; le schéma `RulePack` n'a pas ces champs). Depuis la v0.10.0, l'entropie minimale est reprise par un validateur nommé, sans changement du schéma (« Vraisemblance des règles de fournisseurs », dernière section).
 - *Scores* : 95 pour les 113 règles à préfixe fixe, 80 pour les 181 règles qui exigent le nom du fournisseur à proximité de la valeur. *Type de secret* `provider_token`. *Identifiants* et *libellés de Substitut* (français, anglais) écrits pour ce dépôt.
 
 **Écarts d'analyse du moteur ajoutés avec ces règles, sans effet sur le corpus d'origine** (`detect/prefilter.go`, `detect/literalindex.go`) :
@@ -509,3 +509,198 @@ anglais. Ce qu'elles doivent à d'autres projets :
 Les avis de ces deux projets ne portent aucune mention qui concerne les fichiers cités (le fichier `NOTICE` de
 DefenseClaw vise ses dossiers `internal/sensor/`, non repris ; Skill Scanner n'a pas de fichier `NOTICE`). Mesures et
 critère de garde des motifs : `docs/bench.md`.
+
+## Règles reprises de Betterleaks, vraisemblance et banc de comparaison (v0.10.0)
+
+Trois ajouts de la v0.10.0, aucun dans le moteur d'origine : un contrôle de vraisemblance des valeurs que les règles de fournisseurs signalent, 66 règles reprises de Betterleaks, et un banc de comparaison rejoué à chaque version. Le corpus d'origine (`upstream-*.json`) et les règles du catalogue d'origine ne changent pas.
+
+**Origine.** Betterleaks : dépôt `betterleaks/betterleaks`, commit `b4b1c4455987636400ce693bd9d8a8e2cf375ed9` du 13 novembre 2026, licence MIT, « Copyright (c) 2026 Zachary Rice » (texte reproduit à la fin de cette section, avis dans `NOTICE`). Deux choses en sont reprises : des motifs de règles (`rules/*.go`, champ `Regex`, et le seuil de leur filtre d'entropie), et les cas d'essai que chaque règle porte dans son fichier source (`vectors/comparison/betterleaks.json`). Le code de Betterleaks n'est ni copié, ni compilé, ni exécuté. Les seuils d'entropie des règles reprises de Titus viennent du champ `min_entropy` de ces règles (même commit de Titus que la section « Règles de fournisseurs », Apache-2.0).
+
+### Vraisemblance des règles de fournisseurs
+
+Une règle de fournisseur reconnaît une forme. Une valeur faite d'une lettre répétée, de zéros ou de « X » a la forme et n'est pas un jeton : sur les 931 cas négatifs de Betterleaks, les règles de fournisseurs de la v0.9.0 rendaient 62 constats sur de telles valeurs.
+
+- *Contrôle d'office* (`detect/validators.go`, `plausibleToken`, appliqué par `scanFixedPattern` et par la lecture des jetons finis par un tiret). Pour une règle « motif seul » de type `provider_token` hors du catalogue d'origine, une valeur de moins de 6 octets distincts, ou d'entropie de Shannon inférieure à 3,0 bits par octet, n'est pas un constat. Le contrôle vaut pour les règles de fournisseurs du Pack initial et pour toute règle de ce type ajoutée par un Pack.
+- *Règles du catalogue d'origine* (`originCatalogRules` : `github_token`, `github_fine_grained_pat`, `gitlab_pat`, `openrouter_key`, `anthropic_key`, `openai_key`, `stripe_secret_key`, `slack_token`, `slack_webhook`, `sendgrid_key`, `npm_token`, `huggingface_token`, `databricks_pat`, `digitalocean_token`, `shopify_token`) : le contrôle ne s'y applique pas. Les essais du moteur d'origine attendent un constat sur des valeurs sans diversité (un préfixe suivi d'une lettre répétée) : les y soumettre casserait la parité. Il en reste 19 constats sur les négatifs de Betterleaks.
+- *Validateurs nommés.* La liste fermée des validateurs reçoit `token_entropy_25` à `token_entropy_45` : au moins 6 octets distincts et une entropie d'au moins NN dixièmes de bit par octet. Le schéma `RulePack` ne change pas (le champ `validator` est une chaîne, la liste est tenue en code). Le contrôle ne décode rien et ne débite aucun budget : à la différence des validateurs à clé de contrôle, il s'exécute aussi dans un texte décodé de base64. Un moteur antérieur à la v0.10.0 refuse en entier un Pack qui porte l'un de ces noms (`unknown_validator`).
+- *Seuils du Pack initial.* Les 181 règles à proximité de la v0.9.0 portent un validateur. 79 gardent le seuil `min_entropy` de leur règle de Titus (3,2 à 4,0). 67 portent 3,0 : leur règle de Titus n'a pas de seuil, ou un seuil de 3,0 ou moins. 35 portent un seuil plus bas, pour l'une de deux raisons. *Forme du motif* (22 règles) : le plus haut seuil que 99,95 % de 60 000 valeurs tirées au hasard de la forme du motif passent (alphabet hexadécimal tiré dans une seule casse). Sans ce plafond, un seuil de 3,5 écarterait 19 % des clés de 32 chiffres hexadécimaux, et celui de 4,0 toute clé de 40 chiffres hexadécimaux. Seuils abaissés : `alibaba_access_key_secret` 4,2 → 3,9 ; `asana_oauth_personal_access_token` 3,5 → 2,6 ; `azure_openai_api_key` 3,5 → 3,0 ; `circleci_api_project_token` 3,3 → 3,2 ; `cisco_meraki_api_key` 3,3 → 3,2 ; `clay_api_key` 3 → 2,6 ; `codacy_api_key` 3,5 → 3,4 ; `customer_io_tracking_api_key` 3 → 2,6 ; `deepgram_api_key` 3,5 → 3,2 ; `eventbrite_api_key` 3,5 → 3,4 ; `finicity_api_token` 3,5 → 3,0 ; `finicity_client_secret` 3,5 → 3,4 ; `guardian_api_key` 3,5 → 3,2 ; `honeycomb_api_key` 3,5 → 3,0 ; `larksuite_tenant_access_token` 3,2 → 3,1 ; `mattermost_access_token` 4 → 3,7 ; `mongodb_api_private_key` 3,3 → 3,2 ; `opsgenie_api_key` 3,5 → 3,2 ; `owlbot_api_key` 3,5 → 3,2 ; `packagecloud_api_key` 3,5 → 3,3 ; `sendbird_api_token` 4 → 3,2 ; `weights_and_biases_api_key` 3,5 → 3,2. *Clé publiée hexadécimale* (13 règles, dont deux déjà abaissées de 3,5 à 3,4 pour la forme de leur motif) : le motif admet tout l'alphabet alphanumérique, mais un exemple publié avec la règle de Titus est une clé hexadécimale (après un préfixe littéral pour la clé d'autorité d'origine Cloudflare) ; la forme est alors tirée en hexadécimal, et le seuil plafonné de la même façon. Le seuil d'avant écartait de 0,5 % à 55 % des clés hexadécimales de ces formes (19 % de celles de 32 chiffres au seuil de 3,5), que la v0.9.0 trouvait. Seuils : `baremetrics_api_key` 3,3 → 2,8 ; `cloudflare_ca_key` 4 → 3,9 ; `cloudsight_api_key` 3,5 → 2,6 ; `codecov_access_token` 3,5 → 3,1 ; `datadog_api_key` 3,3 → 3,0 ; `finnhub_api_token` 3 → 2,6 ; `iterable_api_key` 3,5 → 3,0 ; `openweather_map_api_key` 3,5 → 3,0 ; `pagerduty_api_key` 3,5 → 2,8 ; `pdflayer_api_key` 3,5 → 3,0 ; `scraperapi_key` 3,5 → 3,0 ; `snyk_api_key` 3,5 → 3,2 ; `wpengine_api_key` sans seuil → 2,8. Les exemples ne sont pas repris ; la liste des règles est tenue dans `HEX_KEY_RULES` (`generator/test/provider-rules.test.ts`), qui rejoue le tirage. Huit règles descendent ainsi sous le seuil d'office (2,6 à 2,8 : valeurs de 18 à 25 caractères, dont 3 % de celles de 20 chiffres hexadécimaux ont une entropie inférieure à 3,0) ; elles gardent les six octets distincts.
+- *Mesure sur les exemples de Titus.* Sur 385 exemples publiés que nos motifs lisent, 13 (10 règles) ont une valeur dont l'entropie est sous le seuil de leur propre règle : c'est ce qui a fait plafonner les seuils plutôt que les reprendre tels quels.
+- *Corpus.* `vectors/detection/rules-providers.json` : le résultat attendu vient de la lecture de référence en JavaScript, qui applique une seconde écriture du contrôle (`generator/rule-pack/provider-rules.ts`, `plausibleToken`, même ordre de somme et même logarithme que le moteur Go). Seul le cas positif de `github_app_installation_token` change : sa forme d'essai minimale (un caractère par segment) n'avait pas la diversité d'un jeton. `vectors/noise-providers.json` (`generator/corpus/provider-noise.ts`, `TestNoiseProviders`) : pour chaque règle, la forme de sa valeur où chaque suite de caractères est un seul caractère répété ; le motif la reconnaît, l'analyse ne rend aucun constat. 352 cas pour 360 règles : cinq règles n'en ont pas parce que le texte de leur cas est aussi une affectation à un nom sensible, trois (`slack_workflow_webhook`, `slack_trigger_url`, `devcycle_server_sdk_key`) parce que les littéraux de la valeur portent à eux seuls la diversité exigée.
+- *Limites.* Le contrôle porte sur la valeur entière, préfixe compris : un préfixe long et varié suffit à passer le seuil d'office. Il n'écarte pas une valeur d'exemple variée (`abcdef0123456789…`). Les autres règles à proximité dont le motif admet tout l'alphabet alphanumérique gardent le seuil de Titus, qui sépare une clé à casse mêlée d'une empreinte hexadécimale voisine (somme de contrôle d'un fichier de verrouillage, identifiant de commit) : si la clé réelle d'un de ces fournisseurs est hexadécimale sans qu'un exemple publié le montre, un seuil de 3,5 en écarte jusqu'à 19 % (32 chiffres). À revoir fournisseur par fournisseur, sur sa documentation.
+
+### Règles reprises de Betterleaks
+
+Betterleaks a 91 règles « jeton à préfixe » sans règle dédiée complète dans le Pack de la v0.9.0 (mesure du banc, ci-dessous). 83 sont reprises : par 66 règles nouvelles, ajoutées à la fin de `generator/rule-pack/provider-rules.json` (champ `upstream` : `betterleaks.<identifiant>`), et par 8 règles existantes dont le motif est élargi. 8 ne le sont pas.
+
+**Modifications par rapport aux motifs de Betterleaks.**
+
+- *Fin du jeton.* Le délimiteur de fin de Betterleaks (guillemet, espace, `;`, `)`, fin de texte) est remplacé par une limite de mot, ou par « pas un caractère du jeton, ou fin de texte » quand la dernière classe admet autre chose qu'un caractère de mot : un jeton suivi d'une virgule ou d'un point, dans une phrase, est lu.
+- *Casse.* Les drapeaux `(?i)` sont retirés : classes écrites dans les deux casses, préfixe dans la casse du jeton réel.
+- *Un seul groupe capturant*, la valeur ; porte littérale d'au moins trois octets prouvée pour chaque règle (`TestProviderRules`). `buildkite_service_token` : les sept préfixes et les six longueurs de Betterleaks, sans lier chaque longueur à son préfixe (la porte ne se prouve pas autrement).
+- *Nom du fournisseur exigé* (score 80) pour trois règles dont le préfixe est trop court ou absent : `brave_search_api_key` (préfixe `BSA`, exigé après « brave » ou l'en-tête `X-Subscription-Token`), `facebook_access_token` (identifiant d'application, `|`, secret : aucun préfixe), `couchbase_capella_api_key` (comme chez Betterleaks). Les 63 autres sont à préfixe fixe (score 95).
+- *Règles réunies.* `vercel_token` lit les cinq préfixes de Vercel (`vck_`, `vca_`, `vcr_`, `vci_`, `vcp_`), `settlemint_access_token` les trois de SettleMint, `slack_other_token` les jetons `xoxc-`, `xoxe-` et `xoxo-`.
+- *Complétées.* `datastax_astra_token` lit aussi la seconde moitié du jeton (64 chiffres hexadécimaux après « : »), que le motif d'origine laisse hors de la valeur.
+- *Vraisemblance.* Le seuil du filtre d'entropie de la règle d'origine devient le validateur de la règle (`token_entropy_35` pour 45 règles, `token_entropy_40` pour 4, `token_entropy_32` pour une) ; 16 règles gardent le seuil d'office. Quatre règles s'écartent du seuil d'origine : `datastax_astra_token` (4,0 dans Betterleaks, 3,5 ici : 0,13 % des valeurs de la forme la plus courte du motif sont sous 4,0), `square_access_token_eaaa` (2,0, 3,5 ici : le préfixe « EAAA » est court et se lit aussi dans du base64, sans le rapport de jetons de Betterleaks), `slack_other_token` (3,5, seuil d'office ici : 0,6 % des jetons « xoxo- » de la forme la plus courte, des groupes de chiffres puis seize chiffres hexadécimaux, sont sous 3,5) et `huggingface_organization_token` (2,0, seuil d'office ici).
+- *Resserrées contre les identifiants de code.* Betterleaks écarte les valeurs faites de mots par un rapport de jetons (`tokenRatio`) que ce moteur n'a pas. Quatre préfixes sont aussi des débuts d'identifiants (`tss_`, `prf_`, `lip_`, `persona_production_`) : la suite du jeton n'y admet pas « _ », et un nom comme `prf_hmac_sha256_expand_label` n'est pas signalé. `devcycle_server_sdk_key` exige un chiffre dans la suite du préfixe, longue de huit caractères au moins comme dans la règle d'origine (`dvc_server_hostname` et `dvc_server_ipv4` ne sont pas des clés). Ces cinq règles ne lisent donc pas un jeton qui porterait un « _ », ou aucun chiffre : sept positifs de Betterleaks, tous de valeurs d'essai à « _ », en sortent.
+- *Non repris* : les mots-clés de préfiltre (la porte est déduite du motif), le rapport de jetons (`tokenRatio`), les filtres de forme écrits en expressions (`matchesAny`), les appels de validation au fournisseur, les règles composées.
+
+**Règles existantes complétées** (leur champ `upstream` reste celui de Titus) : `tailscale_api_key` (segment de type facultatif, 20 à 70 caractères : lit les six formes de clé Tailscale) ; `hashicorp_vault_service_token` (`-` et `_` admis après `hvs.`) ; `circleci_api_personal_access_token` (22 à 24 caractères quelconques après `CCIPAT_`, score porté de 80 à 95 : le préfixe est fixe) ; `buildkite_api_key` (40 ou 53 caractères) ; `posthog_personal_api_key` (41 à 49 caractères) ; `nuget_api_key` (structure de la clé : alphabet base32 et bits fixes, dans les deux casses ; le motif d'avant admettait 43 caractères quelconques) ; `scalingo_api_token` (jeton fini par un tiret) ; `slack_app_token` (forme `xapp-1-…-…-…` des jetons actuels, en plus de la forme d'avant). `nylas_api_key` garde son motif ; son cas du corpus devient sa seconde forme (30 caractères après le nom), la forme `nyk_` étant lue par `nylas_api_key_v3`.
+
+**Slack.** Le critère « `slack_token` couvre `xapp-`, `xoxo-`, `xoxc-`, `xoxe-` » est tenu par deux règles de fournisseurs, `slack_other_token` et `slack_app_token`, pas par `slack_token` : cette règle vient du catalogue d'origine, son motif est figé par `rules.ts` et la parité. `xoxo-` suivi de mots ou d'une date (« xoxo-my-dear-… ») n'est pas signalé : la règle reprend les formes exactes de Betterleaks, des groupes de chiffres puis une suite hexadécimale ou alphanumérique. Le cookie de session `xoxd-` et les adresses de webhook que `slack_webhook` ne lit pas ne sont pas repris.
+
+**Correspondance** (règle de Betterleaks, règle du Pack) :
+
+| Betterleaks | Pack initial | Périmètre |
+|---|---|---|
+| `adobe-client-secret` | `adobe_client_secret` (nouvelle) | liste des 91 |
+| `aikido-ci-token` | `aikido_ci_token` (nouvelle) | liste des 91 |
+| `atlassian-api-token` | `atlassian_api_token` (nouvelle) | liste des 91 |
+| `aws-amazon-bedrock-api-key-long-lived` | `aws_bedrock_api_key` (nouvelle) | liste des 91 |
+| `bitbucket-data-center-token` | `bitbucket_data_center_token` (nouvelle) | liste des 91 |
+| `brave-search-api-key` | `brave_search_api_key` (nouvelle) | liste des 91 |
+| `buildkite-service-token` | `buildkite_service_token` (nouvelle) | liste des 91 |
+| `buildkite-user-access-token` | `buildkite_api_key` (complétée) | liste des 91 |
+| `cartesia-api-key.1` | `cartesia_api_key` (nouvelle) | liste des 91 |
+| `circleci-personal-token` | `circleci_api_personal_access_token` (complétée) | liste des 91 |
+| `cloudflare-api-key.2` | `cloudflare_user_api_token` (nouvelle) | liste des 91 |
+| `cloudsmith-api-key` | `cloudsmith_api_key` (nouvelle) | liste des 91 |
+| `cockroachlabs-cloud-api-key` | `cockroachdb_cloud_api_key` (nouvelle) | liste des 91 |
+| `configcat-sdk-key-extended` | `configcat_sdk_key` (nouvelle) | liste des 91 |
+| `couchbase-capella-api-key` | `couchbase_capella_api_key` (nouvelle) | liste des 91 |
+| `datastax-astra-application-token` | `datastax_astra_token` (nouvelle) | liste des 91 |
+| `deno-account-token` | `deno_deploy_token` (nouvelle) | liste des 91 |
+| `devcycle-server-sdk-key` | `devcycle_server_sdk_key` (nouvelle) | liste des 91 |
+| `devin-personal-api-key` | `devin_personal_api_key` (nouvelle) | liste des 91 |
+| `devin-service-api-key` | `devin_service_api_key` (nouvelle) | liste des 91 |
+| `devin-service-user-token` | `devin_service_user_token` (nouvelle) | liste des 91 |
+| `docker-swarm-join-token` | `docker_swarm_join_token` (nouvelle) | liste des 91 |
+| `docker-swarm-unlock-key` | `docker_swarm_unlock_key` (nouvelle) | liste des 91 |
+| `dockerhub-organization-access-token` | `docker_hub_organization_access_token` (nouvelle) | liste des 91 |
+| `elastic-cloud-api-key` | `elastic_cloud_api_key` (nouvelle) | liste des 91 |
+| `facebook-access-token` | `facebook_access_token` (nouvelle) | liste des 91 |
+| `facebook-page-access-token` | `facebook_page_access_token` (nouvelle) | liste des 91 |
+| `figma-personal-access-token` | `figma_pat` (nouvelle) | liste des 91 |
+| `gcp-gemini-api` | `google_gemini_api_key` (nouvelle) | liste des 91 |
+| `heroku-api-key-v2` | `heroku_api_key_v2` (nouvelle) | liste des 91 |
+| `huggingface-organization-api-token` | `huggingface_organization_token` (nouvelle) | liste des 91 |
+| `labelbox-api-key` | `labelbox_api_key` (nouvelle) | liste des 91 |
+| `labelbox-recursion-api-key` | `labelbox_recursion_api_key` (nouvelle) | liste des 91 |
+| `lichess-personal-access-token` | `lichess_personal_access_token` (nouvelle) | liste des 91 |
+| `llama-cloud-api-key.1` | `llama_cloud_api_key` (nouvelle) | liste des 91 |
+| `mailersend-api-token` | `mailersend_api_token` (nouvelle) | liste des 91 |
+| `mapbox-secret-token` | `mapbox_secret_token` (nouvelle) | liste des 91 |
+| `mercury-production-api-token` | `mercury_production_api_token` (nouvelle) | liste des 91 |
+| `miro-access-token` | `miro_access_token` (nouvelle) | liste des 91 |
+| `neon-api-key` | `neon_api_key` (nouvelle) | liste des 91 |
+| `nuget-api-key` | `nuget_api_key` (complétée) | liste des 91 |
+| `nylas-api-key.1` | `nylas_api_key_v3` (nouvelle) | liste des 91 |
+| `octopus-deploy-api-key` | `octopus_deploy_api_key` (nouvelle) | liste des 91 |
+| `onesignal-rich-authentication-token` | `onesignal_rich_authentication_token` (nouvelle) | liste des 91 |
+| `openshift-user-token` | `openshift_user_token` (nouvelle) | liste des 91 |
+| `paddle-live-api-key` | `paddle_live_api_key` (nouvelle) | liste des 91 |
+| `persona-production-api-key` | `persona_production_api_key` (nouvelle) | liste des 91 |
+| `pinecone-api-key.2` | `pinecone_api_key_pcsk` (nouvelle) | liste des 91 |
+| `pinterest-access-token` | `pinterest_access_token` (nouvelle) | liste des 91 |
+| `planetscale-oauth-token` | `planetscale_oauth_token` (nouvelle) | liste des 91 |
+| `planetscale-password` | `planetscale_password` (nouvelle) | liste des 91 |
+| `polar-oauth-access-token` | `polar_oauth_access_token` (nouvelle) | liste des 91 |
+| `polar-organization-access-token` | `polar_organization_access_token` (nouvelle) | liste des 91 |
+| `polar-personal-access-token` | `polar_personal_access_token` (nouvelle) | liste des 91 |
+| `posthog-personal-api-key` | `posthog_personal_api_key` (complétée) | liste des 91 |
+| `proof-full-access-api-key` | `proof_api_key` (nouvelle) | liste des 91 |
+| `redirect-pizza-api-token.1` | `redirect_pizza_api_token` (nouvelle) | liste des 91 |
+| `render-api-key` | `render_api_key` (nouvelle) | liste des 91 |
+| `rootly-api-key.1` | `rootly_api_key` (nouvelle) | liste des 91 |
+| `runpod-api-key.1` | `runpod_api_key` (nouvelle) | liste des 91 |
+| `samsara-api-token.1` | `samsara_api_token` (nouvelle) | liste des 91 |
+| `scalingo-api-token` | `scalingo_api_token` (complétée) | liste des 91 |
+| `settlemint-application-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `settlemint-personal-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `settlemint-service-access-token` | `settlemint_access_token` (nouvelle) | liste des 91 |
+| `slack-app-token` | `slack_app_token` (complétée) | Slack |
+| `slack-config-refresh-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-legacy-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-session-token` | `slack_other_token` (nouvelle) | Slack |
+| `slack-user-token` | `slack_other_token` (nouvelle) | Slack |
+| `square-access-token` | `square_access_token_eaaa` (nouvelle) | liste des 91 |
+| `tailscale-api-key.1` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-auth-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-oauth-client-secret` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-scim-key` | `tailscale_api_key` (complétée) | liste des 91 |
+| `tailscale-webhook-secret` | `tailscale_api_key` (complétée) | liste des 91 |
+| `thunderstore-api-token.1` | `thunderstore_api_token` (nouvelle) | liste des 91 |
+| `unkey-root-key.1` | `unkey_root_key` (nouvelle) | liste des 91 |
+| `upcloud-api-token` | `upcloud_api_token` (nouvelle) | liste des 91 |
+| `val-town-api-token.1` | `val_town_api_token` (nouvelle) | liste des 91 |
+| `vault-service-token` | `hashicorp_vault_service_token` (complétée) | liste des 91 |
+| `vercel-ai-gateway-key` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-app-access-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-app-refresh-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-integration-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `vercel-personal-access-token` | `vercel_token` (nouvelle) | liste des 91 |
+| `xendit-production-api-key.1` | `xendit_production_api_key` (nouvelle) | liste des 91 |
+
+**Non reprises** (8 des 91) :
+
+| Betterleaks | Raison |
+|---|---|
+| `aws-access-token` | identifiant de clé, pas un secret : la règle aws_access_key_id du catalogue d’origine le signale à 45 (avertissement) |
+| `jwt` | le cas manqué est un JWT sans signature (algorithme « none ») ; la règle jwt du catalogue d’origine est figée |
+| `sendgrid-api-token` | le cas d’essai n’a pas la forme d’une clé SendGrid (22 puis 43 caractères) que lit sendgrid_key |
+| `mapbox-api-token` | jeton public par construction (pk.), écarté comme en v0.8.1 |
+| `posthog-project-api-key` | clé de projet publique par construction (phc_), écartée comme en v0.8.1 |
+| `devcycle-client-sdk-key` | clé publique par construction (SDK client) |
+| `devcycle-mobile-sdk-key` | clé publique par construction (SDK mobile) |
+| `stripe-access-token` | les formes live et test sont lues par stripe_secret_key ; la forme « _prod_ », seule manquante, n’est pas un format documenté de Stripe et son motif signalerait des identifiants (rk_prod_environment) |
+
+`vault-service-token` est reprise pour sa forme `hvs.` seulement. Sa forme historique (`s.` et 24 caractères) ne l'est pas : Betterleaks l'entoure d'un filtre « pas que des lettres » que le Pack ne sait pas exprimer, et sans lui la règle signale des appels de méthode (quatre négatifs de Betterleaks sur quatre, à l'essai).
+
+**Corpus.** `vectors/detection/rules-providers.json` : 720 cas (un positif et un presque positif pour chacune des 360 règles), formes minimales des motifs, valeurs synthétiques tirées de SHA-256. Aucune valeur d'essai de Betterleaks n'entre dans le corpus de parité. Le 15 novembre 2026, `npm run vectors:detection -- --upstream <checkout> --check` rend « Corpus identique : 1771 cas, 16 fichiers ».
+
+**Mesures du 15 novembre 2026** (indicatives). Bruit : sur 560 855 lignes de code Go et JavaScript et de prose française et anglaise (25 Mo, 390 morceaux de 64 Kio, dont 8 que l'analyse ne finit pas, avant comme après), les règles de fournisseurs ne rendent aucun constat, avant comme après, et le nombre total de constats ne change pas (1 647). Sur les 931 cas négatifs de Betterleaks, 576 rendent au moins un constat (595 en v0.9.0) et 476 un constat bloquant (485) ; les règles nouvelles ou complétées s'y déclenchent 19 fois (7 fois en v0.9.0 pour les règles complétées), sur des jetons d'une forme voisine : un jeton Vercel d'un autre préfixe, une clé RunPod lue par la règle de redirect.pizza et l'inverse, des jetons Mapbox au contenu mal formé, que Betterleaks écarte par un filtre.
+
+### Banc de comparaison Betterleaks
+
+`vectors/comparison/betterleaks.json` : les 1 880 cas d'essai littéraux des règles de Betterleaks (867 positifs, 858 négatifs, 82 positifs et 73 négatifs de règles « composant »), 464 règles. `generator/corpus/betterleaks.ts` les lit dans le texte des fichiers `rules/*.go` et `rules/generic/*.go` d'un clone (appels `rulebuilder.Match`, `NoMatch`, `MatchComponent`, `NoMatchComponent` dont chaque argument est un littéral de chaîne, ou plusieurs joints par `+`) ; 17 appels à argument non littéral sont comptés, pas repris. Le clone doit être au commit épinglé : l'empreinte SHA-256 de la liste des fichiers lus et de leurs empreintes est vérifiée (`BETTERLEAKS_RULES_DIGEST`), sans exécuter git. Régénération : `node corpus/betterleaks.ts --clone <clone> [--check]` dans `generator/`.
+
+C'est un banc, pas un corpus de parité : le fichier ne porte aucun résultat attendu de ce moteur, et un négatif de Betterleaks veut dire « cette règle de Betterleaks ne doit pas se déclencher ici », pas « rien à signaler ». `TestComparisonBetterleaks` (`detect/comparison_test.go`) mesure quatre chiffres avec les règles que `LoadRules` exécute, et refuse une baisse des trois premiers ou une hausse du quatrième :
+
+| Chiffre | v0.9.0 | Après la vraisemblance | v0.10.0 |
+|---|---:|---:|---:|
+| Rappel : positifs dont un constat recouvre la valeur attendue | 818 / 867 (94,3 %) | 818 (94,3 %) | 826 (95,3 %) |
+| Positifs trouvés par une règle dédiée (ni affectation, ni entropie) | 397 (45,8 %) | 396 (45,7 %) | 554 (63,9 %) |
+| Positifs recouverts par un constat que le préréglage bloque | 725 (83,6 %) | 725 (83,6 %) | 774 (89,3 %) |
+| Constats de règles `provider_token` sur des négatifs sans diversité | 62 | 19 | 19 |
+
+Le positif perdu par la vraisemblance est la clé age d'essai de Betterleaks, faite de 58 fois la même lettre. Les 41 positifs encore manqués sont hors de ce lot : mots de passe de la règle générique de Betterleaks (9), variables Sidekiq (8), jeton SonarQube (6), identifiant et mot de passe de `curl -u` (4), identifiant Sumo Logic (4), et dix autres dans huit règles. Les 82 cas « composant » (identifiant de client, nom d'utilisateur) ne sont pas mesurés : ce ne sont pas des secrets seuls.
+
+Le fichier du banc porte des jetons d'essai publics : il est exempté de la recherche de secrets par son chemin exact (`.gitleaks.toml`), comme `vectors/noise-providers.json`, dont quatre formes à caractère répété déclenchent une règle de gitleaks ; le générateur, lui, reste analysé.
+
+Vérification : `TestPlausibility`, `TestNoiseProviders`, `TestProviderRules`, `TestComparisonBetterleaks`, `TestParity` (1 771 cas), `generator/test/provider-rules.test.ts` (dont la garde de rappel : 99,5 % au moins de 2 000 valeurs tirées de la forme de chaque règle passent son seuil, et de même 2 000 valeurs hexadécimales pour les treize règles à clé publiée hexadécimale).
+
+### Licence de Betterleaks
+
+```text
+MIT License
+
+Copyright (c) 2026 Zachary Rice
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```

@@ -20,6 +20,7 @@ import { synth, type CaseIntent } from './synthetic.ts';
 import {
   PROVIDER_RULE_SOURCES,
   PROVIDER_SECRET_TYPE,
+  providerPatternMatches,
   providerReferenceFindings,
   type ProviderRule,
   type SamplePart,
@@ -168,4 +169,54 @@ export function providerRuleCoverageProblems(
   }
   if (cases.length !== 2 * PROVIDER_RULE_SOURCES.length) problems.push('règles de fournisseurs : nombre de cas inattendu');
   return problems;
+}
+
+/**
+ * Cas de bruit d'une règle de fournisseur (v0.10.0, `vectors/noise-providers.json`) : le texte de son cas positif, où
+ * chaque suite tirée au sort est remplacée par un seul caractère répété (le premier de son alphabet). La valeur garde
+ * la forme du motif et n'a pas la diversité d'un jeton : le moteur ne doit rien signaler.
+ */
+export function providerNoiseText(rule: ProviderRule): string {
+  const flat = (parts: readonly SamplePart[]): string =>
+    parts.map((part) => ('lit' in part ? part.lit : (part.alphabet[0] ?? '').repeat(part.length))).join('');
+  return `${BEFORE}${flat(rule.sample.before)}${flat(rule.sample.value)}${flat(rule.sample.after)}${AFTER}`;
+}
+
+/**
+ * Règles sans cas de bruit parce que le texte de leur cas est aussi une affectation à un nom sensible (`before` finit
+ * par « nom = » ou « nom: ») : les affectations du moteur d'origine y rendent leur propre constat, hors du contrôle de
+ * vraisemblance des règles de fournisseurs.
+ */
+export const PROVIDER_NOISE_ASSIGNMENT_FORM: readonly string[] = [
+  'blynk_device_access_token',
+  'coinbase_cdp_api_key',
+  'nasa_api_key',
+  'thingsboard_provision_device_secret',
+  ['wireguard', 'private', 'key'].join('_'),
+];
+
+export interface ProviderNoiseCase {
+  readonly id: string;
+  readonly input: string;
+}
+
+/**
+ * Cas de bruit, dans l'ordre du Pack, et règles sans cas. Une règle a un cas quand son motif reconnaît la valeur à un
+ * caractère répété (sans le contrôle de vraisemblance, elle la signalerait) et que la lecture de référence n'y trouve
+ * plus rien, pour aucune règle. Elle n'en a pas quand son motif refuse une telle valeur (`unmatched` : le motif exige
+ * déjà des caractères différents) ou quand les littéraux de la valeur portent à eux seuls la diversité exigée
+ * (`plausible`), ni quand son texte est une affectation à un nom sensible (`PROVIDER_NOISE_ASSIGNMENT_FORM`).
+ */
+export function providerNoiseCases(): { cases: ProviderNoiseCase[]; unmatched: string[]; plausible: string[] } {
+  const cases: ProviderNoiseCase[] = [];
+  const unmatched: string[] = [];
+  const plausible: string[] = [];
+  for (const rule of PROVIDER_RULE_SOURCES) {
+    if (PROVIDER_NOISE_ASSIGNMENT_FORM.includes(rule.ruleId)) continue;
+    const input = providerNoiseText(rule);
+    if (!providerPatternMatches(input).some((found) => found.rule.ruleId === rule.ruleId)) unmatched.push(rule.ruleId);
+    else if (providerReferenceFindings(input).length > 0) plausible.push(rule.ruleId);
+    else cases.push({ id: `fournisseur/${rule.ruleId}/caractere-repete`, input });
+  }
+  return { cases, unmatched, plausible };
 }
