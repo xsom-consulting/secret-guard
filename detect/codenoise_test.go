@@ -88,6 +88,7 @@ func TestAssignmentValueIsNotALiteral(t *testing.T) {
 		{"type générique", `  ` + nameToken + `: Map<string, Session>;`, "typescript"},
 		{"fonction fléchée", `  ` + nameToken + `: (request) => request.headers.get("x-request-id"),`, "typescript"},
 		{"clé de section YAML", "    secrets:\n      NPM_" + strings.ToUpper(nameToken) + ":\n        required: true", "yaml"},
+		{"champ sous un mot de passe", "properties:\n  " + namePassword + ":\n    type: string\n    minLength: 8", "yaml"},
 		{"case puis instruction", "\tcase n == \"" + strings.ToLower(nameAuth) + "\":\n\t\treturn kind, true", "go"},
 		{"comparaison puis continue", "    if name == \"access_" + nameToken + "\":\n        continue", "python"},
 	}
@@ -195,6 +196,8 @@ func TestAssignmentNoiseGuards(t *testing.T) {
 		{"accents graves d'un mot, sans commande", strings.ToUpper(nameToken) + "=`sesame`", ""},
 		{"valeur entre guillemets à la ligne suivante", nameToken + " =\n  \"" + literalStrong + "\"", "typescript"},
 		{"mot court sans langage", nameAPIKey + `: "test",`, ""},
+		{"mot de passe d'un mot à la ligne suivante", namePassword + ":\n  sesameouvretoi", "yaml"},
+		{"mot de passe seul élément d'une liste en ligne", namePassword + ": [sesameouvretoi]", "yaml"},
 		{"accolades suivies d'un texte collé", namePassword + `={label}` + literalStrong, "properties"},
 		{"crochets suivis d'un texte collé", namePassword + `: [a]` + literalWords, "yaml"},
 	}

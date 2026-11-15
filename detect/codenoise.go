@@ -570,8 +570,9 @@ func hasCredibleLiteral(v *view, start, end int, secretType string, data, words 
 }
 
 // isBracketedWord dit si l'ouverture en open ne porte, jusqu'à sa fermeture sur la ligne, qu'un seul mot nu de forme
-// stricte (« [Xy7…] », « (Xy7…) ») : un littéral écrit entre crochets ou parenthèses dans une phrase, pas une structure.
-func isBracketedWord(v *view, open, lineEnd int) bool {
+// stricte (« [Xy7…] », « (Xy7…) ») : un littéral écrit entre crochets ou parenthèses dans une phrase, ou le seul élément
+// d'une liste YAML en ligne, pas une structure de code. Sous un mot de passe, qui peut être un mot, 8 unités suffisent.
+func isBracketedWord(v *view, open, lineEnd int, secretType string) bool {
 	text := v.text
 	start := skipSpacesAndTabs(text, open+1)
 	end := start
@@ -579,7 +580,10 @@ func isBracketedWord(v *view, open, lineEnd int) bool {
 		end++
 	}
 	closing := skipSpacesAndTabs(text, end)
-	return end > start && closing < lineEnd && bytes.IndexByte([]byte(")]}"), text[closing]) >= 0 && strictShaped(v, start, end)
+	if end == start || closing >= lineEnd || bytes.IndexByte([]byte(")]}"), text[closing]) < 0 {
+		return false
+	}
+	return strictShaped(v, start, end) || (secretType == "password" && utf16Units(text[start:end]) >= 8)
 }
 
 // isBareWordByte : octet d'un mot nu d'une structure (ni espace, ni guillemet, ni ponctuation de structure).
@@ -667,7 +671,7 @@ func (ctx *contextualText) walkStructure(v *view, open int, secretType string) s
 		// Ligne plus longue que la borne : non jugée.
 		return structureWalk{}
 	}
-	if hasCredibleLiteral(v, open, lineEnd, secretType, true, false) || isBracketedWord(v, open, lineEnd) {
+	if hasCredibleLiteral(v, open, lineEnd, secretType, true, false) || isBracketedWord(v, open, lineEnd, secretType) {
 		return structureWalk{judged: true, firstLine: true}
 	}
 	walk := structureWalk{}
@@ -783,6 +787,29 @@ func interpolation(v *view, start, end int, secretType string, fields bool) (int
 	return inner, true
 }
 
+// isMappingEntry dit si text[start:end] commence par un champ : nom (lettres, chiffres, « _ », « . », « - », guillemets
+// admis), puis « : » suivi d'une espace ou de la fin de la ligne.
+func isMappingEntry(text []byte, start, end int) bool {
+	i := start
+	if i < end && (text[i] == '"' || text[i] == '\'') {
+		i++
+	}
+	nameStart := i
+	for i < end && (isWordByte(text[i]) || text[i] == '.' || text[i] == '-') {
+		i++
+	}
+	if i == nameStart {
+		return false
+	}
+	if i < end && (text[i] == '"' || text[i] == '\'') {
+		i++
+	}
+	for i < end && (text[i] == ' ' || text[i] == '\t') {
+		i++
+	}
+	return i < end && text[i] == ':' && (i+1 == end || text[i+1] == ' ' || text[i+1] == '\t')
+}
+
 // crossesLine dit si une fin de ligne sépare le séparateur de l'affectation du début de la valeur.
 func crossesLine(text []byte, from, valueStart int) bool {
 	for i := valueStart - 1; i >= from; i-- {
@@ -831,10 +858,14 @@ func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parse
 	start, end := p.start, p.valueEnd
 
 	// Valeur sans guillemets lue à la ligne suivante (clé de section YAML, « case … : » puis instruction) : la ligne
-	// suivante est relue pour elle-même.
-	// La forme est jugée sur toute la ligne : la lecture d'origine coupe la valeur à la première virgule ou au dièse.
-	if p.kind == kindUnquoted && crossesLine(text, m.start, start) && !hasSecretWord(v, start, max(end, ctx.nextLineBreak(start))) {
-		return noiseVerdict{drop: true, resume: ctx.lineStart(start)}
+	// suivante est relue pour elle-même. La forme est jugée sur toute la ligne : la lecture d'origine coupe la valeur à
+	// la première virgule ou au dièse. Sous un mot de passe, qui peut être un mot, seule une ligne qui est elle-même
+	// un champ (« nom: … ») tombe : un scalaire YAML peut s'écrire à la ligne suivante.
+	if p.kind == kindUnquoted && crossesLine(text, m.start, start) {
+		nextEnd := ctx.nextLineBreak(start)
+		if !hasSecretWord(v, start, max(end, nextEnd)) && (secretType != "password" || isMappingEntry(text, start, nextEnd)) {
+			return noiseVerdict{drop: true, resume: ctx.lineStart(start)}
+		}
 	}
 
 	// Valeur publique connue (clé publiable, clé de site, jeton public d'essai : publicvalues.go), partout, sous un nom

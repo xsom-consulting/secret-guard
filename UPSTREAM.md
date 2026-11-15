@@ -427,7 +427,8 @@ création du constat.
   mot de passe porté par un tableau ou un objet, 8 unités sans espace suffisent (le corpus d'origine garde l'objet JSON
   qui porte un mot de passe fait de mots) ; jamais une adresse sans identifiants, un nom de constante ni une date.
 - *Valeur sans guillemets lue à la ligne suivante* : écartée si aucun mot de la ligne n'a la forme décrite au palier 2 ;
-  la ligne suivante est relue pour elle-même.
+  la ligne suivante est relue pour elle-même. Sous un nom de mot de passe, seule une ligne qui est elle-même un champ
+  (un nom suivi du signe deux-points) est écartée : un scalaire YAML peut s'écrire à la ligne suivante.
 
 **Palier 2, dans du code seulement** (langage de code déclaré, ou, sans langage, ligne qui porte un mot-clé de
 déclaration parmi `const`, `let`, `var`, `return`, `readonly`, `public`, `private`, `protected`, `type`, `interface`,
@@ -474,13 +475,13 @@ analyse séquentielle et en parallèle (`TestParityWorkers`).
   `TestExpurgateVectors`).
 - **`vectors/noise.json`** : 157 cas « vecu/ » ajoutés (212 au total), chacun sans langage puis avec le langage de son
   fichier. Sur le code de v0.9.0, 104 d'entre eux donnent un constat ; `TestNoiseCorpus` passe à la fin du lot.
-- **`vectors/detection/rules-code-noise.json`** : 74 cas, par voisins, la forme écartée (43 cas sans constat, que le
-  moteur d'origine signale tous) et la même forme qui porte un littéral (31 cas dont le constat reste). Le résultat
+- **`vectors/detection/rules-code-noise.json`** : 77 cas, par voisins, la forme écartée (44 cas sans constat, que le
+  moteur d'origine signale tous) et la même forme qui porte un littéral (33 cas dont le constat reste). Le résultat
   attendu vient d'une seconde écriture des filtres en TypeScript (`generator/corpus/code-noise.ts`), qui part des
   constats du moteur d'origine, juge chacun, et fait relire par le moteur d'origine la suite d'une étendue écartée ;
   une forme qu'elle ne lit pas arrête le générateur. Cette seconde écriture a relevé un défaut de la première (le
   palier 2 retirait une structure qui porte un littéral), corrigé avant la fin du lot. Comme les autres lectures
-  absentes du moteur d'origine, ces cas restent hors des vecteurs du masquage. Total du corpus : 1 713 cas, 17 fichiers.
+  absentes du moteur d'origine, ces cas restent hors des vecteurs du masquage. Total du corpus : 1 716 cas, 17 fichiers.
 
 ### Mesures du 15 novembre 2026
 
@@ -511,7 +512,7 @@ palier 2 et vitesse : `docs/bench.md`, « v0.10.0 : code ordinaire ».
 `TestSecretShapeCoversProviderTokens` ; `TestBasicAuthIgnoresDatesAndNumericIDs`, `TestBasicAuthKeepsCredentials` ;
 `TestEncryptedEnvelopeIsNotASecret`, `TestEncryptedEnvelopeGuards`, `TestPGPPrivateKeyIsNotAnEnvelope` ;
 `TestPublicForms`, `TestPublicValueIsNotAnAssignment`, `TestPublicValueIsNotAnEntropyFinding` ;
-`TestCodeNoiseWorstCases`, `FuzzCodeNoise` ; `TestParity` (1 713 cas, 0 écart), `TestParityWorkers`, `TestRedactParity`,
+`TestCodeNoiseWorstCases`, `FuzzCodeNoise`, `TestStructureHelpers` ; `TestParity` (1 716 cas, 0 écart), `TestParityWorkers`, `TestRedactParity`,
 `TestDecisionParity`, et la suite du module `expurgation` ; côté générateur, `generator/test/code-noise.test.ts`.
 
 ### Ce qui reste signalé, et ce qui est perdu
@@ -525,6 +526,10 @@ palier 2 et vitesse : `docs/bench.md`, « v0.10.0 : code ordinaire ».
   dont la valeur est faite de mots (y compris longs, séparés par des tirets), d'une suite aléatoire de moins de
   12 caractères sans chiffre, ou de moins de 16 lettres d'une seule casse. Une règle à format fixe ou l'entropie
   peuvent encore la trouver.
+- Perdu, partout hors dotenv et affectation nue d'environnement : sous un nom de mot de passe, le constat d'un littéral
+  de moins de 8 caractères porté par un tableau ou un objet (seuil qui écarte les schémas à type de chaîne), et celui
+  d'un mot de passe fait de mots, sans chiffre, passé en argument d'un appel ou écrit dans un gabarit. Sous les autres
+  noms, le constat d'un littéral sans chiffre porté par une structure.
 - Perdu, partout : le constat d'une valeur qui a exactement la forme d'une valeur publique de la liste sous un nom de
   clé d'API ou de jeton (pour les formes sans préfixe propre, seulement avec le mot-clé du fournisseur sur la ligne,
   avant la valeur) ; le constat d'une valeur à marque de chiffrement suivie de texte chiffré.

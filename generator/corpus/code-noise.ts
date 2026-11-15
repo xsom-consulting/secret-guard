@@ -323,8 +323,9 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
 
   if (encryptedEnvelope(quoted ? text.slice(valueStart, valueEnd) : text.slice(finding.start, lineEnd), quoted)) return { keep: false };
 
-  // Valeur sans guillemets lue à la ligne suivante.
-  if (!quoted && !placeholder && /[\r\n][ \t]*$/.test(before) && !hasSecretWord(text.slice(finding.start, lineEnd))) {
+  // Valeur sans guillemets lue à la ligne suivante ; sous un mot de passe, seule une ligne qui est elle-même un champ.
+  const mappingEntry = /^["']?[A-Za-z0-9_.-]+["']?[ \t]*:(?:[ \t]|$)/.test(text.slice(finding.start, lineEnd));
+  if (!quoted && !placeholder && /[\r\n][ \t]*$/.test(before) && !hasSecretWord(text.slice(finding.start, lineEnd)) && (secretType !== PASSWORD || mappingEntry)) {
     return { keep: false, resume: text.lastIndexOf('\n', finding.start - 1) + 1 };
   }
   // Valeur publique connue.
@@ -371,7 +372,8 @@ function judgeAssignment(context: Context, finding: EngineFinding): Verdict {
       const closing = balancedEnd(text, open, lineEnd);
       if (closing >= 0 && closing < text.length && !/[\s,;)\]}.?:]/.test(text[closing] ?? ' ')) return KEEP;
       const bracketed = /^[([{][ \t]*([^\s"'`()[\]{},;:=]+)[ \t]*[)\]}]/.exec(text.slice(open, lineEnd));
-      if (hasCredible(text, open, lineEnd, secretType, true, false) || (bracketed !== null && strictShaped(bracketed[1] ?? ''))) return KEEP;
+      const word = bracketed?.[1] ?? '';
+      if (hasCredible(text, open, lineEnd, secretType, true, false) || (bracketed !== null && (strictShaped(word) || (secretType === PASSWORD && word.length >= 8)))) return KEEP;
       // Lignes suivantes, jusqu'à la fermeture de la structure.
       let depth = 0;
       let end = -1;
@@ -549,6 +551,7 @@ function drafts(): Draft[] {
     noise('structure/type-generique', RULE.token, `  ${TOKEN}: Map<string, Session>;`, 'typescript'),
     noise('structure/fonction-flechee', RULE.token, `  ${TOKEN}: (request) => request.headers.get("x-request-id"),`),
     noise('structure/type-de-parametre', RULE.secret, `export function check(kind: Kind, ${SECRET}: string): boolean {`, 'typescript'),
+    kept('structure/liste-en-ligne-a-mot-de-passe', RULE.password, `${PASSWORD}: [sesameouvretoi]`, 'yaml'),
     kept('structure/tableau-dotenv', RULE.token, `${upperToken}=[${WORDS}]`, 'dotenv'),
     kept('structure/objet-environnement', RULE.token, `export ${upperToken}={"a":"b"}`),
     kept('structure/accolades-et-texte-colle', RULE.password, `spring.datasource.${PASSWORD}={label}${strong('colle')}`, 'properties'),
@@ -556,6 +559,8 @@ function drafts(): Draft[] {
     noise('ligne-suivante/cle-de-section', RULE.token, `    secrets:\n      NPM_${upperToken}:\n        required: true`, 'yaml'),
     noise('ligne-suivante/case-puis-instruction', RULE.token, `\tcase n == "${AUTH.toLowerCase()}":\n\t\treturn kind, true`, 'go'),
     kept('ligne-suivante/valeur-a-forme-de-secret', RULE.token, `${upperToken}:\n  ${plain('ligne')}`, 'yaml'),
+    noise('ligne-suivante/champ-sous-un-mot-de-passe', RULE.password, `properties:\n  ${PASSWORD}:\n    type: string\n    minLength: 8`, 'yaml'),
+    kept('ligne-suivante/mot-de-passe-d-un-mot', RULE.password, `${PASSWORD}:\n  sesameouvretoi`, 'yaml'),
     // Palier 2 : du code seulement.
     noise('code/valeur-d-essai', RULE.apiKey, `  ${API_KEY}: "test",`, 'typescript'),
     kept('code/valeur-d-essai-sans-langage', RULE.apiKey, `  ${API_KEY}: "test",`),
