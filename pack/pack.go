@@ -48,6 +48,15 @@ const (
 	SecretTypeFrSiret           SecretType = "fr_siret"
 	SecretTypeFrSiren           SecretType = "fr_siren"
 	SecretTypePaymentCardNumber SecretType = "payment_card_number"
+	// Données à contexte (v0.9.0) : données personnelles annoncées par un mot-clé et identifiants d'infrastructure,
+	// voir docs/rule-pack.md.
+	SecretTypeEmailAddress            SecretType = "email_address"
+	SecretTypePhoneNumber             SecretType = "phone_number"
+	SecretTypePassportNumber          SecretType = "passport_number"
+	SecretTypePaymentCardSecurityCode SecretType = "payment_card_security_code"
+	SecretTypeOneTimeCode             SecretType = "one_time_code"
+	SecretTypeInternalIPAddress       SecretType = "internal_ip_address"
+	SecretTypeCloudResourceAddress    SecretType = "cloud_resource_address"
 )
 
 // SecretTypes rend la liste fermée des types de secret, dans l'ordre du schéma.
@@ -56,7 +65,9 @@ func SecretTypes() []SecretType {
 		SecretTypePrivateKey, SecretTypeProviderToken, SecretTypeAccessToken, SecretTypeJWT,
 		SecretTypeDatabaseCredentials, SecretTypeCloudCredential, SecretTypePassword, SecretTypeAPIKey,
 		SecretTypeGenericSecret, SecretTypeHighEntropy, SecretTypeIBAN, SecretTypeFrSocialSecurity, SecretTypeFrSiret,
-		SecretTypeFrSiren, SecretTypePaymentCardNumber,
+		SecretTypeFrSiren, SecretTypePaymentCardNumber, SecretTypeEmailAddress, SecretTypePhoneNumber,
+		SecretTypePassportNumber, SecretTypePaymentCardSecurityCode, SecretTypeOneTimeCode, SecretTypeInternalIPAddress,
+		SecretTypeCloudResourceAddress,
 	}
 }
 

@@ -386,8 +386,10 @@ func TestRuleScoresAndReasons(t *testing.T) {
 	}
 	p := loadInitialPack(t)
 	// Les règles de fournisseurs (v0.8.1) sont éprouvées une à une par TestProviderRules et par le corpus.
-	if len(cases) != len(p.Rules)-len(providerSubstituteLabels) {
-		t.Fatalf("%d règles testées, %d dans le Pack, dont %d de fournisseurs", len(cases), len(p.Rules), len(providerSubstituteLabels))
+	// Les règles de données à contexte (v0.9.0), par TestContextRules et par le corpus.
+	if len(cases) != len(p.Rules)-len(providerSubstituteLabels)-len(contextSubstituteLabels) {
+		t.Fatalf("%d règles testées, %d dans le Pack, dont %d de fournisseurs et %d de données à contexte", len(cases), len(p.Rules),
+			len(providerSubstituteLabels), len(contextSubstituteLabels))
 	}
 	for _, c := range cases {
 		t.Run("règle "+c.id+" : score, raisons et pénalité d'encodage de Secret Guard", func(t *testing.T) {

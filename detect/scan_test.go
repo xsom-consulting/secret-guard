@@ -390,7 +390,7 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 		slices.Sort(values)
 		if want := []string{
 			"ErrFingerprintKeyInvalid", "ErrPackUnusable", "ErrRedactIncomplete", "ErrRedactSpan", "ErrSubstituteLanguage",
-			"ErrSubstituteOrdinal",
+			"ErrSubstituteOrdinal", "ErrUnknownOptInRule",
 		}; !slices.Equal(values, want) {
 			t.Errorf("variables exportées %v, attendu %v", values, want)
 		}
@@ -403,8 +403,9 @@ func TestFindingNeverCarriesValue(t *testing.T) {
 			// positions ; SubstituteText, un Substitut (préfixe public de la table, numéro, type : TestSubstituteText) ;
 			// Fingerprint, une Empreinte locale (HMAC sous la clé de l'appelant : TestFingerprint) ; ScanWith, un
 			// résultat d'analyse ; méthodes Usable et Valid, des booléens.
-			"DecisionForLevel", "FindSubstitutes", "Fingerprint", "LoadRules", "NewFingerprintKey", "Redact",
-			"RedactAndRescan", "Scan", "ScanWith", "ScanWithFingerprint", "SecretRange", "SubstituteLabels",
+			// LoadRulesWithOptIn et OptInRuleIDs (v0.9.0) : règles « à activer », des identifiants de règles.
+			"DecisionForLevel", "FindSubstitutes", "Fingerprint", "LoadRules", "LoadRulesWithOptIn", "NewFingerprintKey",
+			"OptInRuleIDs", "Redact", "RedactAndRescan", "Scan", "ScanWith", "ScanWithFingerprint", "SecretRange", "SubstituteLabels",
 			"SubstitutePrefixes", "SubstituteText",
 			"méthode Error", "méthode FirstLineSecretEnd", "méthode GoString", "méthode Has", "méthode String",
 			"méthode Unwrap", "méthode Usable", "méthode Valid", "méthode Wipe",

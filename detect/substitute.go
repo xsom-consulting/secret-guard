@@ -83,9 +83,11 @@ type SubstituteLabel struct {
 
 // substituteLabels est la table fermée des types de secret, par règle (repli : SubstituteDefaultLabel) : les règles
 // du catalogue et de données personnelles (baseSubstituteLabels), puis les règles de fournisseurs du Pack initial
-// (providerSubstituteLabels, substitute_providers.go, v0.8.1). Un type est public : il dit la nature du secret, jamais
+// (providerSubstituteLabels, substitute_providers.go, v0.8.1), puis les règles de données à contexte
+// (contextSubstituteLabels, context_rules.go, v0.9.0). Un type est public : il dit la nature du secret, jamais
 // la valeur. Même table que le Mod de l'organisation de xSOM Fleet.
-var substituteLabels = append(append([]SubstituteLabel(nil), baseSubstituteLabels...), providerSubstituteLabels...)
+var substituteLabels = append(append(append([]SubstituteLabel(nil), baseSubstituteLabels...), providerSubstituteLabels...),
+	contextSubstituteLabels...)
 
 // baseSubstituteLabels : types de secret des règles du catalogue d'origine et des règles de données personnelles.
 var baseSubstituteLabels = []SubstituteLabel{

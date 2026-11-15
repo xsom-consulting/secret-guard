@@ -18,7 +18,8 @@ export type RuleFamily = z.infer<typeof RuleFamily>;
 
 /**
  * Types de secret que produisent les règles du catalogue (`SecretType` de Secret Guard, hors types d'échec), puis, depuis
- * la v0.7.0, les types des règles de données personnelles ajoutées par xSOM.
+ * la v0.7.0, les types des règles de données personnelles ajoutées par xSOM, et, depuis la v0.9.0, ceux des règles de
+ * données à contexte (données personnelles annoncées, identifiants d'infrastructure).
  */
 export const RULE_SECRET_TYPES = [
   'private_key',
@@ -37,6 +38,14 @@ export const RULE_SECRET_TYPES = [
   'fr_siret',
   'fr_siren',
   'payment_card_number',
+  // Données à contexte (v0.9.0, `rule-pack/context-data.ts`).
+  'email_address',
+  'phone_number',
+  'passport_number',
+  'payment_card_security_code',
+  'one_time_code',
+  'internal_ip_address',
+  'cloud_resource_address',
 ] as const;
 export const RuleSecretType = z.enum(RULE_SECRET_TYPES);
 export type RuleSecretType = z.infer<typeof RuleSecretType>;

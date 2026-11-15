@@ -12,6 +12,15 @@ import {
   VALUE_BOUNDS,
 } from '../rule-pack/catalog.ts';
 import { buildProviderLabelsGo, PROVIDER_RULE_SOURCES, PROVIDER_RULES, PROVIDER_UPSTREAM_COMMIT, PROVIDER_UPSTREAM_REPOSITORY } from '../rule-pack/provider-rules.ts';
+import {
+  buildContextRulesGo,
+  CONTEXT_DATA_RULES,
+  CONTEXT_OPT_IN_RULE_IDS,
+  CONTEXT_RULE_SOURCES,
+  CONTEXT_UPSTREAM_COMMIT,
+  CONTEXT_UPSTREAM_PATH,
+  CONTEXT_UPSTREAM_REPOSITORY,
+} from '../rule-pack/context-data.ts';
 import { RULE_FAMILIES, RULE_FAMILIES_WITH_PATTERN, RULE_VALIDATORS, RulePack } from '../src/rule-pack.ts';
 
 const upstreamText = readFileSync(new URL('../../pack/initial/upstream/rules.ts.txt', import.meta.url), 'utf8');
@@ -26,7 +35,11 @@ const catalogRules = pack.rules.slice(0, CATALOG_RULE_COUNT);
 // Cinq règles de données personnelles (v0.7.0), puis les règles de fournisseurs (v0.8.1).
 const PERSONAL_RULE_COUNT = 5;
 const personalRules = pack.rules.slice(CATALOG_RULE_COUNT, CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT);
-const providerRules = pack.rules.slice(CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT);
+const providerRules = pack.rules.slice(CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT, CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT + PROVIDER_RULES.length);
+// Règles de données à contexte (v0.9.0) : elles ferment le Pack.
+const contextRules = pack.rules.slice(CATALOG_RULE_COUNT + PERSONAL_RULE_COUNT + PROVIDER_RULES.length);
+const contextRulesText = readFileSync(new URL('../../detect/context_rules.go', import.meta.url), 'utf8');
+const noticeText = readFileSync(new URL('../../NOTICE', import.meta.url), 'utf8');
 const providerLabelsText = readFileSync(new URL('../../detect/substitute_providers.go', import.meta.url), 'utf8');
 
 /**
@@ -157,6 +170,45 @@ describe('Pack initial', () => {
     }
     // Le fichier Go des libellés est exactement celui du générateur.
     expect(providerLabelsText).toBe(buildProviderLabelsGo());
+  });
+
+  it('règles de données à contexte : écrites ici, « motif seul » sans validateur, un groupe capturant au plus, origine de la technique citée', () => {
+    expect(contextRules).toEqual(CONTEXT_DATA_RULES);
+    expect(contextRules.map((rule) => rule.ruleId)).toEqual([
+      'email_address',
+      'phone_number',
+      'passport_number',
+      'payment_card_security_code',
+      'one_time_code',
+      'azure_shared_access_key',
+      'internal_ip_address',
+      'aws_arn',
+      'aws_s3_bucket',
+      'aws_rds_endpoint',
+      'aws_dynamodb_endpoint',
+    ]);
+    const earlier = new Set([...catalogRules, ...personalRules, ...providerRules].map((rule) => rule.ruleId));
+    for (const { rule, labelFr, labelEn, reference } of CONTEXT_RULE_SOURCES) {
+      expect(earlier.has(rule.ruleId), rule.ruleId).toBe(false);
+      expect([rule.family, rule.validator, rule.minLength, rule.maxLength], rule.ruleId).toEqual(['fixed_pattern', '', 0, 0]);
+      // Un seul groupe capturant (la valeur) ; aucun groupe nommé ; le motif de référence se lit en JavaScript, et ne
+      // diffère du motif du Pack que par l'écriture du repli de casse.
+      expect((rule.pattern.match(/\((?!\?)/g) ?? []).length, rule.ruleId).toBeLessThanOrEqual(1);
+      expect(rule.pattern, rule.ruleId).not.toMatch(/\(\?P?</);
+      expect(() => new RegExp(reference.source, reference.flags), rule.ruleId).not.toThrow();
+      expect(reference.flags.includes('i') ? `(?i:${reference.source.slice(0, -2)})\\b` : reference.source, rule.ruleId).toBe(rule.pattern);
+      for (const label of [labelFr, labelEn]) {
+        expect(label, rule.ruleId).toMatch(/^[\p{L}\p{N}][\p{L}\p{N} .’+-]*[\p{L}\p{N}.]$/u);
+      }
+    }
+    // Une règle « à activer » est une règle de données à contexte ; aujourd'hui, l'adresse électronique seule.
+    expect(CONTEXT_OPT_IN_RULE_IDS).toEqual(['email_address']);
+    // Le fichier Go (libellés, règles « à activer ») est exactement celui du générateur.
+    expect(contextRulesText).toBe(buildContextRulesGo());
+    // Technique du mot-clé de contexte : origine citée dans UPSTREAM.md et avis MIT dans NOTICE.
+    for (const text of [CONTEXT_UPSTREAM_REPOSITORY, CONTEXT_UPSTREAM_COMMIT, CONTEXT_UPSTREAM_PATH]) expect(upstreamNotes).toContain(text);
+    expect(noticeText).toContain(CONTEXT_UPSTREAM_REPOSITORY);
+    expect(noticeText).toContain('MIT License');
   });
 
   it('validateur nommé et valeur portée par le premier groupe des règles fixes', () => {

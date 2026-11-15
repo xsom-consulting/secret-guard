@@ -19,6 +19,15 @@ import { CorpusError, coverageProblems, expectedFor, type CoverageInput, type Ev
 import { jsonString, serializeCaseFile } from '../corpus/json.ts';
 import { PERSONAL_DATA_FILE, personalDataCases, personalDataCoverageProblems } from '../corpus/personal-data.ts';
 import {
+  CONTEXT_DATA_FILE,
+  contextDataCases,
+  contextDataCoverageProblems,
+  contextDataSpans,
+  contextReference,
+  withContextFindings,
+} from '../corpus/context-data.ts';
+import { CONTEXT_DATA_RULES } from '../rule-pack/context-data.ts';
+import {
   PASSWORD_PHRASE_FILE,
   passwordPhraseCases,
   passwordPhraseCoverageProblems,
@@ -91,7 +100,9 @@ const allPackRuleIds = RulePack.parse(JSON.parse(read(new URL('../../pack/initia
 const personalRuleIds: readonly string[] = PERSONAL_DATA_RULES.map((rule) => rule.ruleId);
 // Les règles de fournisseurs (v0.8.1) sont jugées par la lecture de référence de `rule-pack/provider-rules.ts`.
 const providerRuleIds: readonly string[] = PROVIDER_RULE_SOURCES.map((rule) => rule.ruleId);
-const packRuleIds = allPackRuleIds.filter((id) => !personalRuleIds.includes(id) && !providerRuleIds.includes(id));
+// Les règles de données à contexte (v0.9.0), par la lecture de référence de `rule-pack/context-data.ts`.
+const contextRuleIds: readonly string[] = CONTEXT_DATA_RULES.map((rule) => rule.ruleId);
+const packRuleIds = allPackRuleIds.filter((id) => !personalRuleIds.includes(id) && !providerRuleIds.includes(id) && !contextRuleIds.includes(id));
 
 function inputBytes(value: CorpusCase): Uint8Array {
   return value.inputEncoding === 'utf8' ? new TextEncoder().encode(value.input) : Buffer.from(value.input, 'base64');
@@ -179,7 +190,8 @@ describe('corpus de parité commité', () => {
         !value.id.startsWith('upstream/') &&
         !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value) &&
         !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value) &&
-        !(corpus.get(PROVIDER_RULES_FILE) ?? []).includes(value),
+        !(corpus.get(PROVIDER_RULES_FILE) ?? []).includes(value) &&
+        !(corpus.get(CONTEXT_DATA_FILE) ?? []).includes(value),
     );
     expect(others.length).toBe(synthetic.length);
   });
@@ -193,16 +205,28 @@ describe('corpus de parité commité', () => {
       if (value === undefined) throw new Error('cas absent');
       expect(Buffer.from(inputBytes(value)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
       expect(value.inputEncoding).toBe('utf8');
-      // Constats attendus = ceux de la lecture de référence (vue d'identité, aucun constat du moteur d'origine à fusionner).
+      // Constats attendus = ceux de la lecture de référence (vue d'identité, aucun constat du moteur d'origine à
+      // fusionner), et ceux des règles de données à contexte quand le texte annonce un téléphone ou un cryptogramme.
       const decoded = decodeInput(inputBytes(value));
-      const found = referenceFindings(decoded.text).map((finding) => [
-        finding.rule.ruleId,
-        finding.rule.secretType,
-        'plain',
-        finding.rule.score,
-        levelForScore(finding.rule.score),
-        byteOffsetOf(decoded, finding.start),
-        byteOffsetOf(decoded, finding.end),
+      const personal = referenceFindings(decoded.text).map(
+        (finding): CorpusFinding => ({
+          ruleId: finding.rule.ruleId,
+          secretType: finding.rule.secretType,
+          encoding: 'plain',
+          score: finding.rule.score,
+          level: levelForScore(finding.rule.score),
+          byteStart: byteOffsetOf(decoded, finding.start),
+          byteEnd: byteOffsetOf(decoded, finding.end),
+        }),
+      );
+      const found = withContextFindings(source.id, personal, inputBytes(value)).map((finding) => [
+        finding.ruleId,
+        finding.secretType,
+        finding.encoding,
+        finding.score,
+        finding.level,
+        finding.byteStart,
+        finding.byteEnd,
       ]);
       const expected = value.expected.findings.map((finding) => [
         finding.ruleId,
@@ -221,6 +245,46 @@ describe('corpus de parité commité', () => {
         sources.map((source, index) => ({
           id: source.id,
           ...(source.intent === undefined ? {} : { intent: source.intent }),
+          expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
+        })),
+      ),
+    ).toEqual([]);
+  });
+
+  it('les cas des règles de données à contexte sont exactement ceux du générateur, et la lecture de référence y trouve la valeur construite', () => {
+    const sources = contextDataCases();
+    const committed = corpus.get(CONTEXT_DATA_FILE) ?? [];
+    expect(committed.map((value) => value.id)).toEqual(sources.map((source) => source.id));
+    const spans = contextDataSpans();
+    sources.forEach((source, index) => {
+      const value = committed[index];
+      if (!value) throw new Error('cas absent');
+      expect(Buffer.from(inputBytes(value)).equals(Buffer.from(source.bytes)), source.id).toBe(true);
+      expect(value.inputEncoding).toBe('utf8');
+      expect(value.expected.complete).toBe(true);
+      // Chaque constat de la lecture de référence est couvert par un constat attendu (le sien, ou celui d'une règle
+      // mieux classée qui l'a absorbé) ; chaque constat attendu d'une règle de données à contexte vient de cette lecture.
+      const reference = contextReference(inputBytes(value));
+      for (const found of reference) {
+        expect(value.expected.findings.some((finding) => finding.byteStart <= found.byteStart && found.byteEnd <= finding.byteEnd), source.id).toBe(true);
+      }
+      for (const finding of value.expected.findings.filter((entry) => contextRuleIds.includes(entry.ruleId))) {
+        expect(reference.some((found) => found.ruleId === finding.ruleId && finding.byteStart <= found.byteStart && found.byteEnd <= finding.byteEnd), source.id).toBe(true);
+      }
+      // Cas positif : la lecture de référence trouve la valeur construite, à son étendue exacte, une seule fois.
+      const span = spans.get(source.id);
+      if (source.intent?.kind === 'positive') {
+        const rule = source.intent.rule;
+        expect(reference.filter((found) => found.ruleId === rule).map((found) => [found.byteStart, found.byteEnd]), source.id).toEqual([span]);
+      } else {
+        expect(span, source.id).toBeUndefined();
+      }
+    });
+    expect(
+      contextDataCoverageProblems(
+        sources.map((source, index) => ({
+          id: source.id,
+          ...(source.intent ? { intent: source.intent } : {}),
           expected: committed[index]?.expected ?? { complete: false, failure: 'scan_error' as const, findings: [] },
         })),
       ),

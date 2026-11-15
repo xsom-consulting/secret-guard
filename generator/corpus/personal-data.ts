@@ -12,6 +12,7 @@
  * l'IBAN d'exemple public de la documentation bancaire française est écrit tel quel.
  */
 import { byteOffsetOf, decodeInput, utf8Bytes } from './bytes.ts';
+import { withContextFindings } from './context-data.ts';
 import { CorpusError, expectedFor, type CaseSource } from './corpus.ts';
 import { compareFindings, levelForScore, type CorpusExpected, type CorpusFinding } from './model.ts';
 import { synth, type CaseIntent } from './synthetic.ts';
@@ -313,7 +314,9 @@ export function personalDataExpected(engine: UpstreamEngine, source: CaseSource)
       throw new CorpusError(`${source.id} : deux règles de données personnelles se chevauchent, le cas doit être redessiné`);
     }
   }
-  return { complete: true, failure: 'none', findings };
+  // Règles de données à contexte (v0.9.0) : un texte qui annonce un téléphone ou un cryptogramme (« tél 01 … »,
+  // « cvv 123 ») porte aussi leur constat.
+  return { complete: true, failure: 'none', findings: withContextFindings(source.id, findings, source.bytes) };
 }
 
 /** Problèmes de couverture des cas de données personnelles : intentions tenues, au moins 2 positifs et 3 négatifs par règle. */

@@ -46,6 +46,15 @@ func parallelEverywhere(tb testing.TB) {
 	tb.Cleanup(func() { parallelMinViewBytes = previous })
 }
 
+// digitSuffixes : « -0 » à « -9 » devant suffix (fin d'une région AWS, « eu-west-3 », puis le domaine du service).
+func digitSuffixes(suffix string) []string {
+	out := make([]string, 0, 10)
+	for digit := '0'; digit <= '9'; digit++ {
+		out = append(out, "-"+string(digit)+suffix)
+	}
+	return out
+}
+
 // gateLiterals rend les littéraux d'une porte, triés (nil sans porte).
 func gateLiterals(g *literalGate) []string {
 	if g == nil {
@@ -109,6 +118,25 @@ func TestPrefilterInitialPack(t *testing.T) {
 			"basic_auth_url":           {"://"},
 			"docker_auth":              {"auth"},
 			"fr_siren":                 {"siren"},
+			// Données à contexte (v0.9.0) : mots-clés du contexte, ou littéral fixe du fournisseur.
+			"email_address": {"courriel", "lectronique", "mail"},
+			// Casses écrites une à une, sans repli : seize littéraux, le plus que porte une porte.
+			"phone_number": {
+				"Fax", "MOBILE", "Mobile", "PHONE", "Phone", "Portable", "TEL", "Tel", "TÉL", "Tél", "fax", "mobile", "phone",
+				"portable", "tel", "tél",
+			},
+			"passport_number":            {"passeport", "passport"},
+			"payment_card_security_code": {"code de s", "cryptogramme", "cvc", "cvv", "security code"},
+			"one_time_code": {
+				" usage unique", "2fa code", "authentication code", "authentification", "confirmation", "otp", "rification",
+				"time code", "time passcode", "time " + "pass" + "word", "time pin", "validation",
+			},
+			"azure_shared_access_key": {"Shared" + "AccessKey="},
+			"internal_ip_address":     {"bastion", "internal", "interne", "intranet", "priv", "vpn"},
+			"aws_arn":                 {"arn:aws-cn:", "arn:aws-us-gov:", "arn:aws:"},
+			"aws_s3_bucket":           {"amazonaws.com", "s3://"},
+			"aws_rds_endpoint":        digitSuffixes(".rds.amazonaws.com"),
+			"aws_dynamodb_endpoint":   digitSuffixes(".amazonaws.com"),
 		}
 		rules := loadInitialRules(t)
 		p := loadInitialPack(t)
@@ -139,7 +167,7 @@ func TestPrefilterInitialPack(t *testing.T) {
 				t.Errorf("%s : littéraux %q, attendu %q", spec.RuleID, got, want[spec.RuleID])
 			}
 		}
-		if seen != len(p.Rules) || seen != 40+len(providers) {
+		if seen != len(p.Rules) || seen != 40+len(providers)+len(contextSubstituteLabels) {
 			t.Fatalf("%d règles relues", seen)
 		}
 	})

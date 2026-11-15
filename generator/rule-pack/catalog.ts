@@ -8,6 +8,7 @@
 import type { RuleFamily, RulePack, RulePackRule, RuleSecretType } from '../src/rule-pack.ts';
 import { RULE_FAMILIES, RULE_SECRET_TYPES } from '../src/rule-pack.ts';
 import { translateJsPattern, type Translation } from './js-to-re2.ts';
+import { CONTEXT_DATA_RULES } from './context-data.ts';
 import { PERSONAL_DATA_RULES } from './personal-data.ts';
 import { PROVIDER_RULES } from './provider-rules.ts';
 
@@ -304,7 +305,7 @@ export function buildCatalogRules(text: string): RulePackRule[] {
  * `provider-rules.ts`).
  */
 export function buildInitialPack(text: string): RulePack {
-  return { ...INITIAL_PACK_HEADER, rules: [...buildCatalogRules(text), ...PERSONAL_DATA_RULES, ...PROVIDER_RULES] };
+  return { ...INITIAL_PACK_HEADER, rules: [...buildCatalogRules(text), ...PERSONAL_DATA_RULES, ...PROVIDER_RULES, ...CONTEXT_DATA_RULES] };
 }
 
 /** Écriture du Pack sur disque : JSON indenté de deux espaces, fin de ligne finale. */

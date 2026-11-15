@@ -3343,6 +3343,116 @@
       "pattern": "(?i:\\b(ZPKA_[0-9A-Za-zſK]{32}_[0-9A-Fa-f]{8}))",
       "minLength": 0,
       "maxLength": 0
+    },
+    {
+      "ruleId": "email_address",
+      "family": "fixed_pattern",
+      "secretType": "email_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "(?i:(?:e-?mail|courriel|\\bmail\\b|adresse .lectronique)[^\\n@.]{0,24}?\\b([a-z0-9][a-z0-9._%+-]{0,63}@(?:[a-z0-9][a-z0-9-]{0,62}\\.){1,8}[a-z]{2,24}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "phone_number",
+      "family": "fixed_pattern",
+      "secretType": "phone_number",
+      "score": 30,
+      "validator": "",
+      "pattern": "(?:\\b(?:Tel|tel|TEL|Tél|tél|TÉL)|Phone|phone|PHONE|Mobile|mobile|MOBILE|Portable|portable|Fax|fax)[^\\n0-9+]{0,20}?((?:\\+|00)[1-9](?:[ .-]?\\(?[0-9]\\)?){7,14}|0[1-9](?:[0-9]{8}|(?: [0-9]{2}){4}|(?:\\.[0-9]{2}){4}|(?:-[0-9]{2}){4}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "passport_number",
+      "family": "fixed_pattern",
+      "secretType": "passport_number",
+      "score": 60,
+      "validator": "",
+      "pattern": "(?i:pass(?:e)?ports?(?:[ \\t_-]*(?:number|num.ro|num|no|n°|#|id))?\\.?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{2}[a-z]{2}[0-9]{5}|[a-z]{1,2}[0-9]{6,8}|[0-9]{9}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "payment_card_security_code",
+      "family": "fixed_pattern",
+      "secretType": "payment_card_security_code",
+      "score": 70,
+      "validator": "",
+      "pattern": "(?i:(?:cvv2?|cvc2?|cryptogramme(?: visuel)?|security code|code de s.curit.)(?:[ _-]?(?:code|number))?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{3,4}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "one_time_code",
+      "family": "fixed_pattern",
+      "secretType": "one_time_code",
+      "score": 45,
+      "validator": "",
+      "pattern": "(?i:(?:one.time (?:password|passcode|code|pin)|(?:verification|confirmation|validation|authentication|2fa) code|otp|code (?:de |d.)?(?:v.rification|confirmation|validation|authentification)|code . usage unique)(?:[ _-]?(?:code|sms|re.u|received))?[\"']?[ \\t  ]*(?:(?:[:=]|is|est)[ \\t  ]*)?(?:le[ \\t  ]+)?[\"']?([0-9]{3}[ -][0-9]{3}|[0-9]{4,8}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "azure_shared_access_key",
+      "family": "fixed_pattern",
+      "secretType": "cloud_credential",
+      "score": 95,
+      "validator": "",
+      "pattern": "\\bSharedAccessKey=([A-Za-z0-9+/]{43}=)",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "internal_ip_address",
+      "family": "fixed_pattern",
+      "secretType": "internal_ip_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "(?i:(?:\\b(?:internal|interne|intranet|private|vpn|bastion)s?\\b|\\bpriv.e?s?)[^\\n0-9]{0,24}?\\b(10(?:\\.(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){3}|172\\.(?:1[6-9]|2[0-9]|3[01])(?:\\.(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){2}|192\\.168(?:\\.(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})){2}))\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_arn",
+      "family": "fixed_pattern",
+      "secretType": "cloud_resource_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "\\barn:aws(?:-cn|-us-gov)?:[a-z0-9-]{2,32}:[a-z0-9-]{0,24}:(?:[0-9]{12})?:[A-Za-z0-9](?:[A-Za-z0-9_+=,.@/:-]{0,126}[A-Za-z0-9_])?",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_s3_bucket",
+      "family": "fixed_pattern",
+      "secretType": "cloud_resource_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "\\bs3://[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\\b|\\b[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\\.s3[.-](?:[a-z0-9-]{1,24}\\.)?amazonaws\\.com\\b|\\bs3[.-][a-z0-9-]{1,24}\\.amazonaws\\.com/[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_rds_endpoint",
+      "family": "fixed_pattern",
+      "secretType": "cloud_resource_address",
+      "score": 30,
+      "validator": "",
+      "pattern": "\\b[a-z0-9][a-z0-9-]{0,62}\\.[a-z0-9-]{6,40}\\.[a-z]{2}(?:-[a-z]+){1,2}-[0-9]\\.rds\\.amazonaws\\.com(?:\\.cn)?\\b",
+      "minLength": 0,
+      "maxLength": 0
+    },
+    {
+      "ruleId": "aws_dynamodb_endpoint",
+      "family": "fixed_pattern",
+      "secretType": "cloud_resource_address",
+      "score": 25,
+      "validator": "",
+      "pattern": "\\b(?:streams\\.)?dynamodb\\.[a-z]{2}(?:-[a-z]+){1,2}-[0-9]\\.amazonaws\\.com(?:\\.cn)?\\b",
+      "minLength": 0,
+      "maxLength": 0
     }
   ]
 }

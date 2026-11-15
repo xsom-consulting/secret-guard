@@ -41,3 +41,8 @@ Composants tiers / third-party components:
 
 Les noms « Secret Guard » et « xSOM » ne sont pas couverts par la licence.
 The names "Secret Guard" and "xSOM" are not licensed under the Apache License.
+
+Context-keyword technique (detect, v0.9.0)
+The idea of requiring a context keyword near a value comes from Akto
+(https://github.com/akto-api-security/akto), distributed under the MIT License.
+No pattern, keyword list or code was copied: the rules are written in this module.
