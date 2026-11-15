@@ -18,6 +18,7 @@
     {"file":"upstream-scan.json","cases":111},
     {"file":"upstream-security.json","cases":126},
     {"file":"upstream-text.json","cases":5},
+    {"file":"views-encodings.json","cases":21},
     {"file":"views.json","cases":151}
   ]
 }

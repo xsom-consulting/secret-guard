@@ -20,6 +20,7 @@ import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
 import { codeNoiseCases, codeNoiseCoverageProblems, codeNoiseExpected, codeNoiseUpstream } from './code-noise.ts';
 import { LAYERED_UPSTREAM_CASES, layeredExpected } from './layered.ts';
+import { encodingCases, encodingExpected } from './encodings.ts';
 import { contextDataCases, contextDataCoverageProblems, contextDataExpected } from './context-data.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
@@ -192,6 +193,11 @@ async function main(): Promise<number> {
       const expected = codeNoiseExpected(engine, source);
       codeNoise.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected, upstream: codeNoiseUpstream(engine, source.bytes, source.languageId) });
       written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
+    // Matrice d'encodages (v0.10.0) : seize cas jugés par l'origine, cinq par la seconde écriture de `corpus/encodings.ts`.
+    for (const source of encodingCases()) {
+      written.push([source.file, corpusCaseOf(source, encodingExpected(engine, source))]);
       sources.push(source);
     }
     problems.push(...codeNoiseCoverageProblems(codeNoise));

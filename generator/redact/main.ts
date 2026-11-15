@@ -18,6 +18,7 @@ import { decodeInput } from '../corpus/bytes.ts';
 import { expectedFor } from '../corpus/corpus.ts';
 import { testImport } from '../corpus/harness.ts';
 import { CODE_NOISE_FILE } from '../corpus/code-noise.ts';
+import { ENCODINGS_FILE } from '../corpus/encodings.ts';
 import { CONTEXT_DATA_FILE } from '../corpus/context-data.ts';
 import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { PASSWORD_PHRASE_FILE } from '../corpus/password-phrase.ts';
@@ -147,7 +148,7 @@ async function main(): Promise<number> {
     for (const { file, value } of committedCorpus()) {
       // Règles de données personnelles (v0.7.0) et annonces de mot de passe (v0.8.1) : absentes du moteur d'origine,
       // son masquage ne les connaît pas.
-      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || file === CODE_NOISE_FILE || !corpusCaseSelected(value)) continue;
+      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || file === CODE_NOISE_FILE || file === ENCODINGS_FILE || !corpusCaseSelected(value)) continue;
       if (LAYERED_UPSTREAM_CASES.has(value.id)) {
         // Décodage à plusieurs couches (v0.10.0) : l'analyse d'origine ne lit qu'une couche de ces deux cas. Leur
         // texte masqué est celui de `redact` d'origine sur les constats du corpus (seconde écriture de
