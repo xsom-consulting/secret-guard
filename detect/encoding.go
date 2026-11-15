@@ -13,6 +13,7 @@
 package detect
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"regexp"
@@ -34,6 +35,12 @@ const (
 	// (/[A-Za-z0-9+/_-]{20,16384}={0,2}/g).
 	minBase64CandidateLength = 20
 	maxBase64CandidateLength = 16_384
+	// maxDecodeLayers est le nombre de couches d'un même encodage (base64, pourcentage) lues l'une dans l'autre.
+	// Écart avec Secret Guard, qui en lit une. Au-delà, le texte n'est plus décodé : seuls les budgets ci-dessus,
+	// débités par chaque couche, rendent l'analyse incomplète.
+	maxDecodeLayers = 3
+	// layerPenalty est la pénalité de score de chaque couche de décodage.
+	layerPenalty = 5
 	// minJWTSignatureLength est la longueur minimale de la signature d'un JWT (en unités UTF-16).
 	minJWTSignatureLength = 8
 )
@@ -130,10 +137,17 @@ func decodeBase64(value string, maxDecoded int) (string, bool) {
 			decoded = append(decoded, byte(cValue&3)<<6|byte(d))
 		}
 	}
-	if !utf8.Valid(decoded) {
-		return "", false
+	plain := decoded
+	if !utf8.Valid(decoded) || bytes.IndexByte(decoded, 0) >= 0 {
+		// Écart avec Secret Guard, qui refuse ce texte : base64 d'UTF-16 (commande PowerShell encodée), lu en UTF-8.
+		wide, ok := utf16Text(decoded)
+		if !ok {
+			return "", false
+		}
+		defer clear(wide)
+		plain = wide
 	}
-	text := strings.TrimPrefix(string(decoded), "\xef\xbb\xbf")
+	text := strings.TrimPrefix(string(plain), "\xef\xbb\xbf")
 	if text == "" || strings.IndexByte(text, 0) >= 0 {
 		return "", false
 	}

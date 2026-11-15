@@ -58,6 +58,14 @@ Composants tiers / third-party components:
   Betterleaks (rules/generic/filter.go), and encrypted envelope shapes taken from rules/generic/password.go of the
   same commit, Copyright (c) 2026 Zachary Rice, MIT License. Changes: UPSTREAM.md, "Code ordinaire"; license text:
   UPSTREAM.md, "Licence de Betterleaks".
+- Cas d'essai du décodeur (detect/encoding_test.go, TestBetterleaksDecoderCases), depuis la v0.10.0 : noms et textes
+  attendus des 18 cas de TestDecode de Betterleaks (https://github.com/betterleaks/betterleaks,
+  internal/codec/decoder_test.go, commit b4b1c4455987636400ce693bd9d8a8e2cf375ed9), Copyright (c) 2026 Zachary Rice,
+  licence MIT. Modifications : UPSTREAM.md, « Décodage à plusieurs couches et vue UTF-16 » ; texte de la licence :
+  UPSTREAM.md, « Licence de Betterleaks ».
+  Decoder test cases, since v0.10.0: names and expected texts of the 18 cases of Betterleaks' TestDecode
+  (internal/codec/decoder_test.go, same commit), Copyright (c) 2026 Zachary Rice, MIT License. Changes: UPSTREAM.md,
+  "Décodage à plusieurs couches et vue UTF-16"; license text: UPSTREAM.md, "Licence de Betterleaks".
 - golang.org/x/text (BSD-3-Clause), Copyright 2009 The Go Authors.
   Licence reproduite dans UPSTREAM.md / license reproduced in UPSTREAM.md.
 - Données Unicode / Unicode data (Unicode License v3), Copyright (c) 1991-2026 Unicode, Inc.

@@ -167,7 +167,8 @@ func newScanState(rules *Rules) *scanState {
 	return &scanState{rules: rules, views: newViewBudget(), windows: &windowBudget{}, decode: &decodeBudget{}, seen: map[sourceRange]struct{}{}}
 }
 
-// collect est l'analyse de collect dans l'état s, dont les tampons restent lisibles jusqu'à s.views.wipe.
+// collect est l'analyse de collect dans l'état s, dont les tampons restent lisibles jusqu'à s.views.wipe. Un contenu
+// UTF-16 (utf16.go) est analysé une seconde fois dans sa vue UTF-16, mêmes budgets : écart avec Secret Guard.
 func (s *scanState) collect(content []byte, lang language) ([]finding, error) {
 	rules := s.rules
 	if rules == nil || !rules.loaded {
@@ -177,6 +178,48 @@ func (s *scanState) collect(content []byte, lang language) ([]finding, error) {
 	if err != nil {
 		return nil, err
 	}
+	findings, err := s.collectViews(text, lang)
+	if err != nil {
+		return nil, err
+	}
+	wide, err := utf16View(content, s.views)
+	if err != nil {
+		return nil, err
+	}
+	if wide != nil {
+		wideText, err := textViewsOf(wide, s.views)
+		if err != nil {
+			return nil, err
+		}
+		found, err := s.collectViews(wideText, lang)
+		if err != nil {
+			return nil, err
+		}
+		if findings, err = appendBounded(findings, found); err != nil {
+			return nil, err
+		}
+	}
+	kept := dedupeOverlaps(content, findings)
+	if len(kept) > MaxFindings {
+		return nil, errTooManyFindings
+	}
+	return kept, nil
+}
+
+// layered retire aux constats trouvés dans v, ou dans une vue tirée de v, la pénalité de ses couches de pourcentage
+// au-delà de la première (la première est déjà comptée par encodingPenalty).
+func layered(found []finding, v *view) []finding {
+	if v.extraLayers == 0 {
+		return found
+	}
+	for i := range found {
+		found[i].score = boundedScore(found[i].score - layerPenalty*v.extraLayers)
+	}
+	return found
+}
+
+// collectViews suit collectFindings de Secret Guard sur les vues d'un texte, avant la déduplication.
+func (s *scanState) collectViews(text *textViews, lang language) ([]finding, error) {
 	var findings []finding
 	views := []*view{text.identity}
 	if text.normalized != nil {
@@ -188,7 +231,7 @@ func (s *scanState) collect(content []byte, lang language) ([]finding, error) {
 		if err != nil {
 			return nil, err
 		}
-		if findings, err = appendBounded(findings, detected); err != nil {
+		if findings, err = appendBounded(findings, layered(detected, v)); err != nil {
 			return nil, err
 		}
 	}
@@ -202,60 +245,64 @@ func (s *scanState) collect(content []byte, lang language) ([]finding, error) {
 			if err != nil {
 				return nil, err
 			}
-			if findings, err = appendBounded(findings, detected); err != nil {
+			if findings, err = appendBounded(findings, layered(detected, v)); err != nil {
 				return nil, err
 			}
 		}
-		base64Windows, err := lineWrappedBase64Views(v, s.windows, s.views)
+		detected, err := s.base64Layer(v, s.seen, 1)
 		if err != nil {
 			return nil, err
 		}
-		for _, joined := range append(base64Windows, v) {
-			detected, err := s.base64Candidates(joined)
-			if err != nil {
-				return nil, err
-			}
-			if findings, err = appendBounded(findings, detected); err != nil {
-				return nil, err
-			}
+		if findings, err = appendBounded(findings, layered(detected, v)); err != nil {
+			return nil, err
 		}
 	}
-	kept := dedupeOverlaps(content, findings)
-	if len(kept) > MaxFindings {
-		return nil, errTooManyFindings
-	}
-	return kept, nil
+	return findings, nil
 }
 
-// base64Candidates suit scanBase64Candidates de Secret Guard.
-func (s *scanState) base64Candidates(v *view) ([]finding, error) {
+// base64Layer suit scanBase64Candidates de Secret Guard sur la vue v et ses fenêtres de lignes jointes : chaque
+// candidat est décodé dans le budget de l'analyse, puis son texte analysé (decodedText). Les constats portent
+// l'étendue du candidat dans le texte de v et l'encodage base64 ; layer est la couche de ce décodage (1 : la source).
+func (s *scanState) base64Layer(v *view, seen map[sourceRange]struct{}, layer int) ([]finding, error) {
+	windows, err := lineWrappedBase64Views(v, s.windows, s.views)
+	if err != nil {
+		return nil, err
+	}
 	var findings []finding
-	err := forEachBase64Candidate(v, s.decode, s.seen, func(start, end int, decoded string) error {
-		// Texte décodé relevé par le budget de vues : la valeur d'un constat y est lue pour son Empreinte locale,
-		// puis effacée à la fin de l'analyse.
-		buffer := []byte(decoded)
-		s.views.own(buffer)
-		inner, err := s.decodedText(buffer)
+	for _, joined := range append(windows, v) {
+		err := forEachBase64Candidate(joined, s.decode, seen, func(start, end int, decoded string) error {
+			// Texte décodé relevé par le budget de vues : la valeur d'un constat y est lue pour son Empreinte locale,
+			// puis effacée à la fin de l'analyse.
+			buffer := []byte(decoded)
+			s.views.own(buffer)
+			inner, err := s.decodedText(buffer, layer)
+			if err != nil {
+				return err
+			}
+			for _, f := range inner {
+				findings = append(findings, finding{
+					ruleID: f.ruleID, secretType: f.secretType, start: start, end: end, score: boundedScore(f.score - layerPenalty),
+					reasons: append(append([]string(nil), f.reasons...), "single_level_base64_decode"), encoding: EncodingBase64,
+					value: f.value,
+				})
+			}
+			if len(findings) > maxRawFindings {
+				return errTooManyFindings
+			}
+			return nil
+		})
 		if err != nil {
-			return err
+			return nil, err
 		}
-		for _, f := range inner {
-			findings = append(findings, finding{
-				ruleID: f.ruleID, secretType: f.secretType, start: start, end: end, score: boundedScore(f.score - 5),
-				reasons: append(append([]string(nil), f.reasons...), "single_level_base64_decode"), encoding: EncodingBase64,
-				value: f.value,
-			})
-		}
-		if len(findings) > maxRawFindings {
-			return errTooManyFindings
-		}
-		return nil
-	})
-	return findings, err
+	}
+	return findings, nil
 }
 
-// decodedText suit scanDecodedText de Secret Guard (une seule couche base64 : ni JWT ni Docker, ni entropie).
-func (s *scanState) decodedText(decoded []byte) ([]finding, error) {
+// decodedText suit scanDecodedText de Secret Guard (ni JWT ni Docker, ni entropie) sur le texte décodé de la couche
+// base64 layer. Écart avec Secret Guard, qui s'arrête à une couche : jusqu'à maxDecodeLayers, les candidats base64 du
+// texte décodé sont décodés à leur tour, dans les mêmes budgets (décodages, octets, fenêtres, vues), et leurs
+// constats rendus avec une pénalité de plus par couche. Budget épuisé : analyse incomplète, jamais un candidat ignoré.
+func (s *scanState) decodedText(decoded []byte, layer int) ([]finding, error) {
 	text, err := buildTextViews(decoded, s.views)
 	if err != nil {
 		return nil, err
@@ -270,9 +317,14 @@ func (s *scanState) decodedText(decoded []byte) ([]finding, error) {
 		if err != nil {
 			return nil, err
 		}
-		if findings, err = appendBounded(findings, detected); err != nil {
+		if findings, err = appendBounded(findings, layered(detected, v)); err != nil {
 			return nil, err
 		}
+	}
+	// Candidats de la couche suivante : ensemble des candidats vus propre à ce texte (étendues de ce texte).
+	var seen map[sourceRange]struct{}
+	if layer < maxDecodeLayers {
+		seen = map[sourceRange]struct{}{}
 	}
 	for _, v := range append([]*view{text.canonical}, text.transformed...) {
 		fixedWindows, err := lineWrappedFixedViews(v, s.windows, s.views)
@@ -284,9 +336,19 @@ func (s *scanState) decodedText(decoded []byte) ([]finding, error) {
 			if err != nil {
 				return nil, err
 			}
-			if findings, err = appendBounded(findings, detected); err != nil {
+			if findings, err = appendBounded(findings, layered(detected, v)); err != nil {
 				return nil, err
 			}
+		}
+		if layer >= maxDecodeLayers {
+			continue
+		}
+		nested, err := s.base64Layer(v, seen, layer+1)
+		if err != nil {
+			return nil, err
+		}
+		if findings, err = appendBounded(findings, layered(nested, v)); err != nil {
+			return nil, err
 		}
 	}
 	return findings, nil

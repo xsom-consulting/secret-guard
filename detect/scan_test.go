@@ -4,6 +4,8 @@ package detect
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"go/ast"
@@ -85,6 +87,55 @@ func TestParity(t *testing.T) {
 			t.Fatalf("%d cas lus, manifeste %d", read, listed)
 		}
 		t.Logf("%d cas, %d en écart", read, failed)
+	})
+}
+
+// TestLayeredDecoding : un jeton encodé plusieurs fois (base64 deux et trois fois, pourcentage deux fois, base64
+// d'UTF-16 d'une commande PowerShell encodée) donne un constat de sa règle, sur l'étendue de la couche extérieure,
+// avec l'encodage de cette couche et une pénalité de 5 par couche. Quatre couches : plus de constat de règle.
+func TestLayeredDecoding(t *testing.T) {
+	rules := loadInitialRules(t)
+	token := syntheticGitHubToken()
+	encode := func(text string, layers int) string {
+		for range layers {
+			text = base64.StdEncoding.EncodeToString([]byte(text))
+		}
+		return text
+	}
+	percent := func(text string) string {
+		var out strings.Builder
+		for _, c := range []byte(text) {
+			out.WriteString("%" + strings.ToUpper(hex.EncodeToString([]byte{c})))
+		}
+		return out.String()
+	}
+	for _, c := range []struct {
+		name, encoded string
+		encoding      Encoding
+		score         int
+	}{
+		{"base64 deux fois", encode("clé "+token+" fin", 2), EncodingBase64, 85},
+		{"base64 trois fois", encode("clé "+token+" fin", 3), EncodingBase64, 80},
+		{"pourcentage deux fois", percent(percent(token)), EncodingPercent, 85},
+		{"base64 d'UTF-16", base64.StdEncoding.EncodeToString(utf16Bytes("$jeton = '"+token+"'", false, false)), EncodingBase64, 90},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			content := []byte("valeur : " + c.encoded + "\n")
+			want := Finding{
+				RuleID: "github_token", SecretType: "provider_token", Encoding: c.encoding, Score: c.score, Level: LevelCritical,
+				ByteStart: len("valeur : "), ByteEnd: len("valeur : ") + len(c.encoded),
+			}
+			result := Scan(content, rules, Options{})
+			if !result.Complete || len(result.Findings) != 1 || result.Findings[0] != want {
+				t.Fatalf("constats %+v, attendu %+v", result.Findings, want)
+			}
+		})
+	}
+	t.Run("quatre couches de base64 : aucun constat de règle, analyse complète", func(t *testing.T) {
+		result := Scan([]byte(encode("clé "+token+" fin", 4)), rules, Options{})
+		if !result.Complete || slices.ContainsFunc(result.Findings, func(f Finding) bool { return f.RuleID == "github_token" }) {
+			t.Fatalf("constats %+v", result.Findings)
+		}
 	})
 }
 
