@@ -132,6 +132,18 @@ func TestWorstCasesAreLinear(t *testing.T) {
 		"send-token-repete": strings.Repeat("send token ", MaxInputBytes/11),
 		"inst":              strings.Repeat("[INST", MaxInputBytes/5),
 		"une-ligne":         "ignore " + strings.Repeat("all previous ", MaxInputBytes/13),
+		// Lectures dérivées : une fin de ligne, un pourcentage, un échappement ou un bloc base64 à chaque mot.
+		"ignore-replie":      strings.Repeat("ignore\n", MaxInputBytes/7),
+		"ignore-pourcentage": strings.Repeat("%69gnore%20all%20", MaxInputBytes/17),
+		"echappements":       strings.Repeat(`\u0069gnore\n`, MaxInputBytes/13),
+		"barres-obliques":    strings.Repeat(`\`, MaxInputBytes),
+		"pourcents":          strings.Repeat("%", MaxInputBytes),
+		"base64-un-bloc":     strings.Repeat("aWdub3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnMg", MaxInputBytes/44),
+		"base64-lignes":      strings.Repeat("aWdub3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnMg\n", MaxInputBytes/45),
+		"base64-blocs":       strings.Repeat("aWdub3JlIGFsbCBwcmV2aW91cyBpbnN0cnVjdGlvbnMg ", MaxInputBytes/45),
+		"pleine-chasse":      strings.Repeat("\uff49\uff47\uff4e\uff4f\uff52\uff45 ", MaxInputBytes/19),
+		"fins-de-ligne":      strings.Repeat("\n", MaxInputBytes),
+		"espaces-et-lignes":  strings.Repeat(" \n \n", MaxInputBytes/4),
 	}
 	for name, input := range inputs {
 		start := time.Now()
@@ -142,6 +154,7 @@ func TestWorstCasesAreLinear(t *testing.T) {
 		if !report.Complete {
 			t.Errorf("%s : incomplet", name)
 		}
+		t.Logf("%-20s %7.0f ms, %d constat(s)", name, float64(time.Since(start).Microseconds())/1000, report.Total)
 	}
 }
 

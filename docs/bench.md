@@ -118,3 +118,71 @@ Lecture :
 - Ces corpus visent un chatbot. Un gabarit de persona n'est pas la même menace qu'une consigne glissée dans un fichier
   lu par un agent de code, qui est le périmètre du paquet ; beaucoup de charges d'Akto demandent du code malveillant
   et ne sont pas des injections. Ces taux sont un point de départ, pas une note.
+
+### Lectures du moteur (Story 27.47)
+
+`injection.Find` lisait le texte tel quel : un encodage suffisait à faire disparaître une consigne. Il lit maintenant
+aussi le texte normalisé et déplié, puis décodé une fois (`injection/views.go`), et ramène chaque constat aux octets
+du texte reçu. `TestPositiveCasesSurviveTransformations` réécrit les 27 cas positifs de `vectors/injection.json` et
+exige d'y retrouver chaque règle attendue :
+
+| Transformation des 27 cas positifs | Avant | Après |
+|---|---:|---:|
+| Base64 (standard ; URL sans remplissage ; au milieu d'une phrase ; replié à 76 colonnes) | 0 | 27 |
+| Pourcentages (`%20`…) | 0 | 27 |
+| Échappements JSON (`\uXXXX`, `\n`) | 0 | 27 |
+| Pleine chasse | 0 | 27 |
+| Espace insécable, espace fine insécable | 12 | 27 |
+| Texte replié (fin de ligne, retrait) | 7 | 27 |
+| Texte replié et espaces insécables | non mesuré | 27 |
+
+« Avant » : relevé du 15 novembre sur le moteur de la v0.9.0 (étude de veille, mêmes cas). Ce qui reste hors de
+portée : base64 de base64, hexadécimal, ROT13, entités HTML, homoglyphes, leetspeak, lettres espacées (repli reporté).
+Sur le corpus de rappel, ces lectures ne changent aucun compte : ses textes sont écrits en clair.
+
+**Porte littérale.** Les motifs étaient exécutés un à un sur tout le texte. Chacun commence par des mots
+obligatoires : une seule lecture du texte relève ces mots, et le motif n'est exécuté qu'à ces endroits, sur une fenêtre
+bornée (`injection/gate.go`). Preuves que rien n'est perdu : `TestGateFindsEveryMatch` (chaque correspondance d'un
+motif cherché sans porte est rendue à la même étendue), `TestFindEqualsUngatedSearch` (même rapport qu'une recherche
+sans porte à chaque position de chaque lecture), `FuzzGateParity`.
+
+**Durée.** `go test -run XXX -bench 'BenchmarkFind/' -benchtime 20x -count 5 ./injection`, médiane des cinq passes,
+Apple M2 Pro, Go 1.27.2. Texte de banc (`injection/bench_test.go`) : lignes de code, de journal, de configuration et
+de prose en français et en anglais, qui portent à chaque ligne les mots obligatoires de plusieurs motifs sans former de
+consigne (cas défavorable à la porte) ; variante « consignes » : une consigne tous les 8 Kio ; « prose repliée » :
+paragraphes français repliés, avec espaces insécables. « Avant » : le même fichier de banc sur le paquet de la v0.9.0
+(commit `e325ae5`), les deux séries l'une après l'autre. La machine était partagée avec d'autres travaux (charge
+moyenne de 15 à 19 pendant la mesure) : les durées sont indicatives, le rapport se lit sur la même série.
+
+| Taille | Texte | Avant (v0.9.0, une lecture) | Après (toutes les lectures) | Gain |
+|---|---|---:|---:|---:|
+| 2 Kio | propre | 1,56 ms | 0,16 ms | ×9,5 |
+| 16 Kio | propre | 12,6 ms | 1,50 ms | ×8,4 |
+| **64 Kio** | **propre** | **66,3 ms** | **5,07 ms** | **×13** |
+| 64 Kio | consignes | 55,6 ms | 5,19 ms | ×11 |
+| 64 Kio | prose repliée | 55,9 ms | 3,85 ms | ×15 |
+| 256 Kio | propre | 229 ms | 22,0 ms | ×10 |
+
+Pire cas (`TestWorstCasesAreLinear`, entrées de 1 Mio choisies contre les motifs et contre chaque lecture) : 3 s pour
+« send token » répété, comme avant ; moins de 150 ms pour les autres.
+
+**Faux positifs.** `go run ./tools/injectioncorpus fichiers -racine <clones>` sur les 34 dépôts publics épinglés de
+l'étude des consignes en clair de xSOM Fleet (22 octobre 2026) : 151 392 fichiers texte analysés (586 de plus de 1 Mio,
+3 927 binaires et 70 liens écartés), un fichier comptant une fois. 15 de ces dépôts sont des cadres d'agents, des
+collections de prompts et des outils d'équipe rouge : un fichier signalé y est souvent une vraie consigne, citée ou
+employée.
+
+| Fichiers signalés | Avant (v0.9.0) | Avec les lectures |
+|---|---:|---:|
+| Tous | 464 (0,306 %) | 478 (0,316 %) |
+| `injection_instruction_override` | 280 | 288 |
+| `injection_role_switch` | 42 | 42 |
+| `injection_exfiltration` | 13 | 20 |
+| `injection_concealment` | 16 | 16 |
+| `injection_message_markers` | 153 | 153 |
+
+Aucun fichier signalé avant ne cesse de l'être. Les 14 fichiers de plus viennent tous du texte déplié : une phrase
+qui continue à la ligne suivante (journal des modifications, commentaire de documentation, prompt d'agent). Une
+première version, qui dépliait aussi les lignes de code, en ajoutait 22 : une fin de ligne après `{`, `}`, `(`, `[`,
+`;`, `=` ou `\`, ou devant `}`, `)`, `]`, n'est donc pas dépliée. La durée de la mesure entière est passée de 865 s à
+52 s de processeur.

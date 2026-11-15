@@ -103,7 +103,7 @@ Les usages légitimes restent silencieux : drapeau de subdivision (Angleterre, �
 ```go
 report := hidden.Find(text)   // texte en octets, 1 Mio au plus
 if !report.Complete {
-	// plus de 1 Mio : rien n'est lu, ne jamais tenir le texte pour propre
+	// plus de 1 Mio (rien n'est lu) ou lecture hors borne : ne jamais tenir le texte pour propre
 }
 for _, f := range report.Findings { // 50 suites au plus ; report.Hidden reste exact
 	// f.Kind, f.Line, f.Column, f.Count, f.ByteStart, f.ByteEnd : jamais ce que les caractères écrivent
@@ -120,14 +120,14 @@ Une page lue, un résultat d'outil ou un fichier cité peut porter, en texte vis
 ```go
 report := injection.Find(text)   // texte en octets, 1 Mio au plus
 if !report.Complete {
-	// plus de 1 Mio : rien n'est lu, ne jamais tenir le texte pour propre
+	// plus de 1 Mio (rien n'est lu) ou lecture hors borne : ne jamais tenir le texte pour propre
 }
 for _, f := range report.Findings { // 50 constats au plus ; report.Total reste exact
 	// f.Rule, f.Line, f.Column, f.ByteStart, f.ByteEnd : jamais le texte trouvé
 }
 ```
 
-C'est un détecteur de constat : il ne masque ni n'expurge rien (le texte d'une page lue n'est pas à réécrire) et il ne juge pas. Un texte qui cite ces phrases pour les expliquer, une documentation sur l'injection de prompt par exemple, est signalé comme celui qui les emploie : l'appelant choisit la décision (avertir est le choix sûr pour un texte lu). Il ne couvre que les formes ci-dessus ; une consigne écrite autrement passe, et l'absence de constat n'est pas une preuve d'innocuité. Les motifs sont des expressions RE2 (temps linéaire) et chaque règle est contrainte par un corpus de bruit (`vectors/injection.json` : textes ordinaires qui ne doivent rien signaler) : une règle ne s'ajoute pas sans cas de bruit. Pas de portage d'origine : le corpus est écrit pour ce paquet. La ligne de commande et le module WebAssembly ne l'exposent pas encore.
+C'est un détecteur de constat : il ne masque ni n'expurge rien (le texte d'une page lue n'est pas à réécrire) et il ne juge pas. Un texte qui cite ces phrases pour les expliquer, une documentation sur l'injection de prompt par exemple, est signalé comme celui qui les emploie : l'appelant choisit la décision (avertir est le choix sûr pour un texte lu). Il ne couvre que les formes ci-dessus ; une consigne écrite autrement passe, et l'absence de constat n'est pas une preuve d'innocuité. Le texte est lu tel quel, puis **normalisé et déplié** (NFKC : pleine chasse, espaces insécables ; une fin de ligne simple vaut une espace, pour un texte replié sur plusieurs lignes), puis **décodé une fois** (suites `%XX`, échappements de chaîne `\uXXXX`, `\xXX`, `\n`…, blocs base64 d'un bloc ou à lignes rejointes) ; chaque constat est rendu en octets, ligne et colonne du texte reçu, et une consigne trouvée dans un bloc base64 désigne le bloc entier. Rien n'est décodé deux fois, et le repli des homoglyphes, du leetspeak et des lettres espacées n'est pas fait. Si une lecture dépasse sa borne (texte dont la forme normalisée est démesurée), `Complete` est faux. Les motifs sont des expressions RE2 (temps linéaire), exécutées seulement là où figurent leurs mots obligatoires, et chaque règle est contrainte par un corpus de bruit (`vectors/injection.json` : textes ordinaires qui ne doivent rien signaler) : une règle ne s'ajoute pas sans cas de bruit. Pas de portage d'origine : le corpus est écrit pour ce paquet. Ce que le paquet signale sur des textes d'attaque publics est mesuré par `TestRecallCorpus` sur `vectors/injection-recall.json` (280 textes de LLM Guard, Promptfoo, Akto et Skill Scanner, sous MIT ou Apache-2.0 : UPSTREAM.md) ; les taux, la durée et les faux positifs sont dans [docs/bench.md](docs/bench.md), sans promesse. La ligne de commande et le module WebAssembly ne l'exposent pas encore.
 
 ### Fichiers cités par « @ » (`mentions`)
 
