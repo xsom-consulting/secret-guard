@@ -689,7 +689,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_33",
+      "validator": "token_entropy_28",
       "pattern": "(?is:\\bBAREMETRICS.{0,32}?\\b([\\-0-9A-Z_a-zſK]{25})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -869,7 +869,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_40",
+      "validator": "token_entropy_39",
       "pattern": "(?is:\\b(?:CLOUDFLARE|X-AUTH-USER-SERVICE-KEY).{0,64}?(V1\\.0-[\\-\\.0-9A-Z_a-zſK]{160,})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -889,7 +889,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_34",
+      "validator": "token_entropy_26",
       "pattern": "(?is:\\bCLOUDSIGHT.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([0-9A-Za-zſK]{20,24})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -909,7 +909,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_31",
       "pattern": "(?is:\\bCODECOV.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?\\b([\\-0-9A-Za-zſK]{36})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -1069,7 +1069,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_33",
+      "validator": "token_entropy_30",
       "pattern": "(?is:\\bD(?:ATADOG.{0,64}?(?:API[\\-_]?KEY|SECRET|PRIVATE|ACCESS|TOKEN)|D[\\-_]API[\\-_]?KEY).{0,32}?\\b([0-9A-Za-zſK]{32})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -1409,7 +1409,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_30",
+      "validator": "token_entropy_26",
       "pattern": "(?is:\\bFINNHUB.{0,24}?\\b([0-9A-Za-zſK]{20})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -1859,7 +1859,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_30",
       "pattern": "(?is:ITERABLE.{0,32}?(?:KEY|TOKEN|SECRET|API).{0,16}?\\b([0-9A-Za-zſK]{32,36})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -2479,7 +2479,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_30",
       "pattern": "(?is:(?:PYOWM|OPENWEATHER|\\bOWM\\b).{0,64}?(?:APPID=)?([0-9A-Za-zſK]{32})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -2529,7 +2529,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_34",
+      "validator": "token_entropy_28",
       "pattern": "(?is:PAGERDUTY[\\-_]?[^0-9A-Z_a-zſK]{0,20}(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,16}?\\b(U\\+[\\+\\-0-9A-Z_a-zſK]{18}|[\\-0-9A-Z_a-zſK]{20}|[0-9A-Fa-f]{32})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -2569,7 +2569,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_30",
       "pattern": "(?is:(?:\\bPDFLAYER.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN|ACCESS_KEY).{0,32}?|\\bAPI\\.PDFLAYER\\.COM/API/CONVERT\\?[^\\t\\n\\r\"'<>]*\\bACCESS_KEY[\\t\\n\\f\\r ]*=[\\t\\n\\f\\r ]*)\\b([0-9A-Za-zſK]{32})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -2829,7 +2829,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_30",
       "pattern": "(?is:\\bSCRAPER(?:[\\t\\n\\f\\r \\-_]?API|API).{0,32}?(?:KEY|TOKEN|API[\\-_]?KEY).{0,16}?([0-9A-Za-zſK]{32})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -2949,7 +2949,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_35",
+      "validator": "token_entropy_32",
       "pattern": "(?is:\\bSNYK.{0,32}?(?:SECRET|PRIVATE|ACCESS|KEY|TOKEN).{0,32}?([0-9A-Za-zſK]{8}-(?:[0-9A-Za-zſK]{4}-){3}[0-9A-Za-zſK]{12})\\b)",
       "minLength": 0,
       "maxLength": 0
@@ -3279,7 +3279,7 @@
       "family": "fixed_pattern",
       "secretType": "provider_token",
       "score": 80,
-      "validator": "token_entropy_30",
+      "validator": "token_entropy_28",
       "pattern": "(?is:WPENGINE.{0,32}?(?:API|KEY|SECRET|TOKEN).{0,16}?\\b([0-9A-Za-zſK]{24,64})\\b)",
       "minLength": 0,
       "maxLength": 0

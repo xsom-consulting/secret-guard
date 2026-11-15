@@ -60,12 +60,36 @@ function realisticAlphabet(alphabet: string): string {
   return /^[0-9a-fA-F]+$/.test(alphabet) && /[a-f]/.test(alphabet) && /[A-F]/.test(alphabet) ? [...new Set(alphabet.toLowerCase())].join('') : alphabet;
 }
 
-function draw(parts: readonly SamplePart[], random: () => number): string {
+const HEX_DIGITS = '0123456789abcdef';
+
+/**
+ * Règles à proximité dont le motif admet tout l'alphabet alphanumérique alors qu'un exemple publié avec la règle
+ * d'origine (Titus) est une clé hexadécimale : leur seuil doit aussi laisser passer une clé hexadécimale de la forme
+ * du motif (UPSTREAM.md, « Vraisemblance des règles de fournisseurs »).
+ */
+const HEX_KEY_RULES: readonly string[] = [
+  'baremetrics_api_key',
+  'cloudflare_ca_key',
+  'cloudsight_api_key',
+  'codecov_access_token',
+  'datadog_api_key',
+  'finnhub_api_token',
+  'iterable_api_key',
+  'openweather_map_api_key',
+  'pagerduty_api_key',
+  'pdflayer_api_key',
+  'scraperapi_key',
+  'snyk_api_key',
+  'wpengine_api_key',
+];
+
+/** Tire une valeur de la forme ; `hexKey` : chaque suite dont l'alphabet admet les seize chiffres hexadécimaux y est tirée. */
+function draw(parts: readonly SamplePart[], random: () => number, hexKey = false): string {
   let value = '';
   for (const part of parts) {
     if ('lit' in part) value += part.lit;
     else {
-      const alphabet = realisticAlphabet(part.alphabet);
+      const alphabet = hexKey && [...HEX_DIGITS].every((digit) => part.alphabet.includes(digit)) ? HEX_DIGITS : realisticAlphabet(part.alphabet);
       for (let index = 0; index < part.length; index += 1) value += alphabet[Math.floor(random() * alphabet.length)] ?? '';
     }
   }
@@ -123,6 +147,7 @@ describe('vraisemblance des règles de fournisseurs', () => {
 
   // Garde de rappel : un seuil trop haut pour la forme d'une clé (20 chiffres hexadécimaux sous un seuil de 3,5, par
   // exemple) écarterait de vraies clés. 2 000 valeurs tirées de la forme de chaque règle : 99,5 % au moins passent.
+  // Pour une règle dont la clé publiée est hexadécimale (HEX_KEY_RULES), 2 000 valeurs hexadécimales de plus.
   it('le seuil de chaque règle laisse passer une valeur tirée au hasard de la forme de son motif', { timeout: 120_000 }, () => {
     const random = generator(0x5eed);
     const draws = 2_000;
@@ -134,8 +159,19 @@ describe('vraisemblance des règles de fournisseurs', () => {
         if (!plausibleToken(draw(rule.sample.value, random), floor)) rejected += 1;
       }
       if (rejected > draws * 0.005) losses.push(`${rule.ruleId} : ${String(rejected)} valeurs sur ${String(draws)} écartées au seuil ${String(floor)}`);
+      if (!HEX_KEY_RULES.includes(rule.ruleId)) continue;
+      let hexRejected = 0;
+      for (let index = 0; index < draws; index += 1) {
+        const value = draw(rule.sample.value, random, true);
+        // La valeur tirée garde la forme du motif : la règle la reconnaît, seul le seuil peut l'écarter.
+        if (index === 0) expect(new RegExp(rule.pattern).test(`${draw(rule.sample.before, random)}${value}${draw(rule.sample.after, random)}`), rule.ruleId).toBe(true);
+        if (!plausibleToken(value, floor)) hexRejected += 1;
+      }
+      if (hexRejected > draws * 0.005) losses.push(`${rule.ruleId} : ${String(hexRejected)} clés hexadécimales sur ${String(draws)} écartées au seuil ${String(floor)}`);
     }
     expect(losses).toEqual([]);
+    const byId = new Map(PROVIDER_RULE_SOURCES.map((rule) => [rule.ruleId, rule]));
+    for (const id of HEX_KEY_RULES) expect(byId.get(id)?.score, id).toBe(80);
   });
 });
 

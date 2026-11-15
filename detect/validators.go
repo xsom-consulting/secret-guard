@@ -44,10 +44,11 @@ var validators = map[string]validator{
 // Une règle de fournisseur reconnaît une forme : un préfixe et une suite de caractères, ou le nom du fournisseur puis
 // une suite de caractères. Une valeur sans diversité (une lettre répétée, des zéros, des « X ») a la forme et n'est
 // pas un jeton. Le moteur écarte donc, pour toute règle « motif seul » du type des jetons de fournisseur hors du
-// catalogue d'origine (originCatalogRules), une valeur de moins de minDistinctBytes octets distincts ou d'entropie de Shannon inférieure à baseEntropyFloor/10 bits par
-// octet. Une règle peut exiger davantage par un validateur nommé « token_entropy_NN » (NN de 25 à 45 : seuil en
-// dixièmes de bit, au-dessus ou au-dessous du seuil d'office), qui s'applique aussi à une règle d'un autre type. Les seuils par règle du Pack initial sont repris
-// de Titus (Apache-2.0, UPSTREAM.md, « Vraisemblance des règles de fournisseurs »).
+// catalogue d'origine (originCatalogRules), une valeur de moins de minDistinctBytes octets distincts ou d'entropie de
+// Shannon inférieure à baseEntropyFloor/10 bits par octet. Une règle peut porter un autre seuil par un validateur
+// nommé « token_entropy_NN » (NN de 25 à 45 : seuil en dixièmes de bit, au-dessus ou au-dessous du seuil d'office),
+// qui s'applique aussi à une règle d'un autre type. Les seuils par règle du Pack initial sont repris de Titus
+// (Apache-2.0) et de Betterleaks (MIT), puis plafonnés (UPSTREAM.md, « Vraisemblance des règles de fournisseurs »).
 const (
 	// providerRuleType : type de secret des règles de fournisseurs.
 	providerRuleType = "provider_" + "token"
