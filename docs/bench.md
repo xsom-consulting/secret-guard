@@ -84,3 +84,37 @@ motifs n'ont pas de littéral obligatoire de trois octets) :
 Coût par règle à 64 Kio sans secret : `iban` 2,0 ms, `payment_card` 2,1 ms, `fr_nir` 1,9 ms, `fr_siret` 1,6 ms, `fr_siren`
 0,5 ms. Un premier motif d'IBAN par pays (une branche par longueur) coûtait 25 ms à lui seul (64 Kio) : le motif est donc
 générique et le moteur raccourcit la correspondance (`detect/personaldata.go`). Mesure indicative, une seule passe.
+
+## v0.10.0 : consignes adressées à l'agent (paquet `injection`)
+
+Mesures du 15 novembre 2026. Ce sont des relevés, pas des promesses : un taux mesuré sur des textes publics ne dit pas
+ce qu'une consigne écrite autrement fera, et l'absence de constat n'est jamais une preuve d'innocuité.
+
+### Rappel de départ
+
+Le rappel du paquet n'avait jamais été mesuré. Le corpus `vectors/injection-recall.json` réunit 280 textes publics
+(sources, commits et licences : UPSTREAM.md, « Corpus de rappel du paquet injection ») ; `TestRecallCorpus` y applique
+`injection.Find`, publie le taux de textes signalés par source et par règle (`go test -v -run '^TestRecallCorpus$'
+./injection`) et échoue au moindre écart avec le relevé commité `injection/testdata/recall.json`, qui liste par
+identifiant, jamais par texte, les consignes manquées et les textes sains signalés.
+
+Point de départ, moteur de la v0.9.0 (cinq règles, texte lu tel quel) :
+
+| Source | Étiquette de la source | Textes | Signalés | Taux | Par règle |
+|---|---|---:|---:|---:|---|
+| LLM Guard | injection | 49 | 21 | 43 % | `instruction_override` 20, `role_switch` 1 |
+| LLM Guard | sain | 11 | 0 | 0 % | |
+| Promptfoo | gabarit de contournement | 106 | 25 | 24 % | `instruction_override` 21, `role_switch` 4, `concealment` 1 |
+| Akto | charge de test LLM | 59 | 31 | 53 % | `instruction_override` 31 |
+| Skill Scanner | consigne (`prompt_injection`) | 1 | 0 | 0 % | |
+| Skill Scanner | sain | 11 | 0 | 0 % | |
+| Skill Scanner | autre risque (code, dépendance) | 43 | 0 | 0 % | |
+
+Lecture :
+
+- Akto : 31 sur 61 (51 %) avec les deux charges qui portent une signature d'essai d'antivirus, non copiées dans le
+  corpus (UPSTREAM.md) ; 31 sur 59 sur le corpus commité.
+- Presque tous les constats viennent d'une seule règle, `injection_instruction_override`.
+- Ces corpus visent un chatbot. Un gabarit de persona n'est pas la même menace qu'une consigne glissée dans un fichier
+  lu par un agent de code, qui est le périmètre du paquet ; beaucoup de charges d'Akto demandent du code malveillant
+  et ne sont pas des injections. Ces taux sont un point de départ, pas une note.
