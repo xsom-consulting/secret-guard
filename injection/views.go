@@ -37,8 +37,10 @@ const (
 	maxViewBytes = 4 * MaxInputBytes
 	// minBase64Length est la longueur la plus courte d'un bloc base64 lu (15 octets décodés).
 	minBase64Length = 20
-	// maxLineIndent : espaces ou tabulations admis devant une ligne de base64 rejointe.
+	// maxLineIndent : espaces ou tabulations admis devant une ligne de base64 rejointe, et derrière elle.
 	maxLineIndent = 8
+	// maxStrayLines : lignes d'un seul mot écartées du début d'un bloc de base64 replié qui ne se décode pas.
+	maxStrayLines = 2
 )
 
 // segment est une suite d'octets d'une vue qui vient d'une même étendue de la source.
@@ -563,23 +565,20 @@ func paddingAt(text []byte, i int) int {
 	return n
 }
 
-// atLineStart dit si l'octet i n'est précédé, sur sa ligne, que d'espaces (maxLineIndent au plus).
-func atLineStart(text []byte, i int) bool {
-	for back := 0; back <= maxLineIndent; back++ {
-		if i-back == 0 || text[i-back-1] == '\n' {
-			return true
-		}
-		if !isBlank(text[i-back-1]) {
-			return false
-		}
+// blankRun rend la fin des espaces et tabulations (maxLineIndent au plus) qui commencent à l'octet i.
+func blankRun(text []byte, i int) int {
+	for n := 0; n < maxLineIndent && i < len(text) && isBlank(text[i]); n++ {
+		i++
 	}
-	return false
+	return i
 }
 
 // base64Decoded rend, bout à bout et séparés par une ligne vide, les textes décodés des blocs base64 de la vue. Un
-// bloc est une suite de caractères base64 d'au moins minBase64Length caractères, ou plusieurs lignes entières de
-// base64 qui se suivent (base64 replié, lignes rejointes) ; si les lignes rejointes ne se décodent pas, chacune est
-// essayée seule. Chaque octet décodé vient du bloc entier.
+// bloc est une suite de caractères base64 d'au moins minBase64Length caractères, ou une suite qui finit sa ligne et
+// les lignes entières de base64 qui la suivent (base64 replié, lignes rejointes ; un retrait et des espaces en fin de
+// ligne sont admis). Une ligne d'un seul mot a la forme d'une ligne de base64 : si les lignes rejointes ne se
+// décodent pas, elles sont réessayées sans les maxStrayLines premières au plus (titre, dernier mot d'une phrase),
+// puis sans la dernière (« EOF ») ; à défaut chacune est essayée seule. Chaque octet décodé vient du bloc entier.
 func base64Decoded(v *view) (*view, bool) {
 	text := v.text
 	b := newBuilder(v, 0)
@@ -604,37 +603,48 @@ func base64Decoded(v *view) (*view, bool) {
 		padding := paddingAt(text, end)
 		pieces = append(pieces[:0], [2]int{i, end})
 		next := end + padding
-		// Lignes entières de base64 qui se suivent : la première commence sa ligne et va jusqu'à la fin de ligne.
-		if padding == 0 && atLineStart(text, i) {
-			for {
-				n := lineBreak(text, next)
-				if n == 0 {
-					break
-				}
-				start := next + n
-				for start < len(text) && start-next-n < maxLineIndent && isBlank(text[start]) {
-					start++
-				}
-				lineEnd := base64Run(text, start)
-				linePadding := paddingAt(text, lineEnd)
-				after := lineEnd + linePadding
-				if lineEnd == start || (after < len(text) && lineBreak(text, after) == 0) {
-					break
-				}
-				pieces = append(pieces, [2]int{start, lineEnd})
-				next, padding = after, linePadding
-				if linePadding > 0 {
-					break
-				}
+		// Lignes entières de base64 qui suivent : la suite va jusqu'à la fin de sa ligne, et chaque ligne suivante
+		// n'est faite que de base64.
+		for padding == 0 {
+			n := lineBreak(text, blankRun(text, next))
+			if n == 0 {
+				break
 			}
+			start := blankRun(text, blankRun(text, next)+n)
+			lineEnd := base64Run(text, start)
+			linePadding := paddingAt(text, lineEnd)
+			after := lineEnd + linePadding
+			if tail := blankRun(text, after); lineEnd == start || (tail < len(text) && lineBreak(text, tail) == 0) {
+				break
+			}
+			pieces = append(pieces, [2]int{start, lineEnd})
+			next, padding = after, linePadding
 		}
 		if !emit(pieces, padding) && len(pieces) > 1 {
-			for k, piece := range pieces {
+			// Bloc retenu : pieces[from:to], sans ses premières lignes ou sans la dernière ; vide s'il n'y en a pas.
+			last, from, to := len(pieces)-1, 0, 0
+			for lead := 1; lead <= maxStrayLines && lead < last && to == 0; lead++ {
+				if decodeBase64(text, pieces[lead:], padding) != nil {
+					from, to = lead, last+1
+				}
+			}
+			for lead := 0; lead <= maxStrayLines && lead < last && to == 0; lead++ {
+				if decodeBase64(text, pieces[lead:last], 0) != nil {
+					from, to = lead, last
+				}
+			}
+			// Dans l'ordre du texte : chaque ligne hors du bloc est essayée seule.
+			for k := 0; k <= last; k++ {
+				stop := k + 1
+				if k == from && to > from {
+					stop = to
+				}
 				piecePadding := 0
-				if k == len(pieces)-1 {
+				if stop == last+1 {
 					piecePadding = padding
 				}
-				emit([][2]int{piece}, piecePadding)
+				emit(pieces[k:stop], piecePadding)
+				k = stop - 1
 			}
 		}
 		i = max(next, end)
