@@ -1019,3 +1019,23 @@ func (ctx *contextualText) structureNoise(v *view, m *assignmentMatch, p *parsed
 	}
 	return noiseVerdict{}, false
 }
+
+// basicAuthNoise dit si l'argument de l'option d'utilisateur (courte ou longue) n'est pas un couple utilisateur et mot
+// de passe : deux nombres (identifiants d'utilisateur et de groupe d'un conteneur), ou un format de date (signe plus et
+// pourcentage en tête : l'heure en temps universel de la commande date). Écart avec Secret Guard (UPSTREAM.md, « Code
+// ordinaire ») : le motif d'origine lit tout couple séparé par deux-points après l'option, sans regarder la commande.
+func basicAuthNoise(user, password []byte) bool {
+	if len(user) > 1 && user[0] == '+' && user[1] == '%' {
+		return true
+	}
+	return isDigits(user) && isDigits(password)
+}
+
+func isDigits(value []byte) bool {
+	for _, c := range value {
+		if !isASCIIDigit(c) {
+			return false
+		}
+	}
+	return len(value) > 0
+}

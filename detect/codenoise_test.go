@@ -428,3 +428,66 @@ func TestSecretShapeCoversProviderTokens(t *testing.T) {
 		t.Fatalf("%d valeurs sur %d ont la forme d'un secret", shaped, values)
 	}
 }
+
+// basicAuthFindings rend les constats de la règle cli_basic_auth de l'analyse de text.
+func basicAuthFindings(t *testing.T, text string) []Finding {
+	t.Helper()
+	result := Scan([]byte(text), loadInitialRules(t), Options{})
+	if !result.Complete {
+		t.Fatalf("analyse incomplète : %v", result.Failure)
+	}
+	var out []Finding
+	for _, f := range result.Findings {
+		if f.RuleID == ruleCLIBasicAuth {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// Options d'utilisateur et arguments, assemblés par morceaux (voir namePassword).
+var (
+	optionUser     = " -" + "u "
+	optionLongUser = " --" + "user"
+	pair           = func(user, secret string) string { return user + ":" + secret }
+)
+
+// TestBasicAuthIgnoresDatesAndNumericIDs : l'option d'utilisateur suivie d'un format de date ou de deux nombres n'est
+// pas un couple utilisateur et mot de passe (commandes date et docker run bloquées sur un Poste réel).
+func TestBasicAuthIgnoresDatesAndNumericIDs(t *testing.T) {
+	clock := "+%H" + ":%M" + ":%S"
+	iso := "+%Y-%m-%dT%H" + ":%M" + ":%SZ"
+	for name, text := range map[string]string{
+		"date en temps universel, format d'heure":      "date" + optionUser + clock,
+		"date en temps universel, format ISO":          "date" + optionUser + iso,
+		"date entre guillemets":                        `stamp="$(date` + optionUser + `"` + iso + `")"`,
+		"docker run, utilisateur et groupe numériques": "docker run --rm" + optionUser + pair("1000", "1000") + " alpine id",
+		"docker run, option longue":                    "docker run --rm" + optionLongUser + " " + pair("501", "20") + " alpine id",
+		"docker run, option longue avec signe égal":    "docker run" + optionLongUser + "=" + pair("0", "0") + " alpine id",
+	} {
+		if got := basicAuthFindings(t, text+"\n"); len(got) != 0 {
+			t.Errorf("%s : %d constat(s) %s", name, len(got), ruleCLIBasicAuth)
+		}
+	}
+}
+
+// TestBasicAuthKeepsCredentials : un couple utilisateur et mot de passe reste signalé, y compris quand l'un des deux
+// est un nombre ou porte un signe de pourcentage.
+func TestBasicAuthKeepsCredentials(t *testing.T) {
+	user := "admin"
+	url := " https://api.example.test/"
+	for name, text := range map[string]string{
+		"curl":                                 "curl" + optionUser + pair(user, literalStrong) + url,
+		"curl entre guillemets":                "curl" + optionUser + `"` + pair(user, literalStrong) + `"` + url,
+		"option longue":                        "curl" + optionLongUser + " " + pair(user, literalStrong) + url,
+		"utilisateur numérique":                "curl" + optionUser + pair("1000", literalStrong) + url,
+		"mot de passe numérique":               "curl" + optionUser + pair(user, "2026"+"1115") + url,
+		"utilisateur à signe plus sans format": "curl" + optionUser + pair("+"+user, literalStrong) + url,
+		"mot de passe à pourcentage":           "curl" + optionUser + pair(user, "+%"+literalStrong) + url,
+		"sans commande":                        strings.TrimPrefix(optionUser, " ") + pair(user, literalStrong),
+	} {
+		if got := basicAuthFindings(t, text+"\n"); len(got) != 1 {
+			t.Errorf("%s : %d constat(s) %s, attendu 1", name, len(got), ruleCLIBasicAuth)
+		}
+	}
+}

@@ -1035,6 +1035,10 @@ func (r *Rules) scanBasicAuthArguments(v *view, findings []finding) []finding {
 		if safeLiteral(text[passwordStart:passwordEnd]) || isSubstituteFragment(text, passwordStart, passwordEnd) {
 			continue
 		}
+		// Écart avec Secret Guard (codenoise.go) : identifiants numériques d'utilisateur et de groupe, format de date.
+		if basicAuthNoise(text[userStart:userEnd], text[passwordStart:passwordEnd]) {
+			continue
+		}
 		findings = append(findings, contextualFinding(v, basic, userStart, passwordEnd, "basic_auth_command_argument"))
 	}
 	return findings
