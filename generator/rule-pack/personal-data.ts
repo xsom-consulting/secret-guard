@@ -13,15 +13,17 @@
 import type { RulePackRule } from '../src/rule-pack.ts';
 
 /**
- * Longueur de l'IBAN par pays (registre ISO 13616, pays d'Europe et du pourtour). Copie dans `detect/personaldata.go`
- * (`ibanLengths`), comparée par `test/personal-data.test.ts`.
+ * Longueur de l'IBAN par pays : les 76 pays que reconnaît Presidio (`iban_patterns.py`, MIT), longueurs du registre
+ * de l'ISO 13616 tenu par SWIFT (52 pays jusqu'à la v0.9.0, 24 ajoutés en v0.10.0 ; UPSTREAM.md). Copie dans
+ * `detect/personaldata.go` (`ibanLengths`), comparée par `test/personal-data.test.ts`.
  */
 export const IBAN_LENGTHS: Readonly<Record<string, number>> = {
-  AD: 24, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BY: 28, CH: 21, CY: 28, CZ: 24,
-  DE: 22, DK: 18, EE: 20, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22, GI: 23, GL: 18,
-  GR: 27, HR: 21, HU: 28, IE: 22, IL: 23, IS: 26, IT: 27, LI: 21, LT: 20, LU: 20, LV: 21,
-  MC: 27, MD: 24, ME: 22, MK: 19, MT: 31, NL: 18, NO: 15, PL: 28, PT: 25, RO: 24, RS: 22,
-  SE: 24, SI: 19, SK: 24, SM: 27, TR: 26, UA: 29, VA: 22, XK: 20,
+  AD: 24, AE: 23, AL: 28, AT: 20, AZ: 28, BA: 20, BE: 16, BG: 22, BH: 22, BR: 29, BY: 28, CH: 21, CR: 22,
+  CY: 28, CZ: 24, DE: 22, DK: 18, DO: 28, EE: 20, EG: 29, ES: 24, FI: 18, FO: 18, FR: 27, GB: 22, GE: 22,
+  GI: 23, GL: 18, GR: 27, GT: 28, HR: 21, HU: 28, IE: 22, IL: 23, IQ: 23, IS: 26, IT: 27, JO: 30, KW: 30,
+  KZ: 20, LB: 28, LC: 32, LI: 21, LT: 20, LU: 20, LV: 21, LY: 25, MC: 27, MD: 24, ME: 22, MK: 19, MR: 27,
+  MT: 31, MU: 30, NL: 18, NO: 15, PK: 24, PL: 28, PS: 29, PT: 25, QA: 29, RO: 24, RS: 22, SA: 24, SC: 31,
+  SE: 24, SI: 19, SK: 24, SM: 27, TL: 23, TN: 24, TR: 26, UA: 29, VA: 22, VG: 24, XK: 20,
 };
 
 /**
@@ -250,6 +252,150 @@ export function cardValid(raw: string): boolean {
   );
 }
 
+// ---------------------------------------------------------------------------------------------------------------
+// Identifiants européens et français (v0.10.0) : seconde écriture des contrôles, indépendante de
+// detect/personaldata.go. Les règles sont dans `context-data.ts` (mot-clé de contexte obligatoire) ; les contrôles
+// européens suivent ceux de Presidio (MIT, avis dans NOTICE, détail dans UPSTREAM.md), les contrôles français les
+// formules publiées (UPSTREAM.md).
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Lettres en majuscules et chiffres d'une valeur, espaces et tirets retirés. */
+const squeeze = (raw: string): string => raw.replaceAll(/[ -]/g, '').toUpperCase();
+
+/** Vrai si la suite n'est faite que d'un même caractère. */
+const repeated = (digits: string): boolean => /^(.)\1+$/.test(digits);
+
+/** Lettre de contrôle du NIF et du NIE espagnols : rang = nombre modulo 23. */
+const ES_CONTROL = ['TRWAGM', 'YFPDXB', 'NJZSQV', 'HLCKE'].join('');
+
+/** NIF (DNI) espagnol : 7 ou 8 chiffres et la lettre du nombre modulo 23. */
+export function esNifValid(raw: string): boolean {
+  const [, digits = '', letter = ''] = /^([0-9]{7,8})([A-Z])$/.exec(squeeze(raw)) ?? [];
+  return digits !== '' && !repeated(digits) && ES_CONTROL.charAt(Number(BigInt(digits) % 23n)) === letter;
+}
+
+/** NIE espagnol : X, Y ou Z (lus 0, 1, 2), 7 chiffres et la lettre du nombre modulo 23. */
+export function esNieValid(raw: string): boolean {
+  const [, head = '', digits = '', letter = ''] = /^([XYZ])([0-9]{7})([A-Z])$/.exec(squeeze(raw)) ?? [];
+  return head !== '' && ES_CONTROL.charAt(Number(BigInt(`${String('XYZ'.indexOf(head))}${digits}`) % 23n)) === letter;
+}
+
+/** Valeur d'un caractère de rang impair du code fiscal italien, par rang (chiffre 0 à 9, ou lettre A à Z). */
+const IT_ODD: readonly number[] = [1, 0, 5, 7, 9, 13, 15, 17, 19, 21, 2, 4, 18, 20, 11, 3, 6, 8, 12, 14, 16, 10, 22, 25, 24, 23];
+
+/** Code fiscal italien : 16 caractères, le dernier est la lettre de la somme (rangs impairs par table, pairs par rang) modulo 26. */
+export function itFiscalCodeValid(raw: string): boolean {
+  const code = raw.toUpperCase();
+  if (!/^[A-Z0-9]{15}[A-Z]$/.test(code)) return false;
+  const rank = (character: string): number => (/[0-9]/.test(character) ? Number(character) : character.charCodeAt(0) - 65);
+  const sum = [...code.slice(0, 15)].reduce((total, character, index) => total + (index % 2 === 0 ? (IT_ODD[rank(character)] ?? 0) : rank(character)), 0);
+  return String.fromCharCode(65 + (sum % 26)) === code.charAt(15);
+}
+
+/** Numéro de TVA italien (partita IVA) : 11 chiffres, Luhn. */
+export function itVatValid(raw: string): boolean {
+  return /^[0-9]{11}$/.test(raw) && !repeated(raw) && luhnValid(raw);
+}
+
+/** Chiffre de contrôle ISO 7064 MOD 11,10 d'une suite de chiffres. */
+export function iso7064CheckDigit(body: string): string {
+  let product = 10;
+  for (const digit of body) {
+    const sum = (Number(digit) + product) % 10 || 10;
+    product = (sum * 2) % 11;
+  }
+  return String((11 - product) % 10);
+}
+
+/** Identifiant fiscal allemand (Steuer-ID) : 11 chiffres sans zéro initial, aucun chiffre plus de trois fois parmi les dix premiers, ISO 7064. */
+export function deTaxIdValid(raw: string): boolean {
+  const digits = raw.replaceAll(' ', '');
+  if (!/^[1-9][0-9]{10}$/.test(digits)) return false;
+  const body = digits.slice(0, 10);
+  if ([...'0123456789'].some((digit) => body.split(digit).length - 1 > 3)) return false;
+  return iso7064CheckDigit(body) === digits.charAt(10);
+}
+
+/** Numéro de TVA allemand (USt-IdNr.) : « DE » et 9 chiffres, le dernier est le contrôle ISO 7064 des huit premiers. */
+export function deVatValid(raw: string): boolean {
+  const [, digits = ''] = /^DE([0-9]{9})$/.exec(raw.replaceAll(' ', '').toUpperCase()) ?? [];
+  return digits !== '' && !repeated(digits) && iso7064CheckDigit(digits.slice(0, 8)) === digits.charAt(8);
+}
+
+/** PESEL polonais : 11 chiffres, mois (01 à 12, plus 20 par siècle) et jour possibles, somme pondérée 1-3-7-9. */
+export function plPeselValid(raw: string): boolean {
+  if (!/^[0-9]{11}$/.test(raw) || repeated(raw)) return false;
+  const month = Number(raw.slice(2, 4)) % 20;
+  const day = Number(raw.slice(4, 6));
+  if (month < 1 || month > 12 || day < 1 || day > 31) return false;
+  const sum = [...raw.slice(0, 10)].reduce((total, digit, index) => total + Number(digit) * Number('1379137913'.charAt(index)), 0);
+  return String((10 - (sum % 10)) % 10) === raw.charAt(10);
+}
+
+/** Numéro NHS britannique : 10 chiffres, somme pondérée de 10 à 1 multiple de 11. */
+export function ukNhsValid(raw: string): boolean {
+  const digits = raw.replaceAll(/[ -]/g, '');
+  if (!/^[0-9]{10}$/.test(digits) || repeated(digits)) return false;
+  return [...digits].reduce((total, digit, index) => total + Number(digit) * (10 - index), 0) % 11 === 0;
+}
+
+/** Personnummer (ou samordningsnummer) suédois : 10 ou 12 chiffres, mois et jour possibles (jour plus 60 admis), Luhn des dix derniers. */
+export function sePersonnummerValid(raw: string): boolean {
+  const digits = raw.replaceAll(/[-+]/g, '');
+  if (!/^(?:[0-9]{2})?[0-9]{10}$/.test(digits)) return false;
+  const last = digits.slice(-10);
+  const month = Number(last.slice(2, 4));
+  const day = Number(last.slice(4, 6)) > 60 ? Number(last.slice(4, 6)) - 60 : Number(last.slice(4, 6));
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31 && luhnValid(last);
+}
+
+/** Caractères de contrôle de l'identifiant personnel finlandais : rang = nombre modulo 31. */
+const FI_CONTROL = ['0123456789', 'ABCDEF', 'HJKLMN', 'PRSTUVWXY'].join('');
+
+/** Identifiant personnel finlandais (henkilötunnus) : date réelle selon le siècle du séparateur, puis caractère du nombre modulo 31. */
+export function fiHetuValid(raw: string): boolean {
+  const [, day = '', month = '', year = '', separator = '', individual = '', control = ''] =
+    /^([0-9]{2})([0-9]{2})([0-9]{2})([-+A-FU-Y])([0-9]{3})([0-9A-Y])$/.exec(raw.toUpperCase()) ?? [];
+  if (day === '') return false;
+  const century = separator === '+' ? 1800 : /[A-F]/.test(separator) ? 2000 : 1900;
+  const date = new Date(Date.UTC(century + Number(year), Number(month) - 1, Number(day)));
+  if (date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== Number(day)) return false;
+  return FI_CONTROL.charAt(Number(`${day}${month}${year}${individual}`) % 31) === control;
+}
+
+/** Numéro de TVA intracommunautaire français : « FR », clé de deux chiffres égale à (12 + 3 × (SIREN mod 97)) mod 97, SIREN valide. */
+export function frVatValid(raw: string): boolean {
+  const [, key = '', siren = ''] = /^FR([0-9]{2})([0-9]{9})$/.exec(raw.replaceAll(' ', '')) ?? [];
+  return siren !== '' && sirenValid(siren) && (12n + 3n * (BigInt(siren) % 97n)) % 97n === BigInt(key);
+}
+
+/** Chiffre d'une lettre d'un numéro de compte (RIB), par rang de A à Z. */
+const RIB_LETTER_DIGITS = '12345678912345678923456789';
+
+/** RIB : banque (5 chiffres), guichet (5), compte (11 lettres ou chiffres), clé = 97 − (les 21 chiffres suivis de « 00 », modulo 97). */
+export function frRibValid(raw: string): boolean {
+  const [, bank = '', branch = '', account = '', key = ''] = /^([0-9]{5})([0-9]{5})([0-9A-Z]{11})([0-9]{2})$/.exec(squeeze(raw)) ?? [];
+  if (bank === '') return false;
+  const digits = `${bank}${branch}${account.replaceAll(/[A-Z]/g, (letter) => RIB_LETTER_DIGITS.charAt(letter.charCodeAt(0) - 65))}`;
+  return !repeated(digits) && 97n - ((BigInt(digits) * 100n) % 97n) === BigInt(key);
+}
+
+/**
+ * Complète `prefix` par le premier de `candidates` qui rend la valeur valide (`suffix` ajouté après) : la clé de
+ * contrôle d'une valeur d'essai est retrouvée par essais, avec le contrôle de référence. Erreur s'il n'y en a aucun.
+ */
+export function withCheck(prefix: string, candidates: readonly string[], valid: (value: string) => boolean, suffix = ''): string {
+  const found = candidates.find((candidate) => valid(`${prefix}${candidate}${suffix}`));
+  if (found === undefined) throw new Error('clé de contrôle introuvable');
+  return `${prefix}${found}${suffix}`;
+}
+
+/** Candidats de `withCheck` : un chiffre, une lettre, un chiffre ou une lettre, une clé de deux chiffres. */
+export const CHECK_DIGITS: readonly string[] = [...'0123456789'];
+export const CHECK_LETTERS: readonly string[] = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
+export const CHECK_ALNUM: readonly string[] = [...CHECK_DIGITS, ...CHECK_LETTERS];
+export const CHECK_PAIRS: readonly string[] = Array.from({ length: 98 }, (_, index) => String(index).padStart(2, '0'));
+
 /** Validateur de référence par nom. */
 export const REFERENCE_VALIDATORS: Readonly<Record<string, (value: string) => boolean>> = {
   iban_mod97: ibanValid,
@@ -257,6 +403,18 @@ export const REFERENCE_VALIDATORS: Readonly<Record<string, (value: string) => bo
   fr_siret_luhn: siretValid,
   fr_siren_luhn: sirenValid,
   payment_card_luhn: cardValid,
+  es_nif_mod23: esNifValid,
+  es_nie_mod23: esNieValid,
+  it_fiscal_code_check: itFiscalCodeValid,
+  it_vat_luhn: itVatValid,
+  de_tax_id_iso7064: deTaxIdValid,
+  de_vat_iso7064: deVatValid,
+  pl_pesel_check: plPeselValid,
+  uk_nhs_mod11: ukNhsValid,
+  se_personnummer_luhn: sePersonnummerValid,
+  fi_hetu_mod31: fiHetuValid,
+  fr_vat_key: frVatValid,
+  fr_rib_key: frRibValid,
 };
 
 /** Constat de référence : règle, étendue en unités UTF-16 du texte. */

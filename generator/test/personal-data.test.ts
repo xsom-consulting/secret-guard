@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { CONTEXT_DATA_RULES } from '../rule-pack/context-data.ts';
 import {
   cardValid,
+  CHECK_PAIRS,
+  frRibValid,
   groupBy4,
   IBAN_LENGTHS,
   ibanPrefixLength,
@@ -18,6 +21,7 @@ import {
   sirenValid,
   siretValid,
   timestampLike,
+  withCheck,
 } from '../rule-pack/personal-data.ts';
 import { RULE_SECRET_TYPES, RULE_VALIDATORS } from '../src/rule-pack.ts';
 
@@ -149,5 +153,50 @@ describe('règles de données personnelles (v0.7.0)', () => {
     for (const prefix of ['1', '4111', '37828224631000', '12345678']) {
       expect(luhnValid(`${prefix}${luhnCheckDigit(prefix)}`), prefix).toBe(true);
     }
+  });
+});
+
+describe('identifiants européens et français à somme de contrôle (v0.10.0)', () => {
+  /** Exemple public d'une documentation, assemblé par morceaux, et le même avec sa clé changée. */
+  const examples: readonly (readonly [validator: string, valid: string, broken: string])[] = [
+    // Identifiants européens portés de Presidio : exemples des documentations nationales et de ses essais.
+    ['es_nif_mod23', ['1234', '5678', 'Z'].join(''), ['1234', '5678', 'A'].join('')],
+    ['es_nie_mod23', ['X', '1234567', 'L'].join(''), ['X', '1234567', 'M'].join('')],
+    ['it_fiscal_code_check', ['RSSMRA', '85T10', 'A562', 'S'].join(''), ['RSSMRA', '85T10', 'A562', 'T'].join('')],
+    ['it_vat_luhn', ['12345', '67890', '3'].join(''), ['12345', '67890', '4'].join('')],
+    ['de_tax_id_iso7064', ['86', '095', '742', '719'].join(' '), ['86', '095', '742', '710'].join(' ')],
+    ['de_vat_iso7064', ['DE', '1366', '95976'].join(''), ['DE', '1366', '95977'].join('')],
+    ['pl_pesel_check', ['440514', '0135', '9'].join(''), ['440514', '0135', '8'].join('')],
+    ['uk_nhs_mod11', ['943', '476', '5919'].join(' '), ['943', '476', '5918'].join(' ')],
+    ['se_personnummer_luhn', ['811218', '9876'].join('-'), ['811218', '9877'].join('-')],
+    ['fi_hetu_mod31', ['131052', '308T'].join('-'), ['131052', '308U'].join('-')],
+    // Identifiants français : TVA de l'exemple courant des guides (SIREN 303 265 045), RIB de l'IBAN d'exemple.
+    ['fr_vat_key', ['FR40', '303', '265', '045'].join(' '), ['FR41', '303', '265', '045'].join(' ')],
+    ['fr_rib_key', ['30006', '00001', '12345678901', '89'].join(' '), ['30006', '00001', '12345678901', '88'].join(' ')],
+  ];
+
+  it('27.12 et 27.13 : chaque contrôle de référence accepte l’exemple public de son format et refuse sa clé changée', () => {
+    for (const [validator, valid, broken] of examples) {
+      const check = REFERENCE_VALIDATORS[validator];
+      expect(check, validator).toBeDefined();
+      expect(check?.(valid), `${validator} : exemple public`).toBe(true);
+      expect(check?.(broken), `${validator} : clé changée`).toBe(false);
+    }
+    // Chaque validateur nommé des règles à contexte a son exemple ; clé de RIB à lettres (A et J valent 1…).
+    const named = CONTEXT_DATA_RULES.map((rule) => rule.validator).filter((name) => name !== '');
+    expect(examples.map(([validator]) => validator)).toEqual(named);
+    const lettered = withCheck(['30006', '00001', 'ABCDEFGHIJK'].join(''), CHECK_PAIRS, frRibValid);
+    expect(frRibValid(lettered.toLowerCase())).toBe(true);
+    // Date impossible (30 février), séparateur de siècle inconnu.
+    expect(REFERENCE_VALIDATORS['fi_hetu_mod31']?.(['300299', '123A'].join('-'))).toBe(false);
+  });
+
+  it('27.13 : la table des IBAN porte 76 pays, aux longueurs du registre (pas aux quatre longueurs fausses de Presidio)', () => {
+    expect(Object.keys(IBAN_LENGTHS)).toHaveLength(76);
+    expect([IBAN_LENGTHS['PT'], IBAN_LENGTHS['MU'], IBAN_LENGTHS['PS'], IBAN_LENGTHS['QA']]).toEqual([25, 30, 29, 29]);
+    // Arabie saoudite, entrée en v0.10.0 : 24 caractères exactement.
+    const saudi = makeIban('SA', ['80000000', '608010167519'].join(''));
+    expect(ibanValid(saudi)).toBe(true);
+    expect(ibanValid(makeIban('SA', ['80000000', '60801016751'].join('')))).toBe(false);
   });
 });

@@ -72,7 +72,7 @@ Portage en Go, sans copie de code d'origine dans le dépôt (la copie figée `pa
 
 **Liens de ressources de claude.ai (v0.7.0)** : l'entropie écarte la fin d'un lien `https://claude.ai/[code/]{artifact,chat,project}/<identifiant>` (`detect/entropylinks.go`, `isKnownResourceLink`) : l'identifiant d'une ressource qui exige une session n'est pas un secret (faux positif relevé sur un Poste réel le 10 novembre 2026). Les liens de partage public (`/share/`), les autres hôtes, un identifiant de connexion ou `http://` restent détectés (`TestEntropyIgnoresClaudeResourceLinks`).
 
-**Règles de données personnelles (v0.7.0), sans origine dans Secret Guard** : `iban`, `fr_nir`, `fr_siret`, `fr_siren` et `payment_card` s'ajoutent aux 35 règles du catalogue d'origine dans le Pack initial (`generator/rule-pack/personal-data.ts`, après l'extraction de `rules.ts`) ; leurs validateurs sont dans `detect/personaldata.go`, avec le raccourcissement de la correspondance de l'IBAN (`trimmers`, `scanFixedPattern`). Ce sont les seules règles du Pack initial dont le résultat attendu ne vient pas du moteur d'origine : le corpus les éprouve dans `vectors/detection/rules-personal-data.json` (80 cas), dont les attentes viennent d'une seconde écriture indépendante des contrôles et des positions (le moteur d'origine doit ne rien trouver dans ces textes), jamais du moteur Go. Les 823 cas du moteur d'origine, les vecteurs du masquage hors de ces règles et ceux du Pack du client sont inchangés. Types de Substituts : un par règle (`SubstituteLabels()`).
+**Règles de données personnelles (v0.7.0), sans origine dans Secret Guard** : `iban`, `fr_nir`, `fr_siret`, `fr_siren` et `payment_card` s'ajoutent aux 35 règles du catalogue d'origine dans le Pack initial (`generator/rule-pack/personal-data.ts`, après l'extraction de `rules.ts`) ; leurs validateurs sont dans `detect/personaldata.go`, avec le raccourcissement de la correspondance de l'IBAN (`trimmers`, `scanFixedPattern`). Ce sont les seules règles du Pack initial dont le résultat attendu ne vient pas du moteur d'origine : le corpus les éprouve dans `vectors/detection/rules-personal-data.json` (82 cas), dont les attentes viennent d'une seconde écriture indépendante des contrôles et des positions (le moteur d'origine doit ne rien trouver dans ces textes), jamais du moteur Go. Les 823 cas du moteur d'origine, les vecteurs du masquage hors de ces règles et ceux du Pack du client sont inchangés. Types de Substituts : un par règle (`SubstituteLabels()`).
 
 **Vérification des règles de données personnelles** : `TestPersonalDataValidators` (49 numéros connus ou calculés), `TestIBANEveryCountry` (un IBAN calculé pour chacun des 52 pays de la table, par groupes et d'un bloc, seul ou suivi d'un mot, d'un nombre ou d'une ponctuation), `TestIBANPrefixLength`, `TestPersonalDataScan`, `TestPersonalDataNoFalsePositives`, `TestPersonalDataViews`, `TestPersonalDataRedaction`, `TestPersonalDataSubstitutes`, `TestRuleCorpus` (cas `<ruleId>/…` du corpus), `TestRuleScoresAndReasons` (score, raisons et pénalité d'encodage), pires cas de 1 Mio (`TestWorstCases`, `TestScanWorstCases` : têtes d'IBAN, groupes de chiffres, suite de chiffres, IBAN valide répété, mot SIREN répété) ; côté générateur, `test/personal-data.test.ts` (exemples connus, table des pays comparée à celle du moteur Go, types et validateurs comparés au schéma) et la régénération `npm run vectors:detection -- --upstream <checkout> --check`.
 
@@ -394,7 +394,7 @@ Le `LICENSE` de `secret-guard/packages/core`, copié dans `pack/initial/upstream
 La technique du mot-clé de contexte obligatoire (une règle ne se déclenche que si un mot qui annonce la donnée est
 proche de la valeur) vient du projet Akto (`https://github.com/akto-api-security/akto`, licence MIT), lue au commit
 `6b7de940c28037d726776bc5f201fd9e572133a3` dans
-`apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
+`apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de la v0.9.0 de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
 cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP interne, ARN, bucket S3, RDS, DynamoDB) sont
 écrites ici en RE2, sans copie de motif, de mot-clé ni de code d'Akto.
 
@@ -982,3 +982,135 @@ régénération du corpus (mêmes deux cas en écart), pas après.
 4. Les cas nouveaux (double et triple base64, double pourcentage, base64 d'UTF-16, fichiers UTF-16) sont éprouvés
    par des essais Go, pas encore par des cas du corpus `vectors/detection/views.json` : la seconde écriture du
    générateur ne juge aujourd'hui que le base64 entier. À étendre avec la matrice d'encodages (lot L27) ?
+
+## Identifiants européens et français, règle composée AWS (v0.10.0)
+
+Quinze règles s'ajoutent à la fin du Pack initial, après les règles de données à contexte de la v0.9.0
+(`generator/rule-pack/context-data.ts`) : dix identifiants européens à somme de contrôle portés de Presidio, quatre
+identifiants français que Presidio n'a pas, et une règle composée pour AWS. La table des longueurs d'IBAN passe de 52
+à 76 pays. Aucune de ces règles n'existe dans le moteur d'origine.
+
+### Reprise de Presidio (licence MIT)
+
+Dépôt `https://github.com/data-privacy-stack/presidio` (le projet a quitté `microsoft/presidio`), commit
+`fd78e974fbf9e15dad1f90de4fc125db39ef4200` du 14 novembre 2026, licence MIT, « Copyright (c) Presidio Contributors. ».
+Dossier `presidio-analyzer/presidio_analyzer/predefined_recognizers` : `country_specific/` pour les identifiants,
+`generic/iban_patterns.py` pour la liste des pays.
+
+| Fichier d'origine | Règle et validateur ici | Ce qui est repris |
+|---|---|---|
+| `country_specific/spain/es_nif_recognizer.py` | `es_nif`, `es_nif_mod23` | forme (7 ou 8 chiffres, une lettre), table des 23 lettres, mots « DNI », « NIF », « documento nacional de identidad » |
+| `country_specific/spain/es_nie_recognizer.py` | `es_nie`, `es_nie_mod23` | forme (X, Y ou Z, 7 chiffres, une lettre), même table, mot « NIE » |
+| `country_specific/italy/it_fiscal_code_recognizer.py` | `it_fiscal_code`, `it_fiscal_code_check` | valeurs des caractères de rang impair et pair, lettre de contrôle modulo 26, mot « codice fiscale » |
+| `country_specific/italy/it_vat_code.py` | `it_vat`, `it_vat_luhn` | 11 chiffres, contrôle (qui est celui de Luhn), mots « partita iva », « piva » |
+| `country_specific/germany/de_tax_id_recognizer.py` | `de_tax_id`, `de_tax_id_iso7064` | 11 chiffres sans zéro initial, aucun chiffre plus de trois fois parmi les dix premiers, ISO 7064 MOD 11,10, mots « Steuer-ID », « IdNr », « Steueridentifikationsnummer » |
+| `country_specific/germany/de_vat_id_recognizer.py` | `de_vat`, `de_vat_iso7064` | « DE » et 9 chiffres, ISO 7064 MOD 11,10 sur les huit premiers, mots « USt-IdNr », « Umsatzsteuer-ID » |
+| `country_specific/poland/pl_pesel_recognizer.py` | `pl_pesel`, `pl_pesel_check` | 11 chiffres, poids 1-3-7-9, mot « PESEL » |
+| `country_specific/uk/uk_nhs_recognizer.py` | `uk_nhs`, `uk_nhs_mod11` | 10 chiffres (3-3-4), somme pondérée de 10 à 1 multiple de 11, mots « NHS », « National Health Service » |
+| `country_specific/sweden/se_personnummer_recognizer.py` | `se_personnummer`, `se_personnummer_luhn` | 10 ou 12 chiffres, jour augmenté de 60 (samordningsnummer), Luhn des dix derniers, mots « personnummer », « samordningsnummer », « personal identity number » |
+| `country_specific/finland/fi_personal_identity_code_recognizer.py` | `fi_personal_identity_code`, `fi_hetu_mod31` | forme, siècle selon le séparateur, table des 31 caractères, mots « hetu », « henkilötunnus », « personbeteckning », « personal identity code » |
+| `generic/iban_patterns.py` | `iban`, `ibanLengths` | la liste des 76 pays |
+
+Ce qui change, pour toutes ces règles :
+
+- **Motifs réécrits en RE2.** Aucun motif de Presidio n'est copié : ceux qui portent une anticipation ne se
+  compilent pas en RE2, et tous sont réécrits avec leur mot-clé. Le motif du code fiscal italien est ici plus simple
+  que celui de Presidio (qui contrôle aussi le jour selon le mois) : le caractère de contrôle décide.
+- **Contexte obligatoire.** Chez Presidio, un mot de contexte ajoute 0,35 au score d'une valeur qui reste un constat
+  sans lui. Ici, sans mot-clé juste avant la valeur (même ligne, liaison bornée « : », « = », « est », « is »), il n'y
+  a pas de constat. Les mots-clés sont donnés en français, en anglais et dans la langue du pays.
+- **Somme de contrôle obligatoire**, par un validateur nommé du moteur (`detect/personaldata.go`). Pour la TVA
+  allemande, Presidio garde par défaut une valeur dont le contrôle échoue ; ici elle est écartée.
+- **Contrôles ajoutés** : une valeur faite d'un seul chiffre répété est écartée ; le mois et le jour d'un PESEL
+  doivent être possibles ; la date d'un identifiant finlandais doit exister (années bissextiles comprises).
+- **IBAN.** Presidio contrôle la forme du compte de chaque pays ; ce module ne contrôle que la longueur et le modulo
+  97. Les longueurs viennent du registre des IBAN de l'ISO 13616, tenu par SWIFT, relu le 15 novembre 2026 sur la
+  table de Wikipédia qui le reproduit (`https://en.wikipedia.org/wiki/International_Bank_Account_Number`), et non
+  des motifs de Presidio, dont quatre sont trop courts : Portugal (25 caractères, 21 chez Presidio), Maurice (30,
+  28), Palestine (29, 25), Qatar (29, 25). Le registre lui-même n'a pas été relu dans cette passe.
+
+Corpus : `vectors/detection/rules-context-data.json`. Le résultat attendu de chaque cas vient d'une seconde écriture
+des contrôles en TypeScript (`generator/rule-pack/personal-data.ts` : BigInt, expressions, tables écrites à part),
+qui sert aussi à calculer la clé de chaque valeur d'essai ; `generator/test/personal-data.test.ts` éprouve cette
+seconde écriture sur l'exemple public de chaque format. Aucun essai ni jeu de données de Presidio n'est repris.
+`vectors/noise.json` reçoit quatre cas « contexte/ » (216 au total) : deux adresses postales ordinaires, que seule la
+règle « à activer » signale, une plaque en minuscules et des numéros à forme d'identifiant sans leur mot-clé.
+
+Licence de Presidio :
+
+```text
+The MIT License (MIT)
+
+Copyright (c) Presidio Contributors.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+### Identifiants français : formules et sources
+
+Ces règles sont écrites pour ce module. Presidio n'a aucune reconnaissance française.
+
+| Règle | Contrôle | Source |
+|---|---|---|
+| `fr_vat` (`fr_vat_key`) | « FR », clé de deux chiffres, SIREN ; clé = (12 + 3 × (SIREN modulo 97)) modulo 97, et SIREN valide (Luhn) | **Source officielle non trouvée dans cette passe.** La structure (code pays, clé, SIREN) est celle que décrit l'administration fiscale ; la formule de la clé est donnée à l'identique par les guides consultés le 15 novembre 2026 (`https://www.eurofiscalis.com/calculateur-numero-tva-intracommunautaire/`, `https://www.indy.fr/guide/fiscalite/taxes/tva/numero-intracommunautaire/`) et vérifiée sur l'exemple courant FR 40 303 265 045. À remplacer par la référence d'un texte officiel. |
+| `fr_rib` (`fr_rib_key`) | banque (5 chiffres), guichet (5), compte (11 chiffres ou lettres), clé = 97 − ((89 × banque + 15 × guichet + 3 × compte) modulo 97) ; une lettre du compte vaut un chiffre (A et J : 1 ; B, K et S : 2 ; jusqu'à I, R et Z : 9) | **Source officielle non trouvée dans cette passe** (la norme est celle du CFONB). Formule donnée par un document pédagogique de l'IREM de Limoges (`https://www.irem.unilim.fr/OLD/fileadmin/documents/ERR/arithmetiquueaulycee/codes_au_quotidien.pdf`) ; la seconde écriture la calcule autrement (les 21 chiffres suivis de « 00 », modulo 97) et les deux s'accordent sur le RIB de l'IBAN d'exemple de la documentation bancaire (30006 00001 12345678901, clé 89). À remplacer par la référence du CFONB. |
+| `fr_license_plate` | aucun : le format de 2009 (deux lettres, trois chiffres, deux lettres, sans I, O ni U) n'a pas de clé ; le mot-clé de contexte est obligatoire | Format du système d'immatriculation des véhicules (arrêté du 9 février 2009 relatif aux modalités d'immatriculation des véhicules) : référence citée de mémoire, non relue dans cette passe. |
+| `fr_postal_address` | aucun : numéro, type de voie en liste fermée, nom, code postal à cinq chiffres, commune | Règle « à activer » (`detect.OptInRuleIDs`) : elle n'est jamais exécutée d'office. |
+
+Limites : une clé de TVA à lettres (numéros attribués depuis quelques années) n'est pas reconnue ; une TVA écrite
+« FR 40 … » (espace avant la clé) non plus ; les plaques d'avant 2009 (« 1234 AB 75 ») et les numéros de voie à
+lettre (« 12B ») ne sont pas lus.
+
+### Règle composée AWS
+
+`detect/awspair.go` : un identifiant de clé d'accès (AKIA, ASIA) et une valeur de 40 caractères de base64 à 200
+octets au plus l'un de l'autre, dans un ordre ou l'autre, donnent un seul constat `aws_access_key_pair` (score 95,
+CRITICAL), de l'un à l'autre ; la déduplication y absorbe le constat de l'identifiant et celui de l'entropie.
+L'identifiant seul reste `aws_access_key_id` (45, MEDIUM). La valeur doit être une suite maximale d'exactement 40
+caractères, avec une minuscule, une majuscule et un chiffre, et ne pas être faite de chiffres hexadécimaux (empreinte
+SHA-1). La paire d'exemple de la documentation d'AWS n'est pas un constat.
+
+L'idée de chercher les deux parties d'un secret dans une même fenêtre vient de TruffleHog
+(`https://github.com/trufflesecurity/trufflehog`, AGPL-3.0). **Aucune ligne de TruffleHog n'est reprise** : ni motif,
+ni seuil d'entropie, ni taille de fenêtre, ni liste de comptes ; le code est écrit pour ce module et la fenêtre de
+200 octets est un choix de ce module. Le Pack porte la règle comme une règle « motif seul » dont le motif décrit la
+forme « identifiant, puis valeur » : un moteur antérieur l'exécuterait ainsi, sans les deux ordres ni le rejet des
+empreintes. Le moteur de la v0.10.0 exécute sa famille à la place du motif pour toute règle qui porte cet
+identifiant. Seconde écriture pour le corpus : `awsPairSpans` (`generator/rule-pack/context-data.ts`).
+
+### Décisions prises par défaut, à confirmer
+
+1. **Cinq types de secret ajoutés au schéma** `RulePack` : `national_identifier`, `vat_number`,
+   `bank_account_number`, `vehicle_registration_plate`, `postal_address` ; douze validateurs ajoutés à
+   `RULE_VALIDATORS`. Un moteur antérieur refuse un Pack qui les emploie (`unknown_secret_type`,
+   `unknown_validator`) : un Pack signé qui les porte déclare en `minAgentVersion` la première version qui embarque
+   le moteur v0.10.0.
+2. **Scores** : identifiant d'une personne 60 (HIGH, comme le NIR) ; numéro de TVA 35 (donnée publique d'une
+   entreprise, comme le SIRET) ; RIB 45 (comme l'IBAN) ; plaque et adresse postale 30.
+3. **La TVA française n'exige pas de mot-clé** : le préfixe « FR », la clé et le Luhn du SIREN laissent passer une
+   suite de onze chiffres sur 970 environ.
+4. **Fenêtre de la règle AWS : 200 octets**, et constat étendu de l'identifiant à la valeur : le masquage retire
+   aussi le texte qui les sépare.
+5. **L'adresse postale seule est « à activer »** ; la plaque s'exécute d'office, son mot-clé étant obligatoire.
+6. **Sources officielles** de la clé de TVA et de la clé du RIB : à fournir (tableau ci-dessus).
+
+Vérification : `TestParity` (1 970 cas), `TestContextRules`, `TestOptInRules`, `TestAWSKeyPair`,
+`generator/test/personal-data.test.ts`, `generator/test/rule-pack.test.ts`. Non mesuré dans cette passe : le banc de
+bruit sur les dépôts de référence (`go run ./tools/bruit <nom>=<chemin>…`, à lancer avant l'étiquette) et le coût des
+quinze règles sur le banc de `docs/bench.md`.

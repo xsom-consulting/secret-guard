@@ -28,12 +28,7 @@ func (r *Rules) scanFixedRules(v *view, budget *decodeBudget, allowStructured bo
 			continue
 		}
 		var err error
-		if fixed.id == ruleJWT {
-			findings, err = scanJWT(v, fixed, budget, findings)
-		} else {
-			findings, err = scanFixedPattern(v, fixed, budget, findings)
-		}
-		if err != nil {
+		if findings, err = fixedScanOf(fixed)(v, fixed, budget, findings); err != nil {
 			return nil, err
 		}
 	}
