@@ -155,6 +155,10 @@ const providerRulesCorpusFile = "rules-providers.json"
 // qui a produit les vecteurs du masquage (TestContextRules).
 const contextDataCorpusFile = "rules-context-data.json"
 
+// codeNoiseCorpusFile : fichier du corpus du code ordinaire (v0.10.0) : filtres absents du moteur d'origine qui a
+// produit les vecteurs du masquage (TestParity en éprouve chaque cas).
+const codeNoiseCorpusFile = "rules-code-noise.json"
+
 // redactSelected dit si un cas du corpus est repris par les vecteurs du masquage : au moins un constat, ou analyse
 // incomplète (selectedCorpusCase du générateur).
 func redactSelected(c corpusCase) bool { return !c.Expected.Complete || len(c.Expected.Findings) > 0 }
@@ -296,7 +300,7 @@ func TestRedactParity(t *testing.T) {
 		selected := 0
 		for file, cases := range corpus {
 			if file == personalDataCorpusFile || file == passwordPhraseCorpusFile || file == providerRulesCorpusFile ||
-				file == contextDataCorpusFile {
+				file == contextDataCorpusFile || file == codeNoiseCorpusFile {
 				// Règles ajoutées en v0.7.0 et annonces de mot de passe (v0.8.1) : le masquage du moteur d'origine ne les
 				// connaît pas (TestPersonalDataRedaction, TestPasswordPhraseRedaction).
 				continue

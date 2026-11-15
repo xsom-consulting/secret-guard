@@ -18,6 +18,7 @@ import { corpusCaseOf, coverageProblems, expectedFor, type CaseSource, type Eval
 import { recordUpstreamTests, testImport, testLabel, type RecordedTest } from './harness.ts';
 import { serializeCaseFile, serializeManifest } from './json.ts';
 import { CASE_FILE_PATTERN, CORPUS_FORMAT_VERSION, MANIFEST_FILE, MAX_INPUT_BYTES, type CorpusCase } from './model.ts';
+import { codeNoiseCases, codeNoiseCoverageProblems, codeNoiseExpected, codeNoiseUpstream } from './code-noise.ts';
 import { contextDataCases, contextDataCoverageProblems, contextDataExpected } from './context-data.ts';
 import { personalDataCases, personalDataCoverageProblems, personalDataExpected } from './personal-data.ts';
 import { passwordPhraseCases, passwordPhraseCoverageProblems, passwordPhraseExpected } from './password-phrase.ts';
@@ -180,6 +181,15 @@ async function main(): Promise<number> {
       written.push([source.file, corpusCaseOf(source, expected)]);
       sources.push(source);
     }
+    // Code ordinaire (v0.10.0) : constats du moteur d'origine jugés par la seconde écriture de `corpus/code-noise.ts`.
+    const codeNoise: (EvaluatedCase & { upstream: ReturnType<typeof codeNoiseUpstream> })[] = [];
+    for (const source of codeNoiseCases()) {
+      const expected = codeNoiseExpected(engine, source);
+      codeNoise.push({ id: source.id, ...(source.intent === undefined ? {} : { intent: source.intent }), expected, upstream: codeNoiseUpstream(engine, source.bytes, source.languageId) });
+      written.push([source.file, corpusCaseOf(source, expected)]);
+      sources.push(source);
+    }
+    problems.push(...codeNoiseCoverageProblems(codeNoise));
     problems.push(...missingContext.map((id) => `règle de données à contexte absente du Pack : ${id}`));
     problems.push(...contextDataCoverageProblems(context));
     problems.push(...missingPersonal.map((id) => `règle de données personnelles absente du Pack : ${id}`));

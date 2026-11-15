@@ -15,6 +15,7 @@ import { UPSTREAM_COMMIT as PACK_UPSTREAM_COMMIT } from '../rule-pack/catalog.ts
 import { RulePack } from '../src/rule-pack.ts';
 import { PERSONAL_DATA_RULES, referenceFindings } from '../rule-pack/personal-data.ts';
 import { byteOffsetOf, decodeInput } from '../corpus/bytes.ts';
+import { CODE_NOISE_FILE } from '../corpus/code-noise.ts';
 import { CorpusError, coverageProblems, expectedFor, type CoverageInput, type EvaluatedCase } from '../corpus/corpus.ts';
 import { jsonString, serializeCaseFile } from '../corpus/json.ts';
 import { PERSONAL_DATA_FILE, personalDataCases, personalDataCoverageProblems } from '../corpus/personal-data.ts';
@@ -191,7 +192,8 @@ describe('corpus de parité commité', () => {
         !(corpus.get(PERSONAL_DATA_FILE) ?? []).includes(value) &&
         !(corpus.get(PASSWORD_PHRASE_FILE) ?? []).includes(value) &&
         !(corpus.get(PROVIDER_RULES_FILE) ?? []).includes(value) &&
-        !(corpus.get(CONTEXT_DATA_FILE) ?? []).includes(value),
+        !(corpus.get(CONTEXT_DATA_FILE) ?? []).includes(value) &&
+        !(corpus.get(CODE_NOISE_FILE) ?? []).includes(value),
     );
     expect(others.length).toBe(synthetic.length);
   });

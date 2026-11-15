@@ -704,3 +704,191 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Code ordinaire (v0.10.0)
+
+Écarts d'analyse ajoutés en v0.10.0 pour que du code ordinaire ne soit plus bloqué (`detect/codenoise.go`,
+`detect/publicvalues.go`). Cette section est celle du lot « les affectations ne bloquent plus le code ordinaire ».
+Aucun de ces écarts n'a d'origine dans Secret Guard ; le précédent suivi est celui de la v0.8.1 (section
+« Expurgation », écarts « sans effet sur le corpus ») : le corpus d'origine ne bouge pas, chaque faux positif relevé
+entre dans `vectors/noise.json`, un essai nommé le prouve.
+
+### Ce qui était lu, et ce qui change
+
+Après un nom sensible, l'origine tient pour une valeur à protéger tout ce qui suit le signe deux-points ou le signe
+égal, fins de ligne comprises, sauf une liste courte d'exceptions. Relevé sur des Postes réels (xSOM Fleet,
+novembre 2026) : un script shell qui passe une variable à une option, une expression de CI, un tableau, un objet, un
+appel, un type, la ligne qui suit une clé de section YAML donnaient chacun un constat de score 70, donc un blocage.
+Les filtres de `detect/codenoise.go` (`assignmentNoise`) jugent la valeur lue, après les filtres d'origine et avant la
+création du constat.
+
+**Palier 1, quel que soit le langage : la valeur n'est pas un littéral.**
+
+- *Référence* (`referenceAt`, `interpolation`) : variable ou paramètre de shell (`$NOM`, `$1`, `$@`), expansion
+  (`${NOM}`, `${NOM:?message}`, `${NOM:-$AUTRE}`), substitution de commande (`$(…)`, accents graves dans une ligne de
+  shell), expression de CI (`${{ … }}`), gabarit (`{{ … }}`, `#{…}`, `%{…}`), champ de format (`%s`), expression d'un
+  gabarit de code (`${f(x)}`, champ `{nom}` d'une chaîne Python `f"…"` ou C# `$"…"`), et chaîne entre guillemets faite
+  de références. Suivie d'une autre option de la commande, la référence reste une référence, et la suite de la ligne
+  est relue pour elle-même. Partout, dotenv compris.
+- *Structure de code* (`structureNoise`, `walkStructure`) : tableau et objet partout hors affectation nue
+  d'environnement ; appel, expression entre parenthèses, fonction, type générique, type d'un paramètre, accès indexé à
+  une propriété là où l'origine admet déjà une référence de code (`referenceEligible`, dernière condition de
+  `safeContextualValue`). La structure est **parcourue**, pas écartée en bloc. Un littéral crédible sur sa première
+  ligne garde le constat d'origine, à son étendue d'origine : une chaîne, le seul mot nu de la structure, ou, hors
+  d'un code reconnu (au sens du palier 2), tout mot nu de forme stricte d'une liste ou d'un objet, jusqu'à sa
+  fermeture, qui n'est ni le nom d'un champ ni un chemin d'identifiants (`i18n.French`) : en YAML, `[a, b]` porte des
+  littéraux ; dans du code, des identifiants. Chaque littéral crédible des
+  lignes suivantes, jusqu'à la
+  fermeture de la structure, a son propre constat, sur son étendue exacte. La recherche d'affectations reprend juste
+  après l'ouverture, et un champ au nom sensible est lu pour lui-même. Un littéral est crédible (`credibleLiteral`)
+  par une forte entropie, ou par 8 unités au moins sans espace avec un chiffre et trois classes de caractères ; pour un
+  mot de passe porté par un tableau ou un objet, 8 unités sans espace suffisent (le corpus d'origine garde l'objet JSON
+  qui porte un mot de passe fait de mots) ; pour un mot de passe passé en argument d'un appel ou écrit dans un gabarit,
+  8 unités sans espace qui mêlent lettres et chiffres (le défaut d'une lecture d'environnement) ; jamais une adresse
+  sans identifiants, un nom de constante ni une date.
+- *Valeur sans guillemets lue à la ligne suivante* : écartée si aucun mot de la ligne n'a la forme décrite au palier 2 ;
+  la ligne suivante est relue pour elle-même. Sous un nom de mot de passe, seule une ligne qui est elle-même un champ
+  (un nom suivi du signe deux-points) est écartée : un scalaire YAML peut s'écrire à la ligne suivante.
+
+**Palier 2, dans du code seulement** (langage de code déclaré, ou, sans langage, ligne qui porte un mot-clé de
+déclaration parmi `const`, `let`, `var`, `return`, `readonly`, `public`, `private`, `protected`, `type`, `interface`,
+`enum`). Pour une clé d'API, un jeton ou un secret générique, une valeur dont aucun mot n'a la forme attendue
+(`secretShaped`) n'est pas un constat. Cette forme demande 8 unités au moins sans espace, et l'une de ces propriétés :
+trois classes de caractères ; des lettres et deux chiffres sur 10 unités ; une forte entropie ; une suite de 12 lettres
+et chiffres qui n'est pas un mot de nom (`nameTokenLetters`) ; plus de 15 lettres d'une seule casse.
+
+**Option d'utilisateur** (`basicAuthNoise`, dans `scanBasicAuthArguments`). Deux nombres (identifiants d'utilisateur et
+de groupe de `docker run`) ou un format de date (signe plus et pourcentage en tête, commande `date` en temps universel)
+ne sont pas un couple utilisateur et mot de passe. Le motif `cli_basic_auth` du Pack ne change pas.
+
+**Valeur chiffrée** (`isEncryptedEnvelope`, `isEncryptedBlock`) et **valeur publique connue** (`isPublicValue`,
+`detect/publicvalues.go`) : voir « Reprise de Betterleaks » ci-dessous. La valeur publique est aussi écartée de
+l'entropie, par un seul appel ajouté à la fin de la condition de `scanEntropy`.
+
+**Garde-fous**, chacun avec son essai (`TestAssignmentNoiseGuards`, `TestCodeValueGuards`,
+`TestEncryptedEnvelopeGuards`, `TestBasicAuthKeepsCredentials`) :
+
+- aucun filtre de structure ni palier 2 dans un fichier dotenv ou sur une affectation nue d'environnement
+  (`isBareEnvironmentAssignment`) ;
+- le défaut littéral d'une expansion de shell reste signalé ;
+- le mot de passe, la clé privée, l'identifiant de nuage et l'URL de base ne sont jamais jugés sur leur forme ;
+- sous un nom de mot de passe, une chaîne à références ne tombe que si ce qui reste hors références ne porte ni lettre
+  ni chiffre, et une variable collée à une lettre (un dollar au milieu d'un mot) n'est pas une référence ;
+- une référence prolongée par une concaténation ou un texte collé garde son constat ;
+- une valeur qui commence par un Substitut n'est pas un tableau (vecteur `residu/bloc-yaml` de
+  `vectors/expurgate.json` : sans cette exclusion, `TestExpurgateVectors` échoue) ;
+- une structure fermée sur la ligne et suivie d'un texte collé n'est pas une structure ; une ouverture jamais fermée
+  suivie d'un seul mot (`[Xy7…`), un mot-clé de fonction collé à un autre signe (`async-…`), un chevron jamais fermé ou
+  suivi d'un texte collé (`Abc<def`, `Abc<def>ghi`) non plus ;
+- au palier 2, une chaîne à forme de secret dans la suite de l'expression que couvre le constat d'origine garde ce
+  constat (`"essai" if debug else "…"`) ;
+- une marque de chiffrement sans texte chiffré derrière elle garde son constat : moins de 64 caractères après
+  `{cipher}`, moins de 40 après `vault:vN:` (les plus courts textes que Spring et Vault écrivent), étiquette `!vault`
+  suivie d'un autre texte qu'un indicateur de bloc, en-tête `$ANSIBLE_VAULT;` sans numéro de version ;
+- aucun marqueur de contournement n'est lu dans le texte.
+
+**Travail borné.** Chaque motif d'affectation dispose, par vue, d'un budget d'octets à relire (`spend`, huit fois la
+longueur de la vue plus 64 Kio) et une structure de plus de 4 096 octets n'est pas parcourue. Budget épuisé ou borne
+dépassée, le filtre ne s'applique plus et le constat d'origine est gardé ; ce n'est jamais une analyse incomplète
+(`TestCodeNoiseWorstCases`, `FuzzCodeNoise`). Le budget est rendu au début de chaque motif : le résultat est le même en
+analyse séquentielle et en parallèle (`TestParityWorkers`).
+
+### Corpus
+
+- **Corpus d'origine inchangé** : les 1 639 cas des 16 fichiers antérieurs sont identiques octet pour octet
+  (`npm run vectors:detection -- --upstream <checkout> --check`), et le moteur les passe tous (`TestParity`). Les
+  vecteurs du masquage et de l'expurgation ne sont pas régénérés (`vectors:redact --check` : identiques ;
+  `TestExpurgateVectors`).
+- **`vectors/noise.json`** : 157 cas « vecu/ » ajoutés (212 au total), chacun sans langage puis avec le langage de son
+  fichier. Sur le code de v0.9.0, 104 d'entre eux donnent un constat ; `TestNoiseCorpus` passe à la fin du lot.
+- **`vectors/detection/rules-code-noise.json`** : 91 cas, par voisins, la forme écartée (46 cas sans constat, que le
+  moteur d'origine signale tous) et la même forme qui porte un littéral (45 cas dont un constat reste). Le résultat
+  attendu vient d'une seconde écriture des filtres en TypeScript (`generator/corpus/code-noise.ts`), qui part des
+  constats du moteur d'origine, juge chacun, et fait relire par le moteur d'origine la suite d'une étendue écartée ;
+  une forme qu'elle ne lit pas arrête le générateur. Cette seconde écriture a relevé un défaut de la première (le
+  palier 2 retirait une structure qui porte un littéral), corrigé avant la fin du lot. Comme les autres lectures
+  absentes du moteur d'origine, ces cas restent hors des vecteurs du masquage. Total du corpus : 1 730 cas, 17 fichiers.
+- **Relecture indépendante du lot** : quatorze cas ajoutés (liste et objet YAML en ligne à mots nus, identifiants et
+  chemin d'identifiants, mot de la suite de la ligne, ouverture jamais fermée, défaut d'un mot de passe en argument
+  d'un appel, mot-clé de fonction collé, chevron jamais fermé, suite de l'expression au palier 2, marques de
+  chiffrement suivies d'un texte court), et les deux cas de texte chiffré portés à la longueur des vrais. Le cas du chiffrement de transit, à longueur réelle, a montré ce que les textes courts
+  cachaient : le constat d'affectation tombe, l'avertissement d'entropie reste (cas
+  `chiffre/transit-de-vault-avertissement-d-entropie`).
+
+### Mesures du 15 novembre 2026
+
+Indicatives, sur une seule machine (Apple M2 Pro). Constats d'affectation (`contextual_*`) sur les fichiers suivis par
+git de cinq dépôts (code et documentation, corpus et vecteurs écartés), moteur v0.9.0 puis moteur de ce lot, sans
+langage (ce que fait xSOM Fleet aujourd'hui) puis avec le langage tiré de l'extension de chaque fichier :
+
+| Dépôt | Fichiers | v0.9.0 sans langage | Ce lot sans langage | v0.9.0 avec langage | Ce lot avec langage |
+|---|---:|---:|---:|---:|---:|
+| xSOM Fleet | 4 648 | 896 | 354 | 844 | 186 |
+| Promptfoo (commit `5fac53e`, échantillon) | 2 498 | 2 933 | 2 456 | 2 788 | 425 |
+| LiteLLM (commit `09ce4f50`, échantillon) | 2 496 | 6 022 | 5 110 | 5 793 | 766 |
+| ggshield (commit `f3377d9`) | 568 | 471 | 286 | 459 | 119 |
+| Gitleaks (commit `5f6ec56`) | 225 | 171 | 145 | 173 | 76 |
+
+Sur xSOM Fleet, `cli_basic_auth` passe de 7 constats à 1. Contrôle de ce qui a été retiré : sur xSOM Fleet
+(550 constats retirés sans langage, 665 avec), Promptfoo (2 367) et LiteLLM (5 029), aucune étendue retirée ne porte un
+mot de 12 caractères ou plus qui mêle lettres et au moins deux chiffres, hors quatre lignes de xSOM Fleet où ce mot est
+le nom d'un champ ; échantillons lus à la main (valeurs d'essai en mots, noms de variables, types, libellés). Cas vécus
+(63 lignes de code ordinaire) : 41 signalés avant, 8 après sans langage ; 39 avant, 6 après avec langage. Seuil du
+palier 2 et vitesse : `docs/bench.md`, « v0.10.0 : code ordinaire ».
+
+Relecture indépendante du lot, le même jour : les garde-fous ajoutés (voir « Corpus ») ne changent aucun constat sur
+ces dépôts. Moteur d'avant la relecture puis moteur relu, mêmes fichiers : xSOM Fleet, 355 constats d'affectation sans
+langage et 186 avec, dans les deux cas (le dépôt a reçu des fichiers depuis la première mesure) ; Promptfoo, 2 456 et
+425 ; LiteLLM avec langage, 766. Aucun constat ajouté ni retiré.
+
+### Vérification
+
+`TestNoiseCorpus` (en échec sur le code de v0.9.0 avec les cas ajoutés) ; `TestAssignmentValueIsNotALiteral`,
+`TestStructureIsWalked`, `TestAssignmentNoiseGuards`, `TestReferenceAt`, `TestSecretShapes` ;
+`TestCodeValueWithoutSecretShape`, `TestCodeValueGuards`, `TestSecretShapeThreshold`,
+`TestSecretShapeCoversProviderTokens` ; `TestBasicAuthIgnoresDatesAndNumericIDs`, `TestBasicAuthKeepsCredentials` ;
+`TestEncryptedEnvelopeIsNotASecret`, `TestEncryptedEnvelopeGuards`, `TestPGPPrivateKeyIsNotAnEnvelope` ;
+`TestPublicForms`, `TestPublicValueIsNotAnAssignment`, `TestPublicValueIsNotAnEntropyFinding` ;
+`TestCodeNoiseWorstCases`, `FuzzCodeNoise`, `TestStructureHelpers` ; `TestParity` (1 730 cas, 0 écart), `TestParityWorkers`, `TestRedactParity`,
+`TestDecisionParity`, et la suite du module `expurgation` ; côté générateur, `generator/test/code-noise.test.ts`.
+
+### Ce qui reste signalé, et ce qui est perdu
+
+- Reste signalé : une valeur courte ou en mots hors d'un code reconnu (sans langage ni mot-clé de déclaration ; YAML,
+  JSON, shell, dotenv) ; un mot de passe d'essai banal, où qu'il soit ; le défaut littéral d'une expansion ; une
+  annotation de type Python à crochets sous un mot de passe (cas `contextual/optional-type-annotation` du corpus
+  d'origine) ; la prose d'un commentaire ou d'un document sous un nom sensible ; une URL de base dont le mot de passe
+  est une référence (règle des URL à identifiants) ; l'avertissement d'entropie d'un texte chiffré de longueur réelle
+  (chiffrement de transit de Vault, corps d'un bloc Ansible Vault) : l'entropie ne lit pas les enveloppes.
+- Perdu, dans du code seulement (palier 2) : le constat d'affectation d'une clé, d'un jeton ou d'un secret générique
+  dont la valeur est faite de mots (y compris longs, séparés par des tirets), d'une suite aléatoire de moins de
+  12 caractères sans chiffre, ou de moins de 16 lettres d'une seule casse. Une règle à format fixe ou l'entropie
+  peuvent encore la trouver.
+- Perdu, partout hors dotenv et affectation nue d'environnement : sous un nom de mot de passe, le constat d'un littéral
+  de moins de 8 caractères porté par un tableau ou un objet (seuil qui écarte les schémas à type de chaîne), et celui
+  d'un mot de passe fait de mots, sans chiffre, passé en argument d'un appel ou écrit dans un gabarit. Sous les autres
+  noms, le constat d'un littéral sans chiffre porté par une structure. Dans une liste en ligne de plusieurs éléments,
+  le constat d'un mot nu sans forme stricte (`[motdepasse1, autre]`) ; dans du code, celui de tout mot nu.
+- Perdu, partout : sous un nom de mot de passe, le constat d'une chaîne faite d'un dollar, d'un nom et de signes
+  (`"$Nom2024!"`) : lue comme une variable suivie de ponctuation, y compris hors d'un script shell (l'origine écartait
+  déjà la variable seule, `"$Nom2024"`) ; le constat d'un mot enveloppé dans un gabarit (`"#{mot}"`, `"%{mot}"`).
+- Perdu, partout : le constat d'une valeur qui a exactement la forme d'une valeur publique de la liste sous un nom de
+  clé d'API ou de jeton (pour les formes sans préfixe propre, seulement avec le mot-clé du fournisseur sur la ligne,
+  avant la valeur) ; le constat d'une valeur à marque de chiffrement suivie de texte chiffré.
+
+### Reprise de Betterleaks (licence MIT)
+
+Dépôt `https://github.com/betterleaks/betterleaks`, commit `b4b1c4455987636400ce693bd9d8a8e2cf375ed9` du
+13 novembre 2026, licence MIT, « Copyright (c) 2026 Zachary Rice ».
+
+| Élément d'origine | Dans ce dépôt | Ce qui est repris | Ce qui change |
+|---|---|---|---|
+| `rules/generic/filter.go`, `testAndPublicAPIFilters` (65 formes de clés publiques et de clés d'essai : 22 par leur motif seul, 43 avec des mots-clés) | `detect/publicvalues.go`, `publicForms` | les 65 motifs et leurs mots-clés, tels quels (`\@` et `\/` écrits sans barre oblique inverse ; les deux valeurs fixes assemblées par morceaux) | motifs ancrés aux deux bouts et compilés par RE2 ; un mot-clé ne compte que sur la ligne et **avant** la valeur (à l'origine : à proximité) ; les affectations n'appliquent la liste qu'aux noms de clé d'API et de jeton, jamais à un mot de passe ni à un nom qui porte « secret » ; l'entropie l'applique par un seul appel (`scanEntropy`) ; les quatre formes que l’origine garde en commentaire (clés secrètes et jeton d’accès d’essai) ne sont pas reprises |
+| `rules/generic/password.go`, `isEncryptedValue` (enveloppes chiffrées) | `detect/codenoise.go`, `isEncryptedEnvelope`, `isEncryptedBlock` | l'idée, et six formes : sops (`ENC[…]`), Spring Cloud Config (`{cipher}…`), Ansible Vault (`$ANSIBLE_VAULT;`, étiquette `!vault`), chiffrement de transit de Vault (`vault:vN:…`), age, PGP (en-têtes d'armure) | aucun motif copié : lecture écrite à la main, resserrée (la marque doit être suivie de texte chiffré : `,data:` et crochet fermant pour sops, 64 caractères de texte chiffré après `{cipher}`, 40 après `vault:vN:`, numéro de version après `$ANSIBLE_VAULT;`, indicateur de bloc ou fin de ligne après `!vault`) ; les autres formes de l'origine (OpenSSL salé, Fernet, JWE, PASETO, DPAPI, `ENCRYPTED PRIVATE KEY`) ne sont pas reprises |
+
+Le code qui applique ces listes est écrit pour ce module ; aucun essai de Betterleaks n'est repris. Rien n'est repris
+de TruffleHog (AGPL-3.0). L'idée d'écarter une référence (`$1`, `${NOM}`, `{{ … }}`, `${{ … }}`) vient aussi de la
+liste des valeurs ignorées de Gitleaks (`config/gitleaks.toml`, commit `5f6ec56cfa6f8c67648d863582c7ae2f206d5c1c`,
+licence MIT, « Copyright (c) 2019 Zachary Rice ») : seule l'idée est reprise, sans motif ni code.
+
+Le texte de la licence MIT de Betterleaks n'est reproduit qu'une fois, plus haut : « Licence de Betterleaks ».
