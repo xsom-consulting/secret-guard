@@ -946,17 +946,18 @@ func (ctx *contextualText) shellLine(m *assignmentMatch, lang language) bool {
 // isFieldString dit si la chaîne dont le contenu commence en start est à champs « {nom} » : préfixe « f » de Python
 // (« f"…" », « rf"…" », « fr"…" ») ou « $ » de C# (« $"…" », « $@"…" »).
 func isFieldString(text []byte, start int) bool {
+	// Préfixe de une ou deux lettres devant le guillemet, lui-même hors d'un identifiant.
 	i := start - 2
+	fields := false
 	for k := 0; k < 2 && i >= 0; k, i = k+1, i-1 {
-		switch text[i] {
-		case 'f', 'F', '$':
-			return i == 0 || !isIdentByte(text[i-1])
-		case 'r', 'R', 'b', 'B', '@':
-		default:
-			return false
+		c := text[i]
+		if c == 'f' || c == 'F' || c == '$' {
+			fields = true
+		} else if c != 'r' && c != 'R' && c != 'b' && c != 'B' && c != '@' {
+			break
 		}
 	}
-	return false
+	return fields && (i < 0 || !isIdentByte(text[i]))
 }
 
 // structureNoise : la valeur sans guillemets est une structure de code. Hors affectation nue d'environnement

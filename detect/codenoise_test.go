@@ -614,3 +614,57 @@ func FuzzCodeNoise(f *testing.F) {
 		rules.scanEntropy(v)
 	})
 }
+
+// TestStructureHelpers : lectures élémentaires du parcours d'une structure.
+func TestStructureHelpers(t *testing.T) {
+	for text, want := range map[string]int{
+		`"abc" rest`:     4,
+		`"a\"b" rest`:    5,
+		`'a' "b"`:        2,
+		"\"abc\nd\"":     -1,
+		`"jamais fermée`: -1,
+		`"fin\`:          -1,
+	} {
+		if got := closingQuote([]byte(text), 0, len(text)); got != want {
+			t.Errorf("closingQuote(%q) = %d, attendu %d", text, got, want)
+		}
+	}
+	for text, want := range map[string]int{
+		"name rest": 4, "a.b.c(": 5, "a?.b)": 4, "std::env::var(": 13, "p->field ": 8, "a. ": 1, "9a": 0, "": 0,
+	} {
+		if got := identPathEnd([]byte(text), 0); got != want {
+			t.Errorf("identPathEnd(%q) = %d, attendu %d", text, got, want)
+		}
+	}
+	for text, want := range map[string]bool{
+		`x = f"a"`: true, `x = rf"a"`: true, `x = Fr"a"`: true, `x = $"a"`: true, `x = $@"a"`: true,
+		`x = "a"`: false, `x = self"a"`: false, `x = r"a"`: false, `"a"`: false,
+	} {
+		if got := isFieldString([]byte(text), strings.Index(text, `"`)+1); got != want {
+			t.Errorf("isFieldString(%q) = %v", text, got)
+		}
+	}
+	for text, want := range map[string]bool{"k:\n  v": true, "k:\r\n\tv": true, "k: v": false, "k:v": false} {
+		if got := crossesLine([]byte(text), 0, len(text)-1); got != want {
+			t.Errorf("crossesLine(%q) = %v", text, got)
+		}
+	}
+	for text, want := range map[string]bool{
+		`{"name": 1}`: true, `{ "a": 1, "name": 2}`: true, "{\n  \"name\": 1}": true,
+		`c ? "name" : other`: false, `["name"]`: false, `{"name"::x}`: false,
+	} {
+		open := strings.Index(text, `"name"`)
+		if got := isFieldName([]byte(text), 0, open, open+5); got != want {
+			t.Errorf("isFieldName(%q) = %v", text, got)
+		}
+	}
+	withUser := "https://" + "user:pw" + "@example.test"
+	for text, want := range map[string]bool{
+		"https://vault.example.test/v1": true, "postgres://db.example.test": true,
+		withUser: false, "https://example.test/?k=v": false, "://x": false, "a b://c": false, "9://x": false,
+	} {
+		if got := isPlainLocator([]byte(text)); got != want {
+			t.Errorf("isPlainLocator(%q) = %v", text, got)
+		}
+	}
+}
