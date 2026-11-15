@@ -677,7 +677,7 @@ Le positif perdu par la vraisemblance est la clé age d'essai de Betterleaks, fa
 
 Le fichier du banc porte des jetons d'essai publics : il est exempté de la recherche de secrets par son chemin exact (`.gitleaks.toml`), comme `vectors/noise-providers.json`, dont quatre formes à caractère répété déclenchent une règle de gitleaks ; le générateur, lui, reste analysé.
 
-Vérification : `TestPlausibility`, `TestNoiseProviders`, `TestProviderRules`, `TestComparisonBetterleaks`, `TestParity` (1 771 cas), `generator/test/provider-rules.test.ts` (dont la garde de rappel : 99,5 % au moins de 2 000 valeurs tirées de la forme de chaque règle passent son seuil, et de même 2 000 valeurs hexadécimales pour les treize règles à clé publiée hexadécimale).
+Vérification : `TestPlausibility`, `TestNoiseProviders`, `TestProviderRules`, `TestComparisonBetterleaks`, `TestParity` (1 862 cas depuis le corpus du code ordinaire), `generator/test/provider-rules.test.ts` (dont la garde de rappel : 99,5 % au moins de 2 000 valeurs tirées de la forme de chaque règle passent son seuil, et de même 2 000 valeurs hexadécimales pour les treize règles à clé publiée hexadécimale).
 
 ### Licence de Betterleaks
 
@@ -795,7 +795,7 @@ analyse séquentielle et en parallèle (`TestParityWorkers`).
 
 ### Corpus
 
-- **Corpus d'origine inchangé** : les 1 639 cas des 16 fichiers antérieurs sont identiques octet pour octet
+- **Corpus d'origine inchangé** : les 1 771 cas des 16 fichiers antérieurs sont identiques octet pour octet
   (`npm run vectors:detection -- --upstream <checkout> --check`), et le moteur les passe tous (`TestParity`). Les
   vecteurs du masquage et de l'expurgation ne sont pas régénérés (`vectors:redact --check` : identiques ;
   `TestExpurgateVectors`).

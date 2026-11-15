@@ -458,8 +458,8 @@ chiffres sans deux chiffres, une suite de moins de 12 caractères sans chiffre, 
 et toute valeur faite de mots. Hors d'un code reconnu, dans un fichier dotenv et sur une affectation nue
 d'environnement, rien ne change.
 
-Vrais positifs : les 521 étendues détectées par une règle de fournisseur dans le corpus portent toutes un mot de cette
-forme (`TestSecretShapeCoversProviderTokens`), et `TestParity` passe sur les 1 639 cas antérieurs.
+Vrais positifs : les 635 étendues détectées par une règle de fournisseur dans le corpus portent toutes un mot de cette
+forme (`TestSecretShapeCoversProviderTokens`), et `TestParity` passe sur les 1 771 cas antérieurs.
 
 Effet mesuré sur les 4 648 fichiers de xSOM Fleet, avec le langage de chaque fichier, en constats d'affectation :
 844 avec le moteur v0.9.0, 333 après le palier 1 seul (commit `cbcb02c`), 186 à la fin du lot. Les 147 constats
