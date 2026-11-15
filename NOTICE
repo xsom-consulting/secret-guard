@@ -46,3 +46,29 @@ Context-keyword technique (detect, v0.9.0)
 The idea of requiring a context keyword near a value comes from Akto
 (https://github.com/akto-api-security/akto), distributed under the MIT License.
 No pattern, keyword list or code was copied: the rules are written in this module.
+
+Recall corpus of the injection package (v0.10.0)
+vectors/injection-recall.json is test data only: it is not part of the shipped engine. Its texts are copied,
+unmodified, by tools/injectioncorpus from:
+- LLM Guard (https://github.com/protectai/llm-guard, tests/input_scanners/test_prompt_injection.py,
+  commit 168c1034ffdb33837e7ae6fd6a16b80567c1be03), Copyright (c) Protect AI. All rights reserved., MIT License;
+- Promptfoo (https://github.com/promptfoo/promptfoo, src/redteam/strategies/promptInjections/data.ts,
+  commit 5fac53eefdd26141a45c52ab77f533a7d30884e3), Copyright (c) Promptfoo 2025, MIT License; part of these
+  texts is modified from LLM Guard (MIT License, Copyright (c) Protect AI);
+- Akto (https://github.com/akto-api-security/akto,
+  apps/dashboard/src/main/resources/inbuilt_llm_test_yaml_files/, commit f69427472ebf57cac9dd1b70bbcfb542ba2189d8),
+  Copyright (c) 2023 Akto.io., MIT License;
+- Skill Scanner (https://github.com/cisco-ai-defense/skill-scanner, evals/skills/,
+  commit c558c421157c546ec417cf23778ce81a3a8f35fd), Copyright 2026 Cisco Systems, Inc. and its affiliates,
+  Apache License, Version 2.0.
+MIT permission notice and details: UPSTREAM.md, "Corpus de rappel du paquet injection".
+
+Rules of the injection package (v0.10.0)
+Some pattern shapes of the rules injection_role_labels, injection_system_prompt_leak and injection_filter_disable
+are taken and modified from DefenseClaw (https://github.com/cisco-ai-defense/defenseclaw,
+internal/scanner/clawshield_injection.go, commit b68373a1c842486b22f7349a2b6fc74b56e2c941) and Skill Scanner
+(https://github.com/cisco-ai-defense/skill-scanner, skill_scanner/data/packs/core/signatures/prompt_injection.yaml,
+commit c558c421157c546ec417cf23778ce81a3a8f35fd), both Copyright 2026 Cisco Systems, Inc. and its affiliates,
+Apache License, Version 2.0. The technique names come from Giskard (https://github.com/Giskard-AI/giskard-oss,
+Apache License, Version 2.0); no Giskard template, data or code is used.
+Changes: UPSTREAM.md, "Règles du paquet injection".

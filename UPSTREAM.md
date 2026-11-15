@@ -406,3 +406,106 @@ cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP int
 - **Jamais la valeur ni un extrait** : aucune région n'a de `snippet` ni de `contextRegion`, aucun message ne cite le texte analysé ; la liste des propriétés écrites est fermée (`sarifKeys`, `TestScanSARIF`, `TestSARIFNeverCarriesContent`). L'Empreinte locale, quand une clé est donnée, va dans `partialFingerprints` (HMAC sous la clé de l'appelant, comme `localFingerprint` de la sortie JSON).
 - **Analyse incomplète** : aucun résultat, `executionSuccessful` faux et une notification d'erreur qui porte l'issue (`scan_limit`, `scan_error`…) ; le code de sortie reste 2. Elle ne se lit jamais comme « rien trouvé ».
 - **Limite** : la forme est vérifiée par des essais (document strict, propriétés fermées, contraintes de la norme sur ce qui est écrit), pas par le schéma JSON officiel, que le dépôt n'embarque pas.
+
+## Corpus de rappel du paquet injection (v0.10.0)
+
+`vectors/injection-recall.json` est une donnée d'essai : il n'entre dans aucun programme livré. Il sert à mesurer ce
+que `injection.Find` signale (`TestRecallCorpus`, relevé `injection/testdata/recall.json`, chiffres dans
+`docs/bench.md`). Ses textes sont copiés sans retouche par `go run ./tools/injectioncorpus construire`, qui épingle
+pour chaque source le commit, l'empreinte du fichier de licence et celle des fichiers lus (`tools/injectioncorpus/sources.go`),
+et refuse d'écrire au moindre écart. Ce sont des consignes piégées écrites par d'autres : des données, jamais des
+instructions ; aucun outil du dépôt n'en affiche le texte.
+
+| Source | Dépôt et commit | Chemin | Licence et droits | Cas |
+|---|---|---|---|---:|
+| LLM Guard | `protectai/llm-guard`, `168c1034ffdb33837e7ae6fd6a16b80567c1be03` (projet archivé) | `tests/input_scanners/test_prompt_injection.py` | MIT, Copyright (c) Protect AI. All rights reserved. | 60 |
+| Promptfoo | `promptfoo/promptfoo`, `5fac53eefdd26141a45c52ab77f533a7d30884e3` | `src/redteam/strategies/promptInjections/data.ts` | MIT, Copyright (c) Promptfoo 2025 ; une partie de ces gabarits est reprise de LLM Guard (MIT, Copyright (c) Protect AI), d'après le `README.md` du même dossier | 106 |
+| Akto | `akto-api-security/akto`, `f69427472ebf57cac9dd1b70bbcfb542ba2189d8` | `apps/dashboard/src/main/resources/inbuilt_llm_test_yaml_files/` (55 fichiers) | MIT, Copyright (c) 2023 Akto.io. | 59 |
+| Skill Scanner | `cisco-ai-defense/skill-scanner`, `c558c421157c546ec417cf23778ce81a3a8f35fd` | `evals/skills/` | Apache-2.0, Copyright 2026 Cisco Systems, Inc. and its affiliates ; chaque `_expected.json` déclare sa fixture « first-party », Apache-2.0 (vérifié à la construction) ; le dépôt n'a pas de fichier `NOTICE` | 55 |
+
+**Ce qui est copié, et comment.**
+
+- *LLM Guard* : les 60 textes du jeu d'essai du détecteur d'injection, avec l'étiquette de leur auteur (49 injections,
+  11 textes sains). Les littéraux Python sont lus sans exécuter le fichier.
+- *Promptfoo* : les 106 littéraux du tableau, décodés sans exécuter le fichier. Ce sont des gabarits de
+  contournement (jailbreak) qui visent un chatbot, pas un agent de code.
+- *Akto* : la charge de chaque gabarit de test LLM embarqué (ligne en pourcentages), décodée. 45 des 55 gabarits
+  citent garak (`leondz/garak`, Apache-2.0) en référence. Beaucoup de ces charges demandent du code malveillant et ne
+  sont pas des injections. Deux charges sur 61 ne sont pas copiées : elles portent une signature d'essai d'antivirus
+  ou d'antispam, qui ferait signaler le corpus, et le module, par les outils de sécurité des postes. Les gabarits du
+  dépôt séparé `tests-library` d'Akto ne sont pas repris.
+- *Skill Scanner* : chaque fichier des skills d'évaluation (hors `_expected.json`), étiqueté d'après le résultat
+  attendu : « consigne » si le résultat porte `prompt_injection` (1 cas), « sain » si le paquet est tenu pour bénin
+  (11), « autre » sinon (43 : risques de code ou de dépendance, hors du périmètre du paquet `injection`). La
+  catégorie `hardcoded-secrets` n'est pas copiée (une valeur à forme de secret n'a pas sa place dans ce corpus).
+
+**Ce qui n'est pas repris** : les jeux de données que Skill Scanner référence sans les embarquer (dont
+MaliciousSkillBench), le paquet de règles ATR de DefenseClaw, les jeux que Giskard charge à l'exécution (dont un sous
+licence non commerciale), le classifieur et les modèles de LLM Guard, et tout code de ces projets : aucun motif, aucune
+règle, aucune ligne de code du moteur n'en vient.
+
+**Format.** Le fichier est écrit en ASCII seul (tout autre caractère en `\uXXXX`) : il ne porte en clair ni
+caractère invisible ni contrôle bidirectionnel, quoi que contiennent les textes. `TestCommittedCorpusIsToolOutput`
+vérifie qu'il est, octet pour octet, la sortie de la commande ; `gitleaks` l'analyse comme le reste du dépôt, sans
+exception.
+
+**Avis de la licence MIT** (LLM Guard, Promptfoo, Akto ; lignes de droits d'auteur ci-dessus) :
+
+```text
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+Les skills d'évaluation de Skill Scanner sont sous la licence Apache-2.0, celle du fichier `LICENSE` de ce dépôt.
+
+Vérification : `go test ./tools/injectioncorpus ./injection`, et, avec les clones aux commits épinglés,
+`go run ./tools/injectioncorpus construire -sources <clones> -verifier`.
+
+## Règles du paquet injection (v0.10.0)
+
+Les sept règles ajoutées au paquet `injection` (`injection_forced_prefix`, `injection_fake_history`,
+`injection_refusal_suppression`, `injection_payload_splitting`, `injection_system_prompt_leak`,
+`injection_filter_disable`, `injection_role_labels`) sont écrites dans ce dépôt, en RE2 borné, en français et en
+anglais. Ce qu'elles doivent à d'autres projets :
+
+- **Familles.** Les noms des techniques (préfixe imposé, suppression du refus, faux historique, découpage de la charge)
+  viennent de la nomenclature de Giskard (`Giskard-AI/giskard-oss`, Apache-2.0, commit
+  `32fb9cf8e9344e9e2847bc22bdcf985a42f1e06c`, `libs/giskard-scan/`). Aucun gabarit, aucune donnée ni aucun code de
+  Giskard n'est repris.
+- **Formes reprises et modifiées de DefenseClaw** (`cisco-ai-defense/defenseclaw`, Apache-2.0, Copyright 2026 Cisco
+  Systems, Inc. and its affiliates, commit `b68373a1c842486b22f7349a2b6fc74b56e2c941`,
+  `internal/scanner/clawshield_injection.go`) : la ligne « system: » suivie d'un ordre d'annulation, le bloc de code
+  « system », « --- » puis « system: » et le jeton `</s>` de la règle `injection_role_labels`. Modifications : motifs
+  réécrits (début de ligne vérifié hors motif, espaces bornés, mots français, `</s>` écarté quand il ferme un texte
+  barré `<s>…</s>` sur la même ligne) ; la ligne « system: you are… » n'est pas reprise (146 fichiers signalés à la
+  mesure). Le reste de ce fichier (densité de verbes à l'impératif, décodage base64, paquet de règles ATR) n'est pas
+  repris.
+- **Formes reprises et modifiées de Skill Scanner** (`cisco-ai-defense/skill-scanner`, Apache-2.0, Copyright 2026
+  Cisco Systems, Inc. and its affiliates, commit `c558c421157c546ec417cf23778ce81a3a8f35fd`,
+  `skill_scanner/data/packs/core/signatures/prompt_injection.yaml`) : la demande de révéler le message système
+  (`injection_system_prompt_leak`) et l'ordre de désactiver les filtres ou d'entrer dans un mode sans restriction
+  (`injection_filter_disable`). Modifications : motifs réécrits avec des intervalles bornés, listes de verbes et de
+  noms propres à ce dépôt, formes françaises, négation lue avant la correspondance (« never reveal… » n'est pas
+  signalé), modes « debug », « developer » et « admin » et mot « security » non repris (courants dans une
+  documentation). L'idée d'écarter les citations entre guillemets vient de la même source, qui la mesure sur ses
+  propres données ; son motif, à assertions arrière, n'est pas repris : le contrôle est écrit en Go
+  (`injection/context.go`).
+
+Les avis de ces deux projets ne portent aucune mention qui concerne les fichiers cités (le fichier `NOTICE` de
+DefenseClaw vise ses dossiers `internal/sensor/`, non repris ; Skill Scanner n'a pas de fichier `NOTICE`). Mesures et
+critère de garde des motifs : `docs/bench.md`.
