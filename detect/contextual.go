@@ -142,6 +142,7 @@ type assignmentMatch struct {
 // scanAssignmentPattern suit scanAssignmentPattern de Secret Guard.
 func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmentPattern, lang language, findings []finding) []finding {
 	text := v.text
+	ctx.resetNoiseBudget()
 	for lastIndex := 0; lastIndex <= len(text); {
 		var m []int
 		if p.windowed {
@@ -214,16 +215,33 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 		if matched == nil {
 			continue
 		}
-		score := matched.score - encodingPenalty(v.encoding)
-		reasons := []string{"sensitive_variable_name", "structured_assignment"}
-		if hasStrongEntropy(v, parsed.start, parsed.valueEnd) {
-			score += 5
-			reasons = append(reasons, "value_shape_supports_secret")
+		// Écart avec Secret Guard (codenoise.go, UPSTREAM.md) : une valeur qui n'est pas un littéral n'est pas un
+		// constat ; une structure est parcourue, la recherche reprend en elle.
+		noise := ctx.assignmentNoise(v, &match, parsed, secretType, lang)
+		if noise.drop {
+			if noise.resume > m[0] {
+				lastIndex = noise.resume
+			}
+			for _, literal := range noise.literals {
+				findings = append(findings, assignmentFinding(v, matched, literal[0], literal[1], literal[0], literal[1]))
+			}
+			continue
 		}
-		reasons = append(reasons, decodingReasons(v.encoding)...)
-		findings = append(findings, newFinding(v, matched, findingStart, findingEnd, score, reasons))
+		findings = append(findings, assignmentFinding(v, matched, parsed.start, parsed.valueEnd, findingStart, findingEnd))
 	}
 	return findings
+}
+
+// assignmentFinding rend le constat d'une affectation : valeur [valueStart, valueEnd), étendue [start, end).
+func assignmentFinding(v *view, matched *rule, valueStart, valueEnd, start, end int) finding {
+	score := matched.score - encodingPenalty(v.encoding)
+	reasons := []string{"sensitive_variable_name", "structured_assignment"}
+	if hasStrongEntropy(v, valueStart, valueEnd) {
+		score += 5
+		reasons = append(reasons, "value_shape_supports_secret")
+	}
+	reasons = append(reasons, decodingReasons(v.encoding)...)
+	return newFinding(v, matched, start, end, score, reasons)
 }
 
 // afterComparison rend la position qui suit l'opérateur de comparaison « == » ou « === » quand le séparateur « = »
@@ -732,14 +750,22 @@ func (ctx *contextualText) safeContextualValue(m *assignmentMatch, p *parsedValu
 	if p.kind == kindQuoted || p.kind == kindMultiline {
 		return false
 	}
-	eligible := lang.isCodeLike() || (lang.set && structuredLanguages[lowered])
-	if !eligible && !lang.set {
-		eligible = bytes.IndexByte(text[m.start:m.end], ':') >= 0 ||
-			ctx.prefixAssignment(prefixStructured, lineStart, m.end) ||
-			ctx.keywords(keywordsInferredCode).inSlice(text, lineStart, m.end) ||
-			ctx.codeDeclaration(lineStart, m.end)
+	return ctx.referenceEligible(m, lang) && isSafeReference(value)
+}
+
+// referenceEligible dit si l'affectation est là où une référence de code est admise (dernière condition de
+// safeContextualValue de Secret Guard) : langage de code ou structuré déclaré, ou, sans langage, séparateur « : »,
+// affectation structurée, mot-clé de code ou déclaration sur la ligne.
+func (ctx *contextualText) referenceEligible(m *assignmentMatch, lang language) bool {
+	if lang.set {
+		return lang.isCodeLike() || structuredLanguages[lang.lowered()]
 	}
-	return eligible && isSafeReference(value)
+	text := ctx.text
+	lineStart := ctx.matchLineStart(m)
+	return bytes.IndexByte(text[m.start:m.end], ':') >= 0 ||
+		ctx.prefixAssignment(prefixStructured, lineStart, m.end) ||
+		ctx.keywords(keywordsInferredCode).inSlice(text, lineStart, m.end) ||
+		ctx.codeDeclaration(lineStart, m.end)
 }
 
 // isUnquotedSubstitute dit si une valeur sans guillemets est un Substitut coupé par la lecture de la valeur, qui
@@ -1078,6 +1104,8 @@ type contextualText struct {
 	// Heredoc.
 	heredocStart    lastSearch
 	cumulativeUnits []int32
+	// noiseBudget : octets que les filtres de codenoise.go peuvent encore relire pour le motif en cours.
+	noiseBudget int
 }
 
 type lastSearch struct {
