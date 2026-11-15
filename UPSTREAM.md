@@ -397,3 +397,12 @@ proche de la valeur) vient du projet Akto (`https://github.com/akto-api-security
 `apps/dashboard/src/main/java/com/akto/service/insights/PiiPatterns.java`. Seule l'idée est reprise : les onze règles de `generator/rule-pack/context-data.ts` (adresse électronique, téléphone, passeport,
 cryptogramme, code à usage unique, clé d'accès partagé Azure, adresse IP interne, ARN, bucket S3, RDS, DynamoDB) sont
 écrites ici en RE2, sans copie de motif, de mot-clé ni de code d'Akto.
+
+## Sortie SARIF (v0.10.0)
+
+`secret-guard scan --format sarif` (`cmd/secret-guard/sarif.go`) écrit le résultat d'une analyse en SARIF 2.1.0 : un résultat par constat, avec la règle, le fichier tel qu'il est nommé sur la ligne de commande, les lignes et colonnes de début et de fin (colonnes en points de code, `columnKind`), l'étendue en octets et le niveau (`error` pour CRITICAL et HIGH, `warning` pour MEDIUM, `note` pour LOW). Extension de ce module, sans origine dans Secret Guard, hors du moteur (la commande seule : `detect` et le module WebAssembly ne changent pas).
+
+- **Idée lue dans ggshield** (GitGuardian, licence MIT, clone de lecture au commit `f3377d9`) : l'outil a une sortie SARIF pour ses constats. Seule l'existence de cette sortie est reprise : son fichier n'a pas été ouvert pour écrire celle-ci, aucune ligne, aucune structure ni aucun texte n'en vient, donc aucun avis dans `NOTICE`. La forme est écrite d'après la spécification OASIS « Static Analysis Results Interchange Format (SARIF) Version 2.1.0 ».
+- **Jamais la valeur ni un extrait** : aucune région n'a de `snippet` ni de `contextRegion`, aucun message ne cite le texte analysé ; la liste des propriétés écrites est fermée (`sarifKeys`, `TestScanSARIF`, `TestSARIFNeverCarriesContent`). L'Empreinte locale, quand une clé est donnée, va dans `partialFingerprints` (HMAC sous la clé de l'appelant, comme `localFingerprint` de la sortie JSON).
+- **Analyse incomplète** : aucun résultat, `executionSuccessful` faux et une notification d'erreur qui porte l'issue (`scan_limit`, `scan_error`…) ; le code de sortie reste 2. Elle ne se lit jamais comme « rien trouvé ».
+- **Limite** : la forme est vérifiée par des essais (document strict, propriétés fermées, contraintes de la norme sur ce qui est écrit), pas par le schéma JSON officiel, que le dépôt n'embarque pas.

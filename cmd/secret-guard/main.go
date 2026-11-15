@@ -5,7 +5,7 @@
 // et les fichiers cités par « @ » dans un prompt ; calcule, chez le client, les condensats de termes confidentiels d'un
 // Pack de règles du client.
 //
-//	secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+//	secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [--format json|sarif] [fichier|-]
 //	secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
 //	secret-guard terms digest --salt <sel> [fichier|-]
 //	secret-guard hidden [--strip] [fichier|-]
@@ -26,7 +26,6 @@ import (
 	"io"
 	"io/fs"
 	"os"
-	"runtime/debug"
 
 	"github.com/xsom-consulting/secret-guard/custom"
 	"github.com/xsom-consulting/secret-guard/detect"
@@ -36,7 +35,8 @@ import (
 )
 
 const usage = `Usage :
-  secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>] [fichier|-]
+  secret-guard scan [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [--fingerprint-key <fichier>]
+                    [--format json|sarif] [fichier|-]
   secret-guard redact [--pack <fichier>] [--custom-pack <fichier>] [--language <id>] [fichier|-]
   secret-guard terms digest --salt <sel> [fichier|-]
   secret-guard hidden [--strip] [fichier|-]
@@ -57,6 +57,13 @@ JSON sur une ligne, {"complete", "failure", "findings": [{"ruleId", "secretType"
   --fingerprint-key <fichier> clé d'Empreinte locale : 64 caractères hexadécimaux (32 octets), lue, jamais écrite ;
                              chaque constat porte alors localFingerprint (HMAC-SHA256 tronqué). Incompatible avec
                              --language.
+  --format json|sarif        forme de la sortie : json (par défaut, le document ci-dessus) ou sarif (SARIF 2.1.0, sur
+                             une ligne : un résultat par constat, avec la règle, le fichier tel qu'il est nommé sur la
+                             ligne de commande (« stdin » pour l'entrée standard), les lignes et colonnes de début et
+                             de fin (colonnes en points de code), l'étendue en octets et le niveau : error pour
+                             CRITICAL et HIGH, warning pour MEDIUM, note pour LOW). Jamais la valeur ni un extrait.
+                             Une analyse incomplète y est une notification d'erreur, sans résultat. Les codes de
+                             sortie ne changent pas.
 
 Codes de sortie : 0 aucun constat ; 1 au moins un constat ; 2 erreur ou analyse incomplète (entrée de plus de
 1 Mio, budget épuisé), qui ne vaut jamais « rien trouvé ».
@@ -141,6 +148,7 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	customFile := flags.String("custom-pack", "", "")
 	language := flags.String("language", "", "")
 	keyFile := flags.String("fingerprint-key", "", "")
+	format := flags.String("format", formatJSON, "")
 	if err := flags.Parse(args); err != nil {
 		_, _ = io.WriteString(stderr, usage)
 		return report.ExitError
@@ -148,6 +156,9 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	if flags.NArg() > 1 {
 		_, _ = io.WriteString(stderr, usage)
 		return report.ExitError
+	}
+	if *format != formatJSON && *format != formatSARIF {
+		return fail(stderr, "--format : json ou sarif attendu")
 	}
 	if *keyFile != "" && *language != "" {
 		return fail(stderr, "--fingerprint-key et --language ne se combinent pas")
@@ -195,7 +206,11 @@ func scan(args []string, stdin io.Reader, stdout, stderr io.Writer, opener files
 	} else {
 		result = detect.Scan(content, rules, detect.Options{LanguageID: *language, Custom: customPack})
 	}
-	if _, err := stdout.Write(report.JSON(result)); err != nil {
+	document := report.JSON(result)
+	if *format == formatSARIF {
+		document = sarifDocument(result, flags.Arg(0), content)
+	}
+	if _, err := stdout.Write(document); err != nil {
 		return report.ExitError
 	}
 	return report.ExitCode(result)
@@ -279,15 +294,11 @@ func fileProblem(err error) string {
 }
 
 func version(stdout, stderr io.Writer) int {
-	moduleVersion := "(devel)"
-	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" {
-		moduleVersion = info.Main.Version
-	}
 	initial, err := pack.Initial()
 	if err != nil {
 		return fail(stderr, err.Error())
 	}
-	_, _ = fmt.Fprintf(stdout, "secret-guard %s\nPack initial : version %d, %d règles\n", moduleVersion,
+	_, _ = fmt.Fprintf(stdout, "secret-guard %s\nPack initial : version %d, %d règles\n", moduleVersion(),
 		initial.PackVersion, len(initial.Rules))
 	return report.ExitClean
 }
