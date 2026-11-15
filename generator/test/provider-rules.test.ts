@@ -214,7 +214,7 @@ describe('règles reprises de Betterleaks', () => {
     // Valeur assemblée à l'exécution : écrite d'un bloc, la recherche de secrets du dépôt la prendrait pour un jeton.
     expect(ids(`carte : ${['xoxo', '2026', '11', '15', 'cafe0123456789ab'].join('-')} fin`)).toEqual([]);
     // Un identifiant de code qui commence comme un préfixe de fournisseur n'est pas un jeton.
-    for (const name of ['dvc_server_hostname', 'prf_hmac_sha256_expand_label', 'tss_thread_specific_storage_key', 'lip_sync_animation_controller', 'persona_production_database_connection_url']) {
+    for (const name of ['dvc_server_hostname', 'dvc_server_ipv4', 'dvc_server_http2', 'prf_hmac_sha256_expand_label', 'tss_thread_specific_storage_key', 'lip_sync_animation_controller', 'persona_production_database_connection_url']) {
       expect(ids(`const value = ${name};`), name).toEqual([]);
     }
   });

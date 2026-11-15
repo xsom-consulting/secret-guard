@@ -3500,7 +3500,7 @@
       "secretType": "provider_token",
       "score": 95,
       "validator": "",
-      "pattern": "\\b(dvc_server_[A-Za-z]{0,31}[0-9][0-9A-Za-z]{0,31})\\b",
+      "pattern": "\\b(dvc_server_(?:[0-9][0-9A-Za-z]{7,31}|[A-Za-z][0-9][0-9A-Za-z]{6,31}|[A-Za-z]{2}[0-9][0-9A-Za-z]{5,31}|[A-Za-z]{3}[0-9][0-9A-Za-z]{4,31}|[A-Za-z]{4}[0-9][0-9A-Za-z]{3,31}|[A-Za-z]{5}[0-9][0-9A-Za-z]{2,31}|[A-Za-z]{6}[0-9][0-9A-Za-z]{1,31}|[A-Za-z]{7,31}[0-9][0-9A-Za-z]{0,31}))\\b",
       "minLength": 0,
       "maxLength": 0
     },
