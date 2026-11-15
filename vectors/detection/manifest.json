@@ -4,6 +4,7 @@
   "files": [
     {"file":"edge-cases.json","cases":84},
     {"file":"limits.json","cases":4},
+    {"file":"rules-code-noise.json","cases":74},
     {"file":"rules-context-data.json","cases":121},
     {"file":"rules-contextual.json","cases":152},
     {"file":"rules-credential-url.json","cases":34},

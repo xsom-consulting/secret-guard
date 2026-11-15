@@ -16,6 +16,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { decodeInput } from '../corpus/bytes.ts';
 import { testImport } from '../corpus/harness.ts';
+import { CODE_NOISE_FILE } from '../corpus/code-noise.ts';
 import { CONTEXT_DATA_FILE } from '../corpus/context-data.ts';
 import { PERSONAL_DATA_FILE } from '../corpus/personal-data.ts';
 import { PASSWORD_PHRASE_FILE } from '../corpus/password-phrase.ts';
@@ -142,7 +143,7 @@ async function main(): Promise<number> {
     for (const { file, value } of committedCorpus()) {
       // Règles de données personnelles (v0.7.0) et annonces de mot de passe (v0.8.1) : absentes du moteur d'origine,
       // son masquage ne les connaît pas.
-      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || !corpusCaseSelected(value)) continue;
+      if (file === PERSONAL_DATA_FILE || file === PASSWORD_PHRASE_FILE || file === PROVIDER_RULES_FILE || file === CONTEXT_DATA_FILE || file === CODE_NOISE_FILE || !corpusCaseSelected(value)) continue;
       const { initial, ...expected } = redactExpectedFor(upstream.engine, engine, corpusInput(value), value.languageId).expected;
       if (JSON.stringify(initial) !== JSON.stringify(value.expected)) problems.push(`${value.id} : analyse initiale différente du corpus`);
       cases.push({ id: value.id, corpusFile: file, expected });
