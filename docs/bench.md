@@ -139,8 +139,8 @@ Constats d'entropie de xSOM Fleet par forme de valeur :
 
 ### Ce qui reste, et pourquoi
 
-- **Base64 d'images embarquées** (275 constats, trois pages HTML) : `data:image/…;base64,` suivi de dizaines de
-  kilooctets, un constat par tranche de 512 caractères. Non traité dans ce lot (hors du périmètre de la Story 27.6) ;
+- **Base64 d'images embarquées** (272 des 275 constats de forme « base64 à signes », dans deux pages HTML) :
+  `data:image/…;base64,` suivi de dizaines de kilooctets, un constat par tranche de 512 caractères. Non traité dans ce lot (hors du périmètre de la Story 27.6) ;
   c'est désormais la première source de bruit d'entropie de ce dépôt.
 - **Identifiants en casse de chameau** (37) : charges utiles base64url d'enveloppes signées (vrais candidats
   d'entropie), noms d'essais de moins de quatre mots réguliers à sigles, sigles de plus de 5 majuscules.
