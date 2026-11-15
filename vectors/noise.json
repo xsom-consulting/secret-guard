@@ -1,6 +1,6 @@
 {
   "formatVersion": 1,
-  "about": "Corpus de bruit du moteur de détection : textes ordinaires qui ne doivent rien signaler (analyse complète, aucun constat). Faux positifs relevés sur des Postes réels ; identifiants hexadécimaux et identifiants d'objets synthétiques. Cas « contexte/ » (v0.9.0) : textes proches des mots-clés des règles de données à contexte, et adresses d'essai annoncées par leur champ, que seule une règle « à activer » signale ; depuis la v0.10.0, adresses postales d'un jeu d'essai et d'un pied de page (règle « à activer » fr_postal_address), numéros à forme d'identifiant européen sans leur mot-clé. Cas « vecu/ » (v0.10.0) : code ordinaire qu'une affectation à nom sensible faisait bloquer (script shell qui passe une variable à une option, workflow de CI, tableau, objet, appel, type, gabarit, valeur chiffrée, commandes date et docker run), chacun sans langage puis avec le langage de son fichier. Rejoué par TestNoiseCorpus à chaque version.",
+  "about": "Corpus de bruit du moteur de détection : textes ordinaires qui ne doivent rien signaler (analyse complète, aucun constat). Faux positifs relevés sur des Postes réels ; identifiants hexadécimaux et identifiants d'objets synthétiques. Cas « contexte/ » (v0.9.0) : textes proches des mots-clés des règles de données à contexte, et adresses d'essai annoncées par leur champ, que seule une règle « à activer » signale ; depuis la v0.10.0, adresses postales d'un jeu d'essai et d'un pied de page (règle « à activer » fr_postal_address), numéros à forme d'identifiant européen sans leur mot-clé. Cas « vecu/ » (v0.10.0) : code ordinaire qu'une affectation à nom sensible faisait bloquer (script shell qui passe une variable à une option, workflow de CI, tableau, objet, appel, type, gabarit, valeur chiffrée, commandes date et docker run), chacun sans langage puis avec le langage de son fichier. Cas « bloc/ » (v0.10.0) : prompts sans langage dont un bloc clôturé par trois accents graves nomme un langage connu ; le libellé du bloc, signalé quand le bloc n'a pas de nom, ne l'est plus. Rejoué par TestNoiseCorpus à chaque version.",
   "cases": [
     {"id":"licence/nom-seul","input":"LICENSE-PolyForm-Small-Business-1.0.0"},
     {"id":"licence/chemin-relatif","input":"deploy/licenses/secret-guard/LICENSE-PolyForm-Small-Business-1.0.0"},
@@ -217,6 +217,17 @@
     {"id":"vecu/sh-18-docker-user-uid-gid","input":"docker run --rm --user 501:20 alpine id\n"},
     {"id":"vecu/sh-18-docker-user-uid-gid/shellscript","input":"docker run --rm --user 501:20 alpine id\n","language":"shellscript"},
     {"id":"vecu/sh-19-date-u-entre-guillemets","input":"stamp=\"$(date -u \"+%Y-%m-%dT%H:%M:%SZ\")\"\n"},
-    {"id":"vecu/sh-19-date-u-entre-guillemets/shellscript","input":"stamp=\"$(date -u \"+%Y-%m-%dT%H:%M:%SZ\")\"\n","language":"shellscript"}
+    {"id":"vecu/sh-19-date-u-entre-guillemets/shellscript","input":"stamp=\"$(date -u \"+%Y-%m-%dT%H:%M:%SZ\")\"\n","language":"shellscript"},
+    {"id":"bloc/ts-libelle-propriete","input":"Que penses-tu de ce fichier ?\n\n```ts\nexport default {\n  apiKey: 'test-key',\n  region: 'eu-west-3',\n}\n```\n"},
+    {"id":"bloc/python-argument","input":"Que penses-tu de ce fichier ?\n\n```py\nclient = Client(\n    api_key=\"demo\",\n    timeout=30,\n)\n```\n"},
+    {"id":"bloc/ruby-config","input":"Que penses-tu de ce fichier ?\n\n```ruby\nconfig.api_key = \"dummy\"\n```\n"},
+    {"id":"bloc/php-tableau","input":"Que penses-tu de ce fichier ?\n\n```php\n$config = [\n    'api_key' => 'demo',\n];\n```\n"},
+    {"id":"bloc/tsx-attribut","input":"Que penses-tu de ce fichier ?\n\n```tsx\n<Field name=\"token\" token=\"label\" />\n```\n"},
+    {"id":"bloc/js-objet","input":"Que penses-tu de ce fichier ?\n\n```js\nfetch(url, {\n  headers: { token: 'none' },\n})\n```\n"},
+    {"id":"bloc/kotlin-champ","input":"Que penses-tu de ce fichier ?\n\n```kotlin\n    apiKey = \"sample\",\n```\n"},
+    {"id":"bloc/swift-champ","input":"Que penses-tu de ce fichier ?\n\n```swift\n    apiKey: \"sample\",\n```\n"},
+    {"id":"bloc/csharp-champ","input":"Que penses-tu de ce fichier ?\n\n```csharp\n    ApiKey = \"sample\",\n```\n"},
+    {"id":"bloc/bash-substitution","input":"Que penses-tu de ce fichier ?\n\n```bash\ncurl --token `cat ./jeton.txt` https://exemple.test\n```\n"},
+    {"id":"bloc/ts-secret-nom","input":"Que penses-tu de ce fichier ?\n\n```typescript\n  clientSecret: 'not-set',\n```\n"}
   ]
 }

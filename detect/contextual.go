@@ -140,7 +140,7 @@ type assignmentMatch struct {
 }
 
 // scanAssignmentPattern suit scanAssignmentPattern de Secret Guard.
-func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmentPattern, lang language, findings []finding) []finding {
+func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmentPattern, declared language, findings []finding) []finding {
 	text := v.text
 	ctx.resetNoiseBudget()
 	for lastIndex := 0; lastIndex <= len(text); {
@@ -178,6 +178,10 @@ func (r *Rules) scanAssignmentPattern(v *view, ctx *contextualText, p *assignmen
 			}
 			continue
 		}
+		// Écart avec Secret Guard (fencedblocks.go, UPSTREAM.md) : sans langage déclaré, une affectation dans un bloc
+		// clôturé par trois accents graves est lue avec le langage connu que nomme le bloc. La position jugée est
+		// celle du nom : la correspondance peut commencer au saut de ligne qui précède le bloc.
+		lang := ctx.languageAt(declared, m[2])
 		valueSyntaxOffset := lastIndex
 		comparison := false
 		if p.plain {
@@ -1110,6 +1114,9 @@ type contextualText struct {
 	cumulativeUnits []int32
 	// noiseBudget : octets que les filtres de codenoise.go peuvent encore relire pour le motif en cours.
 	noiseBudget int
+	// fences : blocs clôturés à langage connu (fencedblocks.go), lus à la première demande.
+	fences      []fencedBlock
+	fencesReady bool
 }
 
 type lastSearch struct {
