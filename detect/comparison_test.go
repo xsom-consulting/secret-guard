@@ -58,7 +58,12 @@ var comparisonBefore = comparisonFigures{Positives: 867, Found: 818, Dedicated: 
 // comparisonFloor : chiffres de la version courante. Le test refuse une baisse du rappel, de la part par règle
 // dédiée ou de la part bloquée, et une hausse des constats sans diversité. Une hausse d'un des trois premiers est
 // permise : relever alors le plancher ici, avec la raison dans le message de commit.
-var comparisonFloor = comparisonFigures{Positives: 867, Found: 826, Dedicated: 554, Blocked: 774, LowDiversity: 19}
+//
+// Seule baisse admise, à l'intégration des valeurs publiques connues (publicvalues.go, Story 27.5) : trois positifs de
+// Betterleaks sont des clés publiques par nature, que seules une affectation ou l'entropie signalaient et qui ne le
+// sont plus, à dessein. Ce sont mapbox-api-token/1 (jeton public Mapbox) et posthog-project-api-key/1 et /3 (clé de
+// projet PostHog). Rappel de 826 à 823, part bloquée de 774 à 772 ; la part par règle dédiée ne bouge pas.
+var comparisonFloor = comparisonFigures{Positives: 867, Found: 823, Dedicated: 554, Blocked: 772, LowDiversity: 19}
 
 // lowDiversity : seconde écriture, pour la mesure seulement, du contrôle de vraisemblance du moteur (validators.go).
 func lowDiversity(value []byte) bool {

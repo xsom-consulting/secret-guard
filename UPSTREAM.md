@@ -668,12 +668,12 @@ C'est un banc, pas un corpus de parité : le fichier ne porte aucun résultat at
 
 | Chiffre | v0.9.0 | Après la vraisemblance | v0.10.0 |
 |---|---:|---:|---:|
-| Rappel : positifs dont un constat recouvre la valeur attendue | 818 / 867 (94,3 %) | 818 (94,3 %) | 826 (95,3 %) |
+| Rappel : positifs dont un constat recouvre la valeur attendue | 818 / 867 (94,3 %) | 818 (94,3 %) | 823 (94,9 %) |
 | Positifs trouvés par une règle dédiée (ni affectation, ni entropie) | 397 (45,8 %) | 396 (45,7 %) | 554 (63,9 %) |
-| Positifs recouverts par un constat que le préréglage bloque | 725 (83,6 %) | 725 (83,6 %) | 774 (89,3 %) |
+| Positifs recouverts par un constat que le préréglage bloque | 725 (83,6 %) | 725 (83,6 %) | 772 (89,0 %) |
 | Constats de règles `provider_token` sur des négatifs sans diversité | 62 | 19 | 19 |
 
-Le positif perdu par la vraisemblance est la clé age d'essai de Betterleaks, faite de 58 fois la même lettre. Les 41 positifs encore manqués sont hors de ce lot : mots de passe de la règle générique de Betterleaks (9), variables Sidekiq (8), jeton SonarQube (6), identifiant et mot de passe de `curl -u` (4), identifiant Sumo Logic (4), et dix autres dans huit règles. Les 82 cas « composant » (identifiant de client, nom d'utilisateur) ne sont pas mesurés : ce ne sont pas des secrets seuls.
+Le positif perdu par la vraisemblance est la clé age d'essai de Betterleaks, faite de 58 fois la même lettre. Les règles reprises donnaient seules 826 positifs trouvés (95,3 %) et 774 bloqués (89,3 %) ; les valeurs publiques connues (section « Code ordinaire ») en retirent trois, à dessein : un jeton public Mapbox (`mapbox-api-token/1`) et deux clés de projet PostHog (`posthog-project-api-key/1` et `/3`), publics par nature, que seules une affectation ou l'entropie signalaient. Les 41 autres positifs manqués sont hors de ce lot : mots de passe de la règle générique de Betterleaks (9), variables Sidekiq (8), jeton SonarQube (6), identifiant et mot de passe de `curl -u` (4), identifiant Sumo Logic (4), et dix autres dans huit règles. Les 82 cas « composant » (identifiant de client, nom d'utilisateur) ne sont pas mesurés : ce ne sont pas des secrets seuls.
 
 Le fichier du banc porte des jetons d'essai publics : il est exempté de la recherche de secrets par son chemin exact (`.gitleaks.toml`), comme `vectors/noise-providers.json`, dont quatre formes à caractère répété déclenchent une règle de gitleaks ; le générateur, lui, reste analysé.
 
