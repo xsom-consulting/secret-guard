@@ -137,6 +137,9 @@ type rule struct {
 	trim func(value []byte) int
 	// dashTail : motif sans son « \b » final, pour les jetons finis par un tiret (dashtail.go), nil sinon.
 	dashTail *regexp.Regexp
+	// entropyFloor : entropie minimale de la valeur détectée d'une règle « motif seul », en dixièmes de bit par octet
+	// (validators.go, vraisemblance d'un jeton de fournisseur) ; 0 : aucun contrôle.
+	entropyFloor int
 }
 
 // Rules est un Pack de règles chargé : règles « motif seul » dans l'ordre du Pack (jwt compris), règles dont le
@@ -316,7 +319,7 @@ func loadRule(spec ruleSpec, expected map[string]engineRule) (*rule, error) {
 	return &rule{
 		id: spec.RuleID, family: spec.Family, secretType: spec.SecretType, score: spec.Score, validator: check,
 		pattern: pattern, gate: gate, minLength: spec.MinLength, maxLength: spec.MaxLength, trim: trimmers[spec.Validator],
-		dashTail: dashTail,
+		dashTail: dashTail, entropyFloor: entropyFloorOf(spec.RuleID, spec.Family, spec.SecretType, spec.Validator),
 	}, nil
 }
 

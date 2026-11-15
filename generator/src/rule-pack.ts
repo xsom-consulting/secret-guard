@@ -64,6 +64,14 @@ export const RULE_VALIDATORS = [
   'fr_siret_luhn',
   'fr_siren_luhn',
   'payment_card_luhn',
+  // Vraisemblance d'un jeton de fournisseur (v0.10.0) : au moins 6 octets distincts et une entropie de Shannon d'au
+  // moins NN dixièmes de bit par octet (`rule-pack/provider-rules.ts`, `detect/validators.go`).
+  'token_entropy_25', 'token_entropy_26', 'token_entropy_27', 'token_entropy_28',
+  'token_entropy_29', 'token_entropy_30', 'token_entropy_31', 'token_entropy_32',
+  'token_entropy_33', 'token_entropy_34', 'token_entropy_35', 'token_entropy_36',
+  'token_entropy_37', 'token_entropy_38', 'token_entropy_39', 'token_entropy_40',
+  'token_entropy_41', 'token_entropy_42', 'token_entropy_43', 'token_entropy_44',
+  'token_entropy_45',
 ] as const;
 export type RuleValidator = (typeof RULE_VALIDATORS)[number];
 

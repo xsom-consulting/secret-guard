@@ -55,7 +55,11 @@ describe('règles de données personnelles (v0.7.0)', () => {
     };
     expect(schema.properties.rules.items.properties.secretType.enum).toEqual([...RULE_SECRET_TYPES]);
     const go = read('../../detect/personaldata.go');
-    for (const validator of RULE_VALIDATORS.filter((name) => name !== '' && name !== 'jwt_structure')) {
+    // Validateurs de vraisemblance d'un jeton de fournisseur (v0.10.0) : dans detect/validators.go.
+    const plausibility = RULE_VALIDATORS.filter((name) => name.startsWith('token_entropy_'));
+    const engine = read('../../detect/validators.go');
+    for (const validator of plausibility) expect(engine, validator).toContain(`"${validator}"`);
+    for (const validator of RULE_VALIDATORS.filter((name) => name !== '' && name !== 'jwt_structure' && !plausibility.includes(name))) {
       expect(go, validator).toContain(`"${validator}"`);
     }
   });

@@ -32,11 +32,20 @@ func TestProviderRules(t *testing.T) {
 				t.Fatalf("règle %d : %s dans le Pack, %s dans la table des libellés", i, spec.RuleID, label.RuleID)
 			}
 			r := byID[spec.RuleID]
-			if r == nil || string(spec.Family) != familyFixedPattern || string(spec.SecretType) != "provider_token" || spec.Validator != "" {
-				t.Fatalf("%s : famille %s, type %s, validateur %q", spec.RuleID, spec.Family, spec.SecretType, spec.Validator)
+			if r == nil || string(spec.Family) != familyFixedPattern || string(spec.SecretType) != providerRuleType {
+				t.Fatalf("%s : famille %s, type %s", spec.RuleID, spec.Family, spec.SecretType)
 			}
 			if spec.Score != 95 && spec.Score != 80 {
 				t.Errorf("%s : score %d (95 : préfixe fixe ; 80 : nom du fournisseur à proximité)", spec.RuleID, spec.Score)
+			}
+			// Vraisemblance (v0.10.0) : une règle à proximité porte un validateur nommé de la liste fermée ; une règle à
+			// préfixe fixe n'en porte un que pour un seuil autre que celui d'office.
+			floor, named := tokenEntropyFloors[spec.Validator]
+			if spec.Validator != "" && !named || spec.Score == 80 && !named {
+				t.Errorf("%s : score %d, validateur %q (validateur de vraisemblance attendu)", spec.RuleID, spec.Score, spec.Validator)
+			}
+			if want := max(floor, baseEntropyFloor); !named && r.entropyFloor != baseEntropyFloor || named && r.entropyFloor != floor || r.entropyFloor > want {
+				t.Errorf("%s : seuil d'entropie %d, validateur %q", spec.RuleID, r.entropyFloor, spec.Validator)
 			}
 			if r.gate == nil {
 				t.Errorf("%s : aucune porte littérale (la règle s'exécuterait sur tout texte)", spec.RuleID)

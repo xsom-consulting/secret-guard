@@ -93,8 +93,9 @@ func (r *Rules) scanPrivateKeys(v *view) []finding {
 // scanFixedPattern exécute une règle « motif seul » du Pack : chaque correspondance (matchAll), valeur détectée =
 // groupe capturant 1 s'il a participé, sinon la correspondance entière (capturedRange de Secret Guard, qui la cherche
 // par lastIndexOf) ; valeur fictive ou exemple public ignorés (Substitut en fin de ligne d'une vue jointe compris,
-// extension de ce module) ; bornes minLength/maxLength (unités UTF-16, 0 = absente) ; validateur nommé. Aucun littéral
-// de la porte de la règle dans le texte de la vue : aucune correspondance possible, le motif n'est pas exécuté.
+// extension de ce module) ; bornes minLength/maxLength (unités UTF-16, 0 = absente) ; vraisemblance d'un jeton de
+// fournisseur (entropyFloor, validators.go : extension de ce module) ; validateur nommé. Aucun littéral de la porte de
+// la règle dans le texte de la vue : aucune correspondance possible, le motif n'est pas exécuté.
 func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding) ([]finding, error) {
 	text := v.text
 	if !r.gate.admits(text) {
@@ -119,6 +120,9 @@ func scanFixedPattern(v *view, r *rule, budget *decodeBudget, findings []finding
 			value = text[start:end]
 		}
 		if safeLiteral(value) || isSubstituteBeforeJoin(v, start, end) || !withinBounds(value, r.minLength, r.maxLength) {
+			continue
+		}
+		if r.entropyFloor > 0 && !plausibleToken(value, r.entropyFloor) {
 			continue
 		}
 		if r.validator != nil {
