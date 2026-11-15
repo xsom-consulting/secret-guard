@@ -151,3 +151,16 @@ Au dernier commit du lot, trois paires alternées du banc séquentiel (25 passes
 Lecture honnête : aucun écart mesurable, mais la dispersion sous charge est plus grande que l'écart cherché. Le banc
 séquentiel, moins sensible au nombre de cœurs libres, donne la même médiane à 0,2 ms près dans la première série. À
 refaire sur une machine calme avant l'étiquette de version.
+
+Relecture du lot, même jour, machine toujours chargée (charge moyenne au-delà de 100) : le temps écoulé ne dit rien, la
+mesure retenue est le nombre d'instructions exécutées par le processus du banc, peu sensible à la charge
+(`/usr/bin/time -l`, binaires de `go test -c` du moteur v0.9.0 et du moteur relu, `-test.benchtime=40x`, passes
+alternées) :
+
+| Banc | v0.9.0 | Ce lot, relu | Écart |
+|---|---|---|---|
+| `BenchmarkScanSequential` (un fil), 5 paires | 67,33 à 67,56 milliards (moyenne 67,45) | 67,62 à 67,92 milliards (moyenne 67,70) | + 0,4 % |
+| `BenchmarkScan64KiB`, 3 paires | 36,56 à 38,41 milliards | 36,78 à 38,88 milliards | séries qui se recouvrent |
+
+Sur le banc à un fil, le lot exécute 0,4 % d'instructions de plus que le moteur v0.9.0 : l'écart existe, il est petit.
+Le temps écoulé reste à mesurer sur une machine calme avant l'étiquette de version.
