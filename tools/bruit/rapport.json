@@ -1,0 +1,1164 @@
+{
+  "formatVersion": 1,
+  "about": "Banc de bruit du moteur de détection (tools/bruit) : constats du moteur sur des dépôts de code ordinaires, lus à un commit épinglé, sans langage. Décomptes seulement : aucun chemin, aucune ligne, aucune valeur de ces dépôts. Une hausse face à ce rapport est refusée.",
+  "repositories": [
+    {
+      "name": "ggshield",
+      "commit": "gf3377d94aebc61062b76387fac37e4b1951ca558",
+      "date": "2026-11-15",
+      "packVersion": 1,
+      "rules": 345,
+      "language": false,
+      "limit": 0,
+      "files": 568,
+      "incomplete": 0,
+      "findings": 699,
+      "byRule": [
+        {
+          "name": "aws_arn",
+          "count": 1
+        },
+        {
+          "name": "aws_s3_bucket",
+          "count": 2
+        },
+        {
+          "name": "basic_auth_url",
+          "count": 5
+        },
+        {
+          "name": "contextual_access_token",
+          "count": 261
+        },
+        {
+          "name": "contextual_api_key",
+          "count": 57
+        },
+        {
+          "name": "contextual_cloud_credential",
+          "count": 13
+        },
+        {
+          "name": "contextual_generic_secret",
+          "count": 121
+        },
+        {
+          "name": "contextual_password",
+          "count": 19
+        },
+        {
+          "name": "high_entropy",
+          "count": 193
+        },
+        {
+          "name": "private_key_pem",
+          "count": 5
+        },
+        {
+          "name": "private_key_pem_incomplete",
+          "count": 1
+        },
+        {
+          "name": "sendgrid_key",
+          "count": 21
+        }
+      ],
+      "assignmentShapes": [
+        {
+          "name": "annotation de type",
+          "count": 51
+        },
+        {
+          "name": "appel de fonction",
+          "count": 70
+        },
+        {
+          "name": "autre valeur sans guillemets",
+          "count": 117
+        },
+        {
+          "name": "chaîne à interpolation",
+          "count": 9
+        },
+        {
+          "name": "expression",
+          "count": 16
+        },
+        {
+          "name": "gabarit de CI ${{ … }}",
+          "count": 10
+        },
+        {
+          "name": "identifiant nu",
+          "count": 26
+        },
+        {
+          "name": "littéral court ou banal",
+          "count": 23
+        },
+        {
+          "name": "littéral en langue naturelle",
+          "count": 9
+        },
+        {
+          "name": "littéral mot de code",
+          "count": 67
+        },
+        {
+          "name": "littéral à forme possible de secret",
+          "count": 18
+        },
+        {
+          "name": "mot-clé de code",
+          "count": 8
+        },
+        {
+          "name": "nombre",
+          "count": 2
+        },
+        {
+          "name": "objet",
+          "count": 32
+        },
+        {
+          "name": "référence de code (a.b, a[b])",
+          "count": 6
+        },
+        {
+          "name": "tableau",
+          "count": 7
+        }
+      ],
+      "entropyShapes": [
+        {
+          "name": "autre suite alphanumérique",
+          "count": 16
+        },
+        {
+          "name": "base64 à signes (+, =)",
+          "count": 137
+        },
+        {
+          "name": "chemin",
+          "count": 2
+        },
+        {
+          "name": "hexadécimal",
+          "count": 6
+        },
+        {
+          "name": "identifiant en casse de chameau",
+          "count": 15
+        },
+        {
+          "name": "nom à soulignés",
+          "count": 16
+        },
+        {
+          "name": "nom à tirets",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "name": "gitleaks",
+      "commit": "g5f6ec56cfa6f8c67648d863582c7ae2f206d5c1c",
+      "date": "2026-11-15",
+      "packVersion": 1,
+      "rules": 345,
+      "language": false,
+      "limit": 0,
+      "files": 225,
+      "incomplete": 2,
+      "findings": 584,
+      "byRule": [
+        {
+          "name": "age_identity",
+          "count": 1
+        },
+        {
+          "name": "anthropic_key",
+          "count": 8
+        },
+        {
+          "name": "atlassian_cloud_api_token",
+          "count": 1
+        },
+        {
+          "name": "aws_access_key_id",
+          "count": 4
+        },
+        {
+          "name": "azure_ad_client_secret",
+          "count": 16
+        },
+        {
+          "name": "basic_auth_url",
+          "count": 14
+        },
+        {
+          "name": "cisco_meraki_api_key",
+          "count": 3
+        },
+        {
+          "name": "cli_basic_auth",
+          "count": 16
+        },
+        {
+          "name": "clickhouse_cloud_secret_key",
+          "count": 2
+        },
+        {
+          "name": "clojars_api_token",
+          "count": 1
+        },
+        {
+          "name": "cloudflare_api_token",
+          "count": 2
+        },
+        {
+          "name": "cloudflare_ca_key",
+          "count": 3
+        },
+        {
+          "name": "cohere_api_key",
+          "count": 1
+        },
+        {
+          "name": "contextual_access_token",
+          "count": 57
+        },
+        {
+          "name": "contextual_api_key",
+          "count": 45
+        },
+        {
+          "name": "contextual_generic_secret",
+          "count": 53
+        },
+        {
+          "name": "contextual_password",
+          "count": 16
+        },
+        {
+          "name": "databricks_pat",
+          "count": 1
+        },
+        {
+          "name": "finnhub_api_token",
+          "count": 1
+        },
+        {
+          "name": "fly_io_api_token",
+          "count": 3
+        },
+        {
+          "name": "github_fine_grained_pat",
+          "count": 1
+        },
+        {
+          "name": "github_token",
+          "count": 5
+        },
+        {
+          "name": "gitlab_pat",
+          "count": 2
+        },
+        {
+          "name": "gitlab_runner_registration_token",
+          "count": 2
+        },
+        {
+          "name": "google_api_key",
+          "count": 50
+        },
+        {
+          "name": "grafana_cloud_api_token",
+          "count": 3
+        },
+        {
+          "name": "grafana_service_account_token",
+          "count": 2
+        },
+        {
+          "name": "hashicorp_vault_batch_token",
+          "count": 1
+        },
+        {
+          "name": "hashicorp_vault_service_token",
+          "count": 1
+        },
+        {
+          "name": "heroku_api_key",
+          "count": 2
+        },
+        {
+          "name": "high_entropy",
+          "count": 132
+        },
+        {
+          "name": "huggingface_token",
+          "count": 19
+        },
+        {
+          "name": "ibm_cloud_user_api_key",
+          "count": 1
+        },
+        {
+          "name": "infracost_api_token",
+          "count": 3
+        },
+        {
+          "name": "intra42_client_secret",
+          "count": 2
+        },
+        {
+          "name": "jira_token",
+          "count": 1
+        },
+        {
+          "name": "jwt",
+          "count": 2
+        },
+        {
+          "name": "looker_client_secret",
+          "count": 2
+        },
+        {
+          "name": "mailchimp_api_key",
+          "count": 2
+        },
+        {
+          "name": "maxmind_license_key",
+          "count": 1
+        },
+        {
+          "name": "notion_token",
+          "count": 4
+        },
+        {
+          "name": "okta_api_token",
+          "count": 4
+        },
+        {
+          "name": "onepassword_account_secret_key",
+          "count": 3
+        },
+        {
+          "name": "onepassword_service_account_token",
+          "count": 1
+        },
+        {
+          "name": "openai_key",
+          "count": 10
+        },
+        {
+          "name": "perplexity_ai_api_key",
+          "count": 2
+        },
+        {
+          "name": "prefect_api_token",
+          "count": 1
+        },
+        {
+          "name": "private_key_pem",
+          "count": 9
+        },
+        {
+          "name": "readme_api_key",
+          "count": 1
+        },
+        {
+          "name": "sentry_organization_token",
+          "count": 2
+        },
+        {
+          "name": "slack_token",
+          "count": 46
+        },
+        {
+          "name": "slack_webhook",
+          "count": 1
+        },
+        {
+          "name": "slack_workflow_webhook",
+          "count": 1
+        },
+        {
+          "name": "snyk_api_key",
+          "count": 9
+        },
+        {
+          "name": "sourcegraph_access_token",
+          "count": 5
+        },
+        {
+          "name": "square_access_token",
+          "count": 1
+        },
+        {
+          "name": "square_oauth_secret",
+          "count": 1
+        },
+        {
+          "name": "stripe_secret_key",
+          "count": 1
+        }
+      ],
+      "assignmentShapes": [
+        {
+          "name": "annotation de type",
+          "count": 4
+        },
+        {
+          "name": "appel de fonction",
+          "count": 10
+        },
+        {
+          "name": "autre valeur sans guillemets",
+          "count": 98
+        },
+        {
+          "name": "expression",
+          "count": 2
+        },
+        {
+          "name": "gabarit {{ … }}",
+          "count": 2
+        },
+        {
+          "name": "identifiant nu",
+          "count": 4
+        },
+        {
+          "name": "littéral court ou banal",
+          "count": 10
+        },
+        {
+          "name": "littéral en langue naturelle",
+          "count": 9
+        },
+        {
+          "name": "littéral mot de code",
+          "count": 1
+        },
+        {
+          "name": "littéral à forme possible de secret",
+          "count": 9
+        },
+        {
+          "name": "objet",
+          "count": 11
+        },
+        {
+          "name": "référence de code (a.b, a[b])",
+          "count": 3
+        },
+        {
+          "name": "référence de variable de shell",
+          "count": 2
+        },
+        {
+          "name": "substitution de commande",
+          "count": 5
+        },
+        {
+          "name": "tableau",
+          "count": 1
+        }
+      ],
+      "entropyShapes": [
+        {
+          "name": "autre suite alphanumérique",
+          "count": 17
+        },
+        {
+          "name": "base64 à signes (+, =)",
+          "count": 28
+        },
+        {
+          "name": "chemin",
+          "count": 2
+        },
+        {
+          "name": "chemin d'URL",
+          "count": 9
+        },
+        {
+          "name": "hexadécimal",
+          "count": 6
+        },
+        {
+          "name": "identifiant en casse de chameau",
+          "count": 21
+        },
+        {
+          "name": "nom à soulignés",
+          "count": 32
+        },
+        {
+          "name": "nom à tirets",
+          "count": 17
+        }
+      ]
+    },
+    {
+      "name": "litellm",
+      "commit": "g09ce4f50ed1298882747c6e279ea6760f1527384",
+      "date": "2026-11-15",
+      "packVersion": 1,
+      "rules": 345,
+      "language": false,
+      "limit": 2500,
+      "files": 2500,
+      "incomplete": 15,
+      "findings": 7071,
+      "byRule": [
+        {
+          "name": "anthropic_key",
+          "count": 3
+        },
+        {
+          "name": "aws_access_key_id",
+          "count": 20
+        },
+        {
+          "name": "aws_arn",
+          "count": 47
+        },
+        {
+          "name": "aws_s3_bucket",
+          "count": 44
+        },
+        {
+          "name": "basic_auth_url",
+          "count": 5
+        },
+        {
+          "name": "circleci_api_project_token",
+          "count": 1
+        },
+        {
+          "name": "contextual_access_token",
+          "count": 2614
+        },
+        {
+          "name": "contextual_api_key",
+          "count": 3090
+        },
+        {
+          "name": "contextual_cloud_credential",
+          "count": 100
+        },
+        {
+          "name": "contextual_generic_secret",
+          "count": 305
+        },
+        {
+          "name": "contextual_password",
+          "count": 97
+        },
+        {
+          "name": "contextual_private_key",
+          "count": 18
+        },
+        {
+          "name": "database_url_credentials",
+          "count": 55
+        },
+        {
+          "name": "google_oauth_token",
+          "count": 1
+        },
+        {
+          "name": "high_entropy",
+          "count": 534
+        },
+        {
+          "name": "iban",
+          "count": 3
+        },
+        {
+          "name": "internal_ip_address",
+          "count": 1
+        },
+        {
+          "name": "jwt",
+          "count": 4
+        },
+        {
+          "name": "openai_key",
+          "count": 81
+        },
+        {
+          "name": "passport_number",
+          "count": 4
+        },
+        {
+          "name": "payment_card",
+          "count": 38
+        },
+        {
+          "name": "phone_number",
+          "count": 2
+        },
+        {
+          "name": "private_key_pem",
+          "count": 3
+        },
+        {
+          "name": "private_key_pem_incomplete",
+          "count": 1
+        }
+      ],
+      "assignmentShapes": [
+        {
+          "name": "annotation de type",
+          "count": 893
+        },
+        {
+          "name": "appel de fonction",
+          "count": 237
+        },
+        {
+          "name": "autre valeur sans guillemets",
+          "count": 595
+        },
+        {
+          "name": "chaîne à interpolation",
+          "count": 312
+        },
+        {
+          "name": "expression",
+          "count": 21
+        },
+        {
+          "name": "gabarit de CI ${{ … }}",
+          "count": 3
+        },
+        {
+          "name": "gabarit {{ … }}",
+          "count": 3
+        },
+        {
+          "name": "identifiant nu",
+          "count": 770
+        },
+        {
+          "name": "littéral court ou banal",
+          "count": 645
+        },
+        {
+          "name": "littéral d'un seul mot",
+          "count": 1
+        },
+        {
+          "name": "littéral en langue naturelle",
+          "count": 301
+        },
+        {
+          "name": "littéral mot de code",
+          "count": 1642
+        },
+        {
+          "name": "littéral à forme possible de secret",
+          "count": 286
+        },
+        {
+          "name": "mot-clé de code",
+          "count": 54
+        },
+        {
+          "name": "nombre",
+          "count": 135
+        },
+        {
+          "name": "objet",
+          "count": 214
+        },
+        {
+          "name": "référence de code (a.b, a[b])",
+          "count": 96
+        },
+        {
+          "name": "référence de variable de shell",
+          "count": 12
+        },
+        {
+          "name": "tableau",
+          "count": 4
+        }
+      ],
+      "entropyShapes": [
+        {
+          "name": "autre suite alphanumérique",
+          "count": 22
+        },
+        {
+          "name": "base64 à signes (+, =)",
+          "count": 263
+        },
+        {
+          "name": "chemin",
+          "count": 40
+        },
+        {
+          "name": "chemin d'URL",
+          "count": 5
+        },
+        {
+          "name": "hexadécimal",
+          "count": 25
+        },
+        {
+          "name": "identifiant en casse de chameau",
+          "count": 60
+        },
+        {
+          "name": "nom à soulignés",
+          "count": 97
+        },
+        {
+          "name": "nom à tirets",
+          "count": 22
+        }
+      ]
+    },
+    {
+      "name": "promptfoo",
+      "commit": "g5fac53eefdd26141a45c52ab77f533a7d30884e3",
+      "date": "2026-11-15",
+      "packVersion": 1,
+      "rules": 345,
+      "language": false,
+      "limit": 2500,
+      "files": 2500,
+      "incomplete": 3,
+      "findings": 4145,
+      "byRule": [
+        {
+          "name": "aws_arn",
+          "count": 49
+        },
+        {
+          "name": "aws_s3_bucket",
+          "count": 60
+        },
+        {
+          "name": "basic_auth_url",
+          "count": 61
+        },
+        {
+          "name": "cohere_api_key",
+          "count": 1
+        },
+        {
+          "name": "contextual_access_token",
+          "count": 785
+        },
+        {
+          "name": "contextual_api_key",
+          "count": 1990
+        },
+        {
+          "name": "contextual_cloud_credential",
+          "count": 2
+        },
+        {
+          "name": "contextual_generic_secret",
+          "count": 152
+        },
+        {
+          "name": "contextual_password",
+          "count": 273
+        },
+        {
+          "name": "contextual_private_key",
+          "count": 12
+        },
+        {
+          "name": "database_url_credentials",
+          "count": 2
+        },
+        {
+          "name": "high_entropy",
+          "count": 626
+        },
+        {
+          "name": "iban",
+          "count": 3
+        },
+        {
+          "name": "jwt",
+          "count": 7
+        },
+        {
+          "name": "openai_key",
+          "count": 89
+        },
+        {
+          "name": "payment_card",
+          "count": 4
+        },
+        {
+          "name": "phone_number",
+          "count": 4
+        },
+        {
+          "name": "private_key_pem",
+          "count": 21
+        },
+        {
+          "name": "private_key_pem_incomplete",
+          "count": 1
+        },
+        {
+          "name": "slack_token",
+          "count": 2
+        },
+        {
+          "name": "xai_api_key",
+          "count": 1
+        }
+      ],
+      "assignmentShapes": [
+        {
+          "name": "annotation de type",
+          "count": 19
+        },
+        {
+          "name": "appel de fonction",
+          "count": 65
+        },
+        {
+          "name": "autre valeur sans guillemets",
+          "count": 328
+        },
+        {
+          "name": "chaîne à interpolation",
+          "count": 111
+        },
+        {
+          "name": "expression",
+          "count": 20
+        },
+        {
+          "name": "gabarit de CI ${{ … }}",
+          "count": 4
+        },
+        {
+          "name": "gabarit {{ … }}",
+          "count": 6
+        },
+        {
+          "name": "identifiant nu",
+          "count": 187
+        },
+        {
+          "name": "littéral court ou banal",
+          "count": 355
+        },
+        {
+          "name": "littéral d'un seul mot",
+          "count": 2
+        },
+        {
+          "name": "littéral en langue naturelle",
+          "count": 240
+        },
+        {
+          "name": "littéral mot de code",
+          "count": 1513
+        },
+        {
+          "name": "littéral à forme possible de secret",
+          "count": 232
+        },
+        {
+          "name": "mot-clé de code",
+          "count": 4
+        },
+        {
+          "name": "nombre",
+          "count": 7
+        },
+        {
+          "name": "objet",
+          "count": 93
+        },
+        {
+          "name": "référence de code (a.b, a[b])",
+          "count": 9
+        },
+        {
+          "name": "référence de variable de shell",
+          "count": 4
+        },
+        {
+          "name": "substitution de commande",
+          "count": 5
+        },
+        {
+          "name": "tableau",
+          "count": 6
+        },
+        {
+          "name": "vue décodée",
+          "count": 4
+        }
+      ],
+      "entropyShapes": [
+        {
+          "name": "autre suite alphanumérique",
+          "count": 6
+        },
+        {
+          "name": "base64 à signes (+, =)",
+          "count": 560
+        },
+        {
+          "name": "chemin",
+          "count": 6
+        },
+        {
+          "name": "chemin d'URL",
+          "count": 17
+        },
+        {
+          "name": "hexadécimal",
+          "count": 7
+        },
+        {
+          "name": "identifiant en casse de chameau",
+          "count": 24
+        },
+        {
+          "name": "nom à soulignés",
+          "count": 2
+        },
+        {
+          "name": "nom à tirets",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "name": "xsom-fleet",
+      "commit": "g77fded7769e73317248e575bc69410a678c57092",
+      "date": "2026-11-15",
+      "packVersion": 1,
+      "rules": 345,
+      "language": false,
+      "limit": 0,
+      "files": 4614,
+      "incomplete": 1,
+      "findings": 1959,
+      "byRule": [
+        {
+          "name": "alchemy_api_key",
+          "count": 3
+        },
+        {
+          "name": "anthropic_key",
+          "count": 3
+        },
+        {
+          "name": "aws_access_key_id",
+          "count": 6
+        },
+        {
+          "name": "aws_s3_bucket",
+          "count": 1
+        },
+        {
+          "name": "basic_auth_url",
+          "count": 10
+        },
+        {
+          "name": "cli_basic_auth",
+          "count": 7
+        },
+        {
+          "name": "contextual_access_token",
+          "count": 345
+        },
+        {
+          "name": "contextual_api_key",
+          "count": 146
+        },
+        {
+          "name": "contextual_cloud_credential",
+          "count": 4
+        },
+        {
+          "name": "contextual_database_credentials",
+          "count": 9
+        },
+        {
+          "name": "contextual_generic_secret",
+          "count": 239
+        },
+        {
+          "name": "contextual_password",
+          "count": 122
+        },
+        {
+          "name": "contextual_private_key",
+          "count": 31
+        },
+        {
+          "name": "database_url_credentials",
+          "count": 46
+        },
+        {
+          "name": "fr_siret",
+          "count": 102
+        },
+        {
+          "name": "github_token",
+          "count": 5
+        },
+        {
+          "name": "high_entropy",
+          "count": 868
+        },
+        {
+          "name": "iban",
+          "count": 2
+        },
+        {
+          "name": "mandrill_api_key",
+          "count": 3
+        },
+        {
+          "name": "openai_key",
+          "count": 2
+        },
+        {
+          "name": "payment_card",
+          "count": 2
+        },
+        {
+          "name": "private_key_pem",
+          "count": 2
+        },
+        {
+          "name": "private_key_pem_incomplete",
+          "count": 1
+        }
+      ],
+      "assignmentShapes": [
+        {
+          "name": "annotation de type",
+          "count": 52
+        },
+        {
+          "name": "appel de fonction",
+          "count": 90
+        },
+        {
+          "name": "autre valeur sans guillemets",
+          "count": 166
+        },
+        {
+          "name": "chaîne qui commence par une référence de shell",
+          "count": 8
+        },
+        {
+          "name": "chaîne à interpolation",
+          "count": 46
+        },
+        {
+          "name": "expression",
+          "count": 15
+        },
+        {
+          "name": "gabarit de CI ${{ … }}",
+          "count": 12
+        },
+        {
+          "name": "identifiant nu",
+          "count": 51
+        },
+        {
+          "name": "littéral court ou banal",
+          "count": 52
+        },
+        {
+          "name": "littéral en langue naturelle",
+          "count": 29
+        },
+        {
+          "name": "littéral mot de code",
+          "count": 13
+        },
+        {
+          "name": "littéral à forme possible de secret",
+          "count": 24
+        },
+        {
+          "name": "mot-clé de code",
+          "count": 3
+        },
+        {
+          "name": "nombre",
+          "count": 6
+        },
+        {
+          "name": "objet",
+          "count": 303
+        },
+        {
+          "name": "référence de code (a.b, a[b])",
+          "count": 1
+        },
+        {
+          "name": "référence de variable de shell",
+          "count": 18
+        },
+        {
+          "name": "substitution de commande",
+          "count": 5
+        },
+        {
+          "name": "tableau",
+          "count": 2
+        }
+      ],
+      "entropyShapes": [
+        {
+          "name": "autre suite alphanumérique",
+          "count": 9
+        },
+        {
+          "name": "base64 à signes (+, =)",
+          "count": 275
+        },
+        {
+          "name": "chemin",
+          "count": 7
+        },
+        {
+          "name": "chemin d'URL",
+          "count": 39
+        },
+        {
+          "name": "hexadécimal",
+          "count": 13
+        },
+        {
+          "name": "identifiant en casse de chameau",
+          "count": 486
+        },
+        {
+          "name": "nom à soulignés",
+          "count": 35
+        },
+        {
+          "name": "nom à tirets",
+          "count": 4
+        }
+      ]
+    }
+  ]
+}
