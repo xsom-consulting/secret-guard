@@ -145,6 +145,9 @@ cette charge, les deux moteurs donnent des séries qui se recouvrent :
 | `BenchmarkScan64KiB`, trois séries de trois passes alternées | 15,7 à 43,2 ms (médiane 31,2) | 18,8 à 76,6 ms (médiane 25,1) |
 | `BenchmarkScanSequential` (un fil), trois passes alternées | 80,2 ms, 81,5 ms, 88,0 ms | 81,2 ms, 81,7 ms, 83,2 ms |
 
+Au dernier commit du lot, trois paires alternées du banc séquentiel (25 passes chacune), toujours sous charge :
+82,6 ms, 113,1 ms et 129,3 ms avant ; 66,4 ms, 98,1 ms et 101,0 ms après.
+
 Lecture honnête : aucun écart mesurable, mais la dispersion sous charge est plus grande que l'écart cherché. Le banc
-séquentiel, moins sensible au nombre de cœurs libres, donne la même médiane à 0,2 ms près. À refaire sur une machine
-calme avant l'étiquette de version.
+séquentiel, moins sensible au nombre de cœurs libres, donne la même médiane à 0,2 ms près dans la première série. À
+refaire sur une machine calme avant l'étiquette de version.

@@ -492,13 +492,13 @@ langage (ce que fait xSOM Fleet aujourd'hui) puis avec le langage tiré de l'ext
 | Dépôt | Fichiers | v0.9.0 sans langage | Ce lot sans langage | v0.9.0 avec langage | Ce lot avec langage |
 |---|---:|---:|---:|---:|---:|
 | xSOM Fleet | 4 648 | 896 | 354 | 844 | 186 |
-| Promptfoo (commit `5fac53e`, échantillon) | 2 498 | 2 933 | 2 454 | 2 788 | 425 |
-| LiteLLM (commit `09ce4f50`, échantillon) | 2 496 | 6 022 | 5 108 | 5 793 | 765 |
+| Promptfoo (commit `5fac53e`, échantillon) | 2 498 | 2 933 | 2 456 | 2 788 | 425 |
+| LiteLLM (commit `09ce4f50`, échantillon) | 2 496 | 6 022 | 5 110 | 5 793 | 766 |
 | ggshield (commit `f3377d9`) | 568 | 471 | 286 | 459 | 119 |
 | Gitleaks (commit `5f6ec56`) | 225 | 171 | 145 | 173 | 76 |
 
 Sur xSOM Fleet, `cli_basic_auth` passe de 7 constats à 1. Contrôle de ce qui a été retiré : sur xSOM Fleet
-(550 constats retirés sans langage, 665 avec), Promptfoo (2 367) et LiteLLM (5 030), aucune étendue retirée ne porte un
+(550 constats retirés sans langage, 665 avec), Promptfoo (2 367) et LiteLLM (5 029), aucune étendue retirée ne porte un
 mot de 12 caractères ou plus qui mêle lettres et au moins deux chiffres, hors quatre lignes de xSOM Fleet où ce mot est
 le nom d'un champ ; échantillons lus à la main (valeurs d'essai en mots, noms de variables, types, libellés). Cas vécus
 (63 lignes de code ordinaire) : 41 signalés avant, 8 après sans langage ; 39 avant, 6 après avec langage. Seuil du
