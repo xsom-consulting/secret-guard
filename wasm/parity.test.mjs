@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 // Parité du module WebAssembly avec le moteur Go : node --test wasm/parity.test.mjs (Go et le module construit requis).
-// tools/wasmparity exécute en Go natif, sur tout le corpus du module (vectors/detection/, 1 518 cas ; vectors/expurgate.json ;
+// tools/wasmparity exécute en Go natif, sur tout le corpus du module (vectors/detection/, cas du manifeste ; vectors/expurgate.json ;
 // vectors/hidden.json), l'analyse, l'expurgation et les instructions cachées ; chaque chargeur du paquet exécute les
 // mêmes cas, sur les mêmes octets, dans le module WebAssembly, et doit rendre les mêmes documents (et le même texte
 // expurgé). Un écart n'affiche que l'identifiant du cas, jamais son entrée.
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
@@ -17,6 +18,9 @@ const output = execFileSync('go', ['run', './tools/wasmparity', '-root', root], 
   cwd: join(root, 'expurgation'), encoding: 'utf8', maxBuffer: 256 << 20, stdio: ['ignore', 'pipe', 'inherit'],
 });
 const [summary, ...lines] = output.trimEnd().split('\n').map((line) => JSON.parse(line));
+// Nombre de cas attendu : celui du manifeste du corpus (tools/wasmparity relit chaque fichier et refuse un écart).
+const manifest = JSON.parse(readFileSync(join(root, 'vectors', 'detection', 'manifest.json'), 'utf8'));
+const corpusCases = manifest.files.reduce((total, file) => total + file.cases, 0);
 const key = Uint8Array.from({ length: 32 }, (_, i) => i + 1); // FingerprintKey de tools/wasmparity
 
 /** Document natif, octets d'entrée et texte attendu d'une ligne. */
@@ -24,7 +28,7 @@ const decode = (base64) => Uint8Array.from(Buffer.from(base64, 'base64'));
 
 test('le décompte natif couvre tout le corpus', () => {
   assert.equal(summary.kind, 'summary');
-  assert.equal(summary.scan, 1518);
+  assert.equal(summary.scan, corpusCases);
   assert.ok(summary.expurgate > summary.scan);
   assert.ok(summary.hidden > 0);
   const counts = { scan: 0, expurgate: 0, hidden: 0 };
