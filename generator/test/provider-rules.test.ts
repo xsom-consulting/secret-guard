@@ -4,7 +4,7 @@
  * Contrôles sans le clone de Betterleaks ni le checkout de Secret Guard : la régénération du banc et sa comparaison
  * octet pour octet se font par `node corpus/betterleaks.ts --clone <clone> [--check]`.
  */
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { parse as parseToml } from 'smol-toml';
 import { describe, expect, it } from 'vitest';
 import {
@@ -307,7 +307,9 @@ describe('banc de comparaison Betterleaks', () => {
     expect(rulesDigest([['rules/a.go', Buffer.from('y')]])).not.toBe(a);
   });
 
-  it('le fichier commité vient du commit épinglé : 1 880 cas, écrits dans la forme du générateur', () => {
+  // Banc généré en local, jamais commité (.gitignore) : sans lui, ce test est sauté.
+  const bench = new URL('../../vectors/comparison/betterleaks.json', import.meta.url);
+  it.skipIf(!existsSync(bench))('le banc généré vient du commit épinglé : 1 880 cas, écrits dans la forme du générateur', () => {
     const committed = read('vectors/comparison/betterleaks.json');
     const parsed = JSON.parse(committed) as {
       formatVersion: number;

@@ -5,6 +5,8 @@ package detect
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"io/fs"
 	"math"
 	"os"
 	"testing"
@@ -90,6 +92,9 @@ func lowDiversity(value []byte) bool {
 // règle, jamais la valeur.
 func TestComparisonBetterleaks(t *testing.T) {
 	raw, err := os.ReadFile(comparisonVectorsPath)
+	if errors.Is(err, fs.ErrNotExist) {
+		t.Skip("banc absent : il se génère en local (cd generator && node corpus/betterleaks.ts --clone <clone de Betterleaks>), il n'est pas commité")
+	}
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -18,7 +18,7 @@ besoin, et cette page ne classe personne. Elle dit ce qui a été mesuré, sur q
 
 ## 1. Les cas d'essai de Betterleaks, rejoués par Secret Guard
 
-Mesuré. `vectors/comparison/betterleaks.json` reprend les 1 880 cas d'essai littéraux des règles de Betterleaks
+Mesuré. `vectors/comparison/betterleaks.json` (généré en local par `node corpus/betterleaks.ts --clone <clone>` depuis `generator/`, ignoré par git : ses valeurs d'essai ont la forme de vraies clés, que la protection de GitHub refuse) reprend les 1 880 cas d'essai littéraux des règles de Betterleaks
 (464 règles), dont 867 positifs. `TestComparisonBetterleaks` (`detect/comparison_test.go`) y applique les règles que
 `LoadRules` exécute, et échoue si un chiffre recule.
 

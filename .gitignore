@@ -8,3 +8,6 @@ coverage.out
 /.agents/
 /AGENTS.md
 /CLAUDE.md
+
+# Banc de comparaison Betterleaks : généré en local (generator/corpus/betterleaks.ts), jamais commité.
+vectors/comparison/
