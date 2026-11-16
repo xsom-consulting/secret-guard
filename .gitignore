@@ -13,3 +13,5 @@ coverage.out
 vectors/comparison/
 # Bruit des règles de fournisseurs : généré (generator/corpus/provider-noise.ts), jamais commité.
 vectors/noise-providers.json
+# Page de comparaison avec d'autres outils : document de travail, gardé en local.
+docs/comparaison.md

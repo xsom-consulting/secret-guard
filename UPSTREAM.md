@@ -1180,9 +1180,9 @@ familles présentes).
 
 ### Page de comparaison
 
-`docs/comparaison.md` est un brouillon : il réunit des chiffres déjà commités (banc Betterleaks, banc de bruit, rappel du
-paquet `injection`, matrice d'encodages), dit ce qui est mesuré et ce qui est seulement lu dans le code des autres
-outils, et n'est lié depuis aucune page. Sa publication reste à décider par Julian.
+La page de comparaison chiffrée (banc Betterleaks, banc de bruit, rappel du paquet `injection`, matrice d'encodages)
+est un document de travail du mainteneur, gardé hors du dépôt (`docs/comparaison.md` est ignoré par git) : aucune
+comparaison avec un autre outil n'est publiée tant qu'elle n'a pas été mesurée des deux côtés.
 
 ### Version v0.10.0 : ce qui est fait, ce qui reste à lancer
 
@@ -1241,5 +1241,5 @@ avec `-baseline` et à expliquer dans le message du commit.
    cette lecture que par le code Go qu'il compile.
 5. **`generator/` et `detect/redact_test.go` modifiés** pour que la matrice soit un fichier du corpus généré, jamais un
    fichier écrit à la main.
-6. **La colonne v0.9.0** de `docs/encodages.md` et de `docs/comparaison.md` vient d'un relevé d'étude sur le binaire de
+6. **La colonne v0.9.0** de `docs/encodages.md` (et de la page de comparaison, hors du dépôt) vient d'un relevé d'étude sur le binaire de
    la v0.9.0, qu'aucun essai du dépôt ne rejoue.
