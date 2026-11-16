@@ -247,7 +247,7 @@ npm ci
 npm test                                   # Pack, motifs du moteur, corpus, Unicode, Empreintes locales, vecteurs hidden et mentions
 npm run pack:initial                       # pack/initial/pack.json et detect/engine_patterns.go
 npm run vectors:detection -- --upstream <checkout> --check   # corpus : réservé à xSOM (checkout du dépôt d'origine privé, voir UPSTREAM.md)
-node corpus/provider-noise.ts --check      # vectors/noise-providers.json : bruit des règles de fournisseurs
+node corpus/provider-noise.ts              # vectors/noise-providers.json : bruit des règles de fournisseurs (généré, ignoré par git, exigé par TestNoiseProviders)
 node corpus/betterleaks.ts --clone <clone> --check          # vectors/comparison/betterleaks.json (clone de Betterleaks au commit épinglé, lu, jamais exécuté)
 npm run vectors:redact -- --upstream <checkout> --check      # vecteurs du masquage et des décisions (même checkout)
 npm run vectors:hidden -- --upstream <checkout> --check      # vectors/hidden.json et vectors/mentions.json (même checkout)

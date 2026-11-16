@@ -35,6 +35,13 @@ jobs:
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Bruit des règles de fournisseurs (généré, jamais commité)
+        run: |
+          npm ci --prefix generator --ignore-scripts
+          (cd generator && node corpus/provider-noise.ts)
       - name: go vet
         run: go vet ./...
       - name: go vet (GOOS=windows)

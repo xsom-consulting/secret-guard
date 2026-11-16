@@ -11,3 +11,5 @@ coverage.out
 
 # Banc de comparaison Betterleaks : généré en local (generator/corpus/betterleaks.ts), jamais commité.
 vectors/comparison/
+# Bruit des règles de fournisseurs : généré (generator/corpus/provider-noise.ts), jamais commité.
+vectors/noise-providers.json

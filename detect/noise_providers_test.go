@@ -25,7 +25,8 @@ const noiseProvidersPath = "../vectors/noise-providers.json"
 func TestNoiseProviders(t *testing.T) {
 	raw, err := os.ReadFile(noiseProvidersPath)
 	if err != nil {
-		t.Fatal(err)
+		// Fichier généré, jamais commité (ses valeurs ont la forme de jetons) : la CI le produit avant les tests.
+		t.Fatalf("%v : générer d'abord le bruit des règles de fournisseurs (cd generator && npm ci && node corpus/provider-noise.ts)", err)
 	}
 	var corpus noiseCorpus
 	if err := json.Unmarshal(raw, &corpus); err != nil {

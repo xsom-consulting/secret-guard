@@ -221,10 +221,10 @@ describe('règles reprises de Betterleaks', () => {
 });
 
 describe('bruit des règles de fournisseurs', () => {
-  const committed = read('vectors/noise-providers.json');
+  // Généré, jamais commité (.gitignore) : la CI l'écrit avant les tests Go (TestNoiseProviders).
+  const committed = serializeProviderNoise();
 
-  it('le fichier commité est exactement celui du générateur, au format du corpus de bruit', () => {
-    expect(committed).toBe(serializeProviderNoise());
+  it('le corpus généré a le format du corpus de bruit', () => {
     const parsed = JSON.parse(committed) as { formatVersion: number; about: string; cases: { id: string; input: string }[] };
     expect(parsed.formatVersion).toBe(1);
     expect(parsed.cases.map((entry) => Object.keys(entry))).toEqual(parsed.cases.map(() => ['id', 'input']));
