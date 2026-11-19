@@ -4,6 +4,7 @@ package injection
 
 import (
 	"regexp"
+	"regexp/syntax"
 	"strings"
 	"testing"
 )
@@ -54,6 +55,7 @@ func gateTexts(t testing.TB) [][]byte {
 func missedByGate(text []byte) (matches int, missed []string) {
 	type span struct{ pattern, start, end int }
 	found := map[span]bool{}
+	patterns, engine := compiled()
 	engine.scan(patterns, &view{text: text}, func(pattern, start, end int) { found[span{pattern, start, end}] = true })
 	special := strings.ContainsAny(string(text), "ſK")
 	for order, reference := range referencePatterns {
@@ -153,6 +155,44 @@ func TestFindEqualsUngatedSearch(t *testing.T) {
 	}
 }
 
+// program rend le programme RE2 d'une expression, tel que regexp.Compile le construit.
+func program(t *testing.T, expr string) string {
+	t.Helper()
+	tree, err := syntax.Parse(expr, syntax.Perl)
+	if err != nil {
+		t.Fatalf("%s : %v", expr, err)
+	}
+	prog, err := syntax.Compile(tree.Simplify())
+	if err != nil {
+		t.Fatalf("%s : %v", expr, err)
+	}
+	return prog.String()
+}
+
+// TestAnchoredSourceSameProgram : le motif ancré écrit à partir de la source (anchoredSource) compile le même
+// programme que le motif réécrit depuis son arbre, assertions de tête retirées, comme jusqu'à la v0.10.3. Aucun
+// constat ne peut donc changer.
+func TestAnchoredSourceSameProgram(t *testing.T) {
+	patterns, _ := compiled()
+	for i, p := range patternSources {
+		tree, err := syntax.Parse(p.source, syntax.Perl)
+		if err != nil {
+			t.Fatal(err)
+		}
+		subs := []*syntax.Regexp{tree}
+		if tree.Op == syntax.OpConcat {
+			subs = tree.Sub
+		}
+		for len(subs) > 0 && (subs[0].Op == syntax.OpWordBoundary || subs[0].Op == syntax.OpBeginLine) {
+			subs = subs[1:]
+		}
+		body := &syntax.Regexp{Op: syntax.OpConcat, Sub: subs, Flags: tree.Flags}
+		if got, want := program(t, patterns[i].re.String()), program(t, `\A(?:`+body.String()+`)`); got != want {
+			t.Errorf("motif %d (%.60s…) : le programme ancré diffère", i, p.source)
+		}
+	}
+}
+
 // TestEveryPatternIsGated : chaque motif a des débuts littéraux d'au moins deux octets, une fenêtre bornée, et sa
 // règle est déclarée.
 func TestEveryPatternIsGated(t *testing.T) {
@@ -160,6 +200,7 @@ func TestEveryPatternIsGated(t *testing.T) {
 	for _, rule := range Rules() {
 		declared[rule] = true
 	}
+	patterns, _ := compiled()
 	for i, p := range patterns {
 		if len(p.anchors) == 0 || p.window <= windowMargin || p.window > 1<<14 {
 			t.Errorf("motif %d : %d début(s) littéral(aux), fenêtre %d", i, len(p.anchors), p.window)
@@ -214,6 +255,7 @@ func FuzzGateParity(f *testing.F) {
 func anchoredScan(patterns []pattern, v *view, yield func(pattern, start, end int)) {
 	text := v.text
 	folded := foldLower(text)
+	_, engine := compiled()
 	for i := 0; i+1 < len(folded); i++ {
 		bucket := engine.index[int(folded[i])<<8|int(folded[i+1])]
 		if bucket == 0 {

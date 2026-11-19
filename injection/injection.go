@@ -36,6 +36,7 @@ package injection
 import (
 	"regexp"
 	"sort"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/xsom-consulting/secret-guard/internal/limits"
@@ -196,21 +197,24 @@ var patternSources = []struct {
 	{rule: RoleLabels, source: `(?i)</s>`, before: `(?i)<s>[^<\n]*$`},
 }
 
-// patterns sont les motifs compilés, dans l'ordre de patternSources ; engine est leur porte littérale (gate.go).
-var (
-	patterns = func() []pattern {
-		compiled := make([]pattern, 0, len(patternSources))
-		for _, p := range patternSources {
-			pattern := compilePattern(p.rule, p.source)
-			if p.before != "" {
-				pattern.before, pattern.beforeRequired = regexp.MustCompile(p.before), p.beforeRequired
-			}
-			compiled = append(compiled, pattern)
+// compiled rend les motifs compilés, dans l'ordre de patternSources, et leur porte littérale (gate.go). Ils sont
+// compilés au premier appel de Find, pas au chargement du paquet : un programme qui importe le paquet sans chercher de
+// consigne ne paie rien, et un processus court (un hook lancé à chaque contrôle) ne les compile qu'une fois, s'il en
+// a besoin. Les appels concurrents attendent la même compilation.
+var compiled = sync.OnceValues(compilePatterns)
+
+// compilePatterns compile les motifs de patternSources et indexe leur porte littérale.
+func compilePatterns() ([]pattern, *gate) {
+	patterns := make([]pattern, 0, len(patternSources))
+	for _, p := range patternSources {
+		pattern := compilePattern(p.rule, p.source)
+		if p.before != "" {
+			pattern.before, pattern.beforeRequired = regexp.MustCompile(p.before), p.beforeRequired
 		}
-		return compiled
-	}()
-	engine = newGate(patterns)
-)
+		patterns = append(patterns, pattern)
+	}
+	return patterns, newGate(patterns)
+}
 
 func positions(text []byte, start int, line, column *int, from int) {
 	for off := from; off < start; {
@@ -241,6 +245,7 @@ type match struct {
 // faux aussi quand une lecture dépasse sa borne (maxViewBytes) : les constats des autres lectures sont rendus, et le
 // texte ne doit pas être tenu pour propre.
 func Find(text []byte) Report {
+	_, engine := compiled()
 	return find(text, engine.scan)
 }
 
@@ -250,6 +255,7 @@ func find(text []byte, scanView func(patterns []pattern, v *view, yield func(pat
 	if len(text) > MaxInputBytes {
 		return Report{}
 	}
+	patterns, _ := compiled()
 	report := Report{Complete: true}
 	var found []match
 	views := 0

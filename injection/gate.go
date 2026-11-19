@@ -78,16 +78,23 @@ func compilePattern(rule Rule, source string) pattern {
 	if tree.Op == syntax.OpConcat {
 		subs = tree.Sub
 	}
+	flags, rest := splitFlags(source)
 	for len(subs) > 0 && (subs[0].Op == syntax.OpWordBoundary || subs[0].Op == syntax.OpBeginLine) {
+		assertion := `\b`
 		if subs[0].Op == syntax.OpWordBoundary {
 			p.wordStart = true
 		} else {
 			p.lineStart = true
+			assertion = "^"
 		}
+		if !strings.HasPrefix(rest, assertion) {
+			panic("injection : assertion de tête illisible : " + source)
+		}
+		rest = rest[len(assertion):]
 		subs = subs[1:]
 	}
 	body := &syntax.Regexp{Op: syntax.OpConcat, Sub: subs, Flags: tree.Flags}
-	p.re = regexp.MustCompile(`\A(?:` + body.String() + `)`)
+	p.re = regexp.MustCompile(anchoredSource(flags, rest))
 	set, _ := leadingLiterals(body)
 	p.anchors = pruneAnchors(set)
 	for _, anchor := range p.anchors {
@@ -116,6 +123,27 @@ func compilePattern(rule Rule, source string) pattern {
 		}
 	}
 	return p
+}
+
+// splitFlags sépare la source d'un motif de ses drapeaux de tête (« (?i) », « (?im) »), qui valent pour tout le motif.
+func splitFlags(source string) (flags, rest string) {
+	if !strings.HasPrefix(source, "(?") {
+		return "", source
+	}
+	end := strings.IndexByte(source, ')')
+	if end < 0 || strings.Trim(source[2:end], "imsU-") != "" {
+		return "", source
+	}
+	return source[:end+1], source[end+1:]
+}
+
+// anchoredSource rend le motif ancré au début de la fenêtre : ses drapeaux de tête, \A, puis le reste du motif tel
+// qu'il est écrit, assertions de tête retirées. Le motif n'est pas réécrit depuis son arbre ((*syntax.Regexp).String) :
+// pour chaque classe niée ([^.\n]) répétée, cette réécriture replie la casse de chaque point de code d'Unicode, et
+// coûtait plus de 150 ms pour l'ensemble des motifs, à chaque processus qui cherchait une consigne. Le programme
+// compilé est le même (TestAnchoredSourceSameProgram).
+func anchoredSource(flags, rest string) string {
+	return flags + `\A(?:` + rest + `)`
 }
 
 // leadingLiterals rend des chaînes en minuscules dont l'une commence toute correspondance du nœud. exact : le nœud
