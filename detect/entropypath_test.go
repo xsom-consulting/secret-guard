@@ -232,6 +232,7 @@ func TestEntropyIgnoresClaudeResourceLinks(t *testing.T) {
 			"Artifact de Claude Code": "Lien : https://claude.ai/code/artifact/" + id + " (privé)",
 			"conversation":            "https://claude.ai/chat/" + id,
 			"projet":                  "voir https://claude.ai/project/" + id + ".",
+			"session à distance":      "Session d'origine : https://claude.ai/code/session_01" + strings.Map(alnumOnly, id) + " (Windows)",
 		} {
 			if n := entropyFindings(t, rules, content); n != 0 {
 				t.Fatalf("%s : %d constat(s) d'entropie sur un lien de ressource de claude.ai", name, n)
@@ -245,10 +246,20 @@ func TestEntropyIgnoresClaudeResourceLinks(t *testing.T) {
 			"identifiant de connexion":   "https://user@claude.ai/artifact/" + long,
 			"HTTP sans chiffrement":      "http://claude.ai/artifact/" + long,
 			"jeton dans un chemin d'API": "https://api.exemple.fr/artifact/" + long,
+			"session sans le préfixe":    "https://claude.ai/code/" + long,
+			"session sur un autre hôte":  "https://claude.ai.exemple.fr/code/session_01" + strings.Map(alnumOnly, long),
 		} {
 			if n := entropyFindings(t, rules, content); n == 0 {
 				t.Fatalf("%s : jeton aléatoire non détecté", name)
 			}
 		}
 	}
+}
+
+// alnumOnly garde les lettres et chiffres ASCII d'un jeton tiré au hasard (forme d'un identifiant de session).
+func alnumOnly(r rune) rune {
+	if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+		return r
+	}
+	return -1
 }

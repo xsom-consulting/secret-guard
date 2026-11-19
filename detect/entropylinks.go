@@ -15,10 +15,14 @@ import (
 )
 
 // claudeResourceLink : lien complet, en HTTPS, sans identifiant de connexion ni port, vers une ressource de claude.ai
-// qui exige une session (Artifact, conversation, projet), terminé par l'identifiant.
-var claudeResourceLink = regexp.MustCompile(`^https://claude\.ai/(?:code/)?(?:artifact|chat|project)/[A-Za-z0-9_-]{1,64}$`)
+// qui exige une session (Artifact, conversation, projet, session de Claude Code ouverte à distance), terminé par
+// l'identifiant. Le lien d'une session de Claude Code (« https://claude.ai/code/session_<identifiant> », donné par le
+// Remote Control et repris dans les messages entre sessions) ne s'ouvre qu'avec le compte de son propriétaire : faux
+// positif relevé sur un Poste réel le 19 novembre 2026, où il arrêtait chaque message d'une session Windows.
+var claudeResourceLink = regexp.MustCompile(`^https://claude\.ai/(?:(?:code/)?(?:artifact|chat|project)/[A-Za-z0-9_-]{1,64}|code/session_[A-Za-z0-9]{1,64})$`)
 
-// claudeLinkLookBehind borne la recherche du début du lien avant la suite jugée (« https://claude.ai/code/ »).
+// claudeLinkLookBehind borne la recherche du début du lien avant la suite jugée (« https://claude.ai/code/session_ »,
+// 31 octets).
 const claudeLinkLookBehind = 32
 
 // isKnownResourceLink dit si la suite [start, start+len(value)) de la vue finit un lien de ressource de claude.ai
