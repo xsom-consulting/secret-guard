@@ -25,6 +25,12 @@
 //     minuscules, majuscules (lettres de toute écriture, par leur casse : « Réinitialisé » n'en a que deux), chiffres et
 //     autres caractères (symboles, ponctuation, lettres sans casse) ; ni valeur fictive, ni Substitut, ni référence de
 //     code ou d'environnement, ni substitution de commande, ni « ${ », « $( », « {{ », « % … % », ni adresse « :// ».
+//   - Complément, facultatif (v0.10.3) : entre l'indice et la valeur, un complément qui commence par une préposition
+//     (« de », « du », « des », « d' », « pour », « sur », « à », « au », « aux », « chez » ; « for », « of », « on »,
+//     « to », « at ») et compte au plus cinq mots de lettres, chiffres, « _ », « - », « . » ou apostrophe, sur la même
+//     ligne, suivi de « : », « = », « est » ou « is ». « mot de passe de la base : <valeur> », « the password for the
+//     admin account is <valeur> ». Sans ce signe de liaison après le complément, rien n'est lu (« le mot de passe de
+//     l'utilisateur doit contenir 12 caractères »). Relevé sur deux Postes réels le 2026-11-19.
 //   - Un constat qui chevauche un constat de l'affectation ordinaire, des cookies ou de « -u » dans la même vue n'est pas
 //     ajouté : les résultats de l'origine restent ceux de l'origine (corpus de parité inchangé).
 //
@@ -119,6 +125,9 @@ func passwordPhraseValue(text []byte, hintStart, hintEnd int) (int, int, bool) {
 		return 0, 0, false
 	}
 	i = skipPhraseSpaces(text, i)
+	if j, ok := phraseQualifier(text, i); ok {
+		return phraseValueSpan(text, j, hintStart)
+	}
 	linked := false
 	if j, ok := phraseWordLink(text, i); ok {
 		i, linked = skipPhraseSpaces(text, j), true
@@ -132,7 +141,7 @@ func passwordPhraseValue(text []byte, hintStart, hintEnd int) (int, int, bool) {
 	if bare && !linked {
 		return 0, 0, false
 	}
-	return phraseValueSpan(text, i)
+	return phraseValueSpan(text, i, hintStart)
 }
 
 // hintMayFollow dit si un indice peut suivre le caractère r (début de mot hors nom de variable, option, propriété).
@@ -177,12 +186,66 @@ func phraseWordLink(text []byte, i int) (int, bool) {
 	return 0, false
 }
 
+// phraseQualifierStarts : prépositions qui ouvrent un complément de l'indice, sans la casse.
+var phraseQualifierStarts = map[string]bool{
+	"de": true, "du": true, "des": true, "pour": true, "sur": true, "à": true, "au": true, "aux": true, "chez": true,
+	"for": true, "of": true, "on": true, "to": true, "at": true,
+}
+
+// phraseQualifierMaxWords borne le complément (préposition comprise).
+const phraseQualifierMaxWords = 5
+
+// phraseQualifier lit, à partir de i, un complément de l'indice (préposition puis au plus quatre mots, même ligne)
+// suivi de « : », « = » ou d'une liaison en mot, et rend la position de la valeur qui suit ; faux sinon.
+func phraseQualifier(text []byte, i int) (int, bool) {
+	words := 0
+	for words < phraseQualifierMaxWords {
+		start := i
+		for i < len(text) {
+			r, width := utf8.DecodeRune(text[i:])
+			if !isQualifierRune(r) {
+				break
+			}
+			i += width
+		}
+		if i == start {
+			return 0, false
+		}
+		word := bytes.ToLower(text[start:i])
+		if words == 0 {
+			// « d'… » : l'élision ouvre le complément et porte le premier mot (« d'accès », « d’administration »).
+			elided := bytes.HasPrefix(word, []byte("d'")) || bytes.HasPrefix(word, []byte("d’"))
+			if !phraseQualifierStarts[string(word)] && !elided {
+				return 0, false
+			}
+		}
+		words++
+		j := skipPhraseSpaces(text, i)
+		if j < len(text) && (text[j] == ':' || text[j] == '=') {
+			return skipPhraseSpaces(text, j+1), true
+		}
+		if k, ok := phraseWordLink(text, j); ok && words > 1 {
+			return skipPhraseSpaces(text, k), true
+		}
+		if j == i {
+			return 0, false
+		}
+		i = j
+	}
+	return 0, false
+}
+
+// isQualifierRune : caractère d'un mot du complément (lettre, chiffre, « _ », « - », « . », apostrophes).
+func isQualifierRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '_' || r == '-' || r == '.' || r == '\'' || r == '’'
+}
+
 // phraseQuotes : guillemet d'ouverture → guillemet de fermeture.
 var phraseQuotes = map[rune]rune{'"': '"', '\'': '\'', '`': '`', '«': '»', '“': '”', '‘': '’'}
 
 // phraseValueSpan lit, à partir de i, un mot sans espace et rend l'étendue de la valeur s'il a la forme d'un mot de
 // passe.
-func phraseValueSpan(text []byte, i int) (int, int, bool) {
+func phraseValueSpan(text []byte, i, hintStart int) (int, int, bool) {
 	start := i
 	closing := rune(-1)
 	if i < len(text) {
@@ -218,6 +281,13 @@ func phraseValueSpan(text []byte, i int) (int, int, bool) {
 			end -= width
 		}
 	}
+	if closing < 0 && end > start {
+		// Annonce écrite dans une chaîne déjà ouverte (« echo "mot de passe : <valeur>" ») : le guillemet qui ferme la
+		// chaîne n'est pas dans la valeur. Lu seulement quand la valeur finit par un guillemet droit.
+		if r, width := utf8.DecodeLastRune(text[start:end]); (r == '"' || r == '\'' || r == '`') && lineOpenQuote(text, hintStart, byte(r)) {
+			end -= width
+		}
+	}
 	if closing == '»' {
 		// « valeur » : espace avant le guillemet fermant, mot suivant hors de la valeur.
 		end = trimRightPhraseSpaces(text, start, end)
@@ -226,6 +296,17 @@ func phraseValueSpan(text []byte, i int) (int, int, bool) {
 		return 0, 0, false
 	}
 	return start, end, true
+}
+
+// lineQuoteLookBehind borne la lecture de la ligne avant l'indice (coût linéaire même pour une ligne d'indices).
+const lineQuoteLookBehind = 512
+
+// lineOpenQuote dit si le guillemet quote est resté ouvert sur la ligne avant at (nombre impair d'occurrences dans
+// les lineQuoteLookBehind octets qui précèdent).
+func lineOpenQuote(text []byte, at int, quote byte) bool {
+	from := max(0, at-lineQuoteLookBehind)
+	from += bytes.LastIndexByte(text[from:at], '\n') + 1
+	return bytes.Count(text[from:at], []byte{quote})%2 == 1
 }
 
 func trimRightPhraseSpaces(text []byte, start, end int) int {
