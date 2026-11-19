@@ -510,6 +510,15 @@ Les avis de ces deux projets ne portent aucune mention qui concerne les fichiers
 DefenseClaw vise ses dossiers `internal/sensor/`, non repris ; Skill Scanner n'a pas de fichier `NOTICE`). Mesures et
 critère de garde des motifs : `docs/bench.md`.
 
+**Compilation au premier appel (après la v0.10.3).** Les motifs du paquet `injection` sont compilés au premier appel de
+`Find` (`sync.OnceValues`), plus au chargement du paquet, et le motif ancré de la porte est écrit à partir de sa source
+(`anchoredSource`, `injection/gate.go`) au lieu d'être réécrit depuis son arbre : `(*syntax.Regexp).String` repliait la
+casse de chaque point de code d'Unicode pour chaque classe niée répétée. Mesuré le 2026-11-19 (programme qui importe le
+paquet, `GODEBUG=inittrace=1`) : initialisation du paquet de 155 ms à moins de 0,05 ms, premier `Find` sur un texte
+court d'environ 0,03 ms à environ 3 ms, soit environ 155 ms de moins par processus. Programmes compilés identiques
+(`TestAnchoredSourceSameProgram`), motifs et constats inchangés ; borne de la compilation :
+`TestPatternCompilationIsCheap`.
+
 ## Règles reprises de Betterleaks, vraisemblance et banc de comparaison (v0.10.0)
 
 Trois ajouts de la v0.10.0, aucun dans le moteur d'origine : un contrôle de vraisemblance des valeurs que les règles de fournisseurs signalent, 66 règles reprises de Betterleaks, et un banc de comparaison rejoué à chaque version. Le corpus d'origine (`upstream-*.json`) et les règles du catalogue d'origine ne changent pas.
