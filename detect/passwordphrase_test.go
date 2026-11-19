@@ -38,6 +38,11 @@ func TestPasswordPhraseFindsAnnouncedValue(t *testing.T) {
 		{"guillemets français", "mot de passe « ", phraseSimple, " »"},
 		{"apostrophes", "pass" + "word is '", phraseSimple, "'."},
 		{"ligne suivante", "salut\nmon " + mdp + " ", phraseSimple, "\nfin"},
+		{"complément de la base", "echo \"mot de passe de la base : ", phraseSimple, "\""},
+		{"complément du compte admin égal", "mot de passe du compte admin = ", phraseSymbols, ""},
+		{"complément élidé", "le mdp d'administration : ", phraseAccents, ""},
+		{"complément anglais is", "the pass" + "word for the admin account is ", phraseSimple, ""},
+		{"complément anglais deux-points", "pass" + "word for prod: ", phraseSimple, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -90,6 +95,11 @@ func TestPasswordPhraseIgnoresOrdinarySentences(t *testing.T) {
 		"mon mdp est " + strings.Repeat("Ab1&", 70), // plus de 256 points de code
 		"the " + word + " = getPassword(Db1)",       // affectation laissée à l'origine
 		"the " + word + ": ${DB_Pass1}",
+		"le mot de passe de l'utilisateur doit contenir 12 caractères", // complément sans liaison
+		"mot de passe de la base : voir le coffre",                     // valeur trop courte
+		"mot de passe de la base de production de test du client : " + phraseSimple, // complément trop long
+		"mot de passe le plus sûr : " + phraseSimple,                                // pas de préposition
+		"mot de passe de la base :\n" + phraseSimple,                                // autre ligne
 	} {
 		t.Run(input, func(t *testing.T) {
 			result := Scan([]byte(input), rules, Options{})
