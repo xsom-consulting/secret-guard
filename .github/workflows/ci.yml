@@ -1,5 +1,5 @@
 # Vérification de Secret Guard à chaque poussée sur main et à chaque demande de fusion : module racine (Apache-2.0) et
-# module expurgation (dossier expurgation/, PolyForm Small Business 1.0.0).
+# module expurgation (dossier expurgation/, Business Source License 1.1 depuis la v0.11.0).
 # Pas de déclenchement sur les autres branches ni sur les étiquettes : une branche poussée avec une demande de fusion
 # était vérifiée deux fois sur trois systèmes, et une étiquette pose sur un commit de main déjà vérifié (release.yml
 # construit et vérifie le module WebAssembly). Vérification d'une branche sans demande de fusion : à la main.
@@ -49,7 +49,7 @@ jobs:
       - name: go vet, module expurgation
         working-directory: expurgation
         run: go vet ./... && GOOS=windows go vet ./...
-      - name: Identifiant SPDX de chaque fichier source (Apache-2.0 ; PolyForm sous expurgation/)
+      - name: Identifiant SPDX de chaque fichier source (Apache-2.0 ; BUSL-1.1 sous expurgation/)
         run: go run ./tools/spdxcheck
       - name: Le moteur ne dépend pas de l'expurgation
         run: |

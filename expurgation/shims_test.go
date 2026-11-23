@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Équivalents, sur l'API publique de detect, des fonctions internes du moteur qu'appelaient les essais de l'expurgation
 // quand ils étaient dans le paquet detect (avant la v0.6.0). Les noms sont gardés : les essais déplacés n'ont pas

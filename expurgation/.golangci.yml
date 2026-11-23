@@ -1,6 +1,6 @@
-# golangci-lint v2 (CI : 2.14) du module github.com/xsom-consulting/secret-guard/expurgation (PolyForm Small Business
-# 1.0.0), lancé depuis ce dossier : cd expurgation && golangci-lint run. Mêmes règles que le module racine
-# (../.golangci.yml) pour le programme livré (module WebAssembly) ; l'expurgation (paquet de ce dossier) est pure comme le
+# golangci-lint v2 (CI : 2.14) du module github.com/xsom-consulting/secret-guard/expurgation (Business Source
+# License 1.1 depuis la v0.11.0), lancé depuis ce dossier : cd expurgation && golangci-lint run. Mêmes règles que le
+# module racine (../.golangci.yml) pour le programme livré (module WebAssembly) ; l'expurgation (paquet de ce dossier) est pure comme le
 # moteur. La preuve que chaque import interdit est refusé : go run ./tools/depguardcheck, à la racine du dépôt.
 version: "2"
 

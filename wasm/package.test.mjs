@@ -17,16 +17,18 @@ const manifest = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
 
 test('paquet : nom, licence, contenu en liste fermée', () => {
   assert.equal(manifest.name, '@xsom/secret-guard-wasm');
-  assert.equal(manifest.license, '(Apache-2.0 AND PolyForm-Small-Business-1.0.0)');
+  assert.equal(manifest.license, '(Apache-2.0 AND BUSL-1.1)');
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.dependencies, undefined, 'aucune dépendance');
   assert.equal(manifest.scripts, undefined, 'aucun script (ni postinstall)');
   assert.deepEqual(readdirSync(dir).sort(), ['package.json', ...manifest.files].sort());
   assert.ok(readFileSync(join(dir, 'LICENSE'), 'utf8').includes('Apache License'));
-  // Le module embarque l'expurgation : texte de PolyForm Small Business 1.0.0 et ligne Required Notice de xSOM.
-  const polyform = readFileSync(join(dir, 'LICENSE-PolyForm-Small-Business-1.0.0'), 'utf8');
-  assert.ok(polyform.startsWith('# PolyForm Small Business License 1.0.0\n'));
-  assert.ok(polyform.endsWith('\nRequired Notice: Copyright (c) 2026 XSOM CONSULTING (https://xsom.fr)\n'));
+  // Le module embarque l'expurgation : Business Source License 1.1 avec les paramètres de xSOM (expurgation/LICENSE).
+  const busl = readFileSync(join(dir, 'LICENSE-BUSL-1.1'), 'utf8');
+  assert.ok(busl.startsWith('Business Source License 1.1\n'));
+  assert.ok(busl.includes('\nLicensor:             XSOM CONSULTING'));
+  assert.ok(busl.includes('\nChange License:       Apache License, Version 2.0\n'));
+  assert.ok(busl.endsWith('\n4. Not to modify this License in any other way.\n'));
 });
 
 test('chaque cible de « exports » existe, chaque point d’entrée JavaScript a ses types', () => {

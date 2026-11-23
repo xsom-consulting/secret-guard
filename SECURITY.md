@@ -18,8 +18,8 @@ synthétiques.
 ### Périmètre
 
 - Le moteur de détection et le masquage (module racine `github.com/xsom-consulting/secret-guard`, Apache-2.0) ;
-- l'expurgation et le module WebAssembly (module `github.com/xsom-consulting/secret-guard/expurgation`, PolyForm
-  Small Business 1.0.0) ;
+- l'expurgation et le module WebAssembly (module `github.com/xsom-consulting/secret-guard/expurgation`, Business
+  Source License 1.1 depuis la v0.11.0, PolyForm Small Business 1.0.0 de la v0.6.0 à la v0.10.4) ;
 - le paquet npm `@xsom/secret-guard-wasm` et les fichiers des Releases GitHub.
 
 Entrent dans ce périmètre, par exemple : une valeur détectée qui sort du moteur (constat, journal, message, texte
@@ -48,7 +48,8 @@ real secret: a synthetic value of the same shape is enough, and the repository o
 ### Scope
 
 The detection engine and redaction (root module, Apache-2.0), expurgation and the WebAssembly module (module
-`github.com/xsom-consulting/secret-guard/expurgation`, PolyForm Small Business 1.0.0), the npm package
+`github.com/xsom-consulting/secret-guard/expurgation`, Business Source License 1.1 since v0.11.0, PolyForm Small
+Business 1.0.0 from v0.6.0 to v0.10.4), the npm package
 `@xsom/secret-guard-wasm` and the GitHub Release files. Examples: a detected value leaving the engine, an
 incomplete scan reported as complete, an input that exceeds the work budgets or stops the process, a substitute that
 reveals part of the value, a bypass of Pack verification. A secret that the rules do not describe is a known limit of

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Commande secret-guard-wasm : le moteur de détection en module WebAssembly WASI (preview 1), en mode bibliothèque
 // (« reactor ») : l'hôte instancie le module une fois, appelle _initialize, puis appelle ses fonctions exportées

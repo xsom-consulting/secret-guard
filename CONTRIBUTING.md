@@ -18,12 +18,14 @@ par l'équipe de `.github/CODEOWNERS`.
 
 ### Accord de contribution
 
-Le dépôt a deux licences (README, « Licences ») : Apache-2.0 pour le module racine, PolyForm Small Business 1.0.0
-pour le module `expurgation/`. Pour pouvoir publier chaque contribution sous la licence de son module, et l'expurgation
-aussi sous licence commerciale, xSOM Consulting demande à chaque contributeur d'accepter l'[accord de contribution](docs/CLA.md)
-avant la fusion de sa première demande : écrire dans la description de la demande de fusion la phrase
-« J'accepte l'accord de contribution de docs/CLA.md (version 1.0) » ou « I agree to the contributor license agreement
-in docs/CLA.md (version 1.0) ». Une contribution faite pour un employeur demande l'accord de celui-ci.
+Le dépôt a deux licences (README, « Licences ») : Apache-2.0 pour le module racine ; pour le module `expurgation/`,
+Business Source License 1.1 à partir de la v0.11.0 (PolyForm Small Business 1.0.0 de la v0.6.0 à la v0.10.4). Pour
+pouvoir publier chaque contribution sous la licence de son module, l'expurgation aussi sous licence commerciale et,
+quatre ans après chaque version, sous Apache-2.0, xSOM Consulting demande à chaque contributeur d'accepter
+l'[accord de contribution](docs/CLA.md) avant la fusion de sa première demande : écrire dans la description de la
+demande de fusion la phrase « J'accepte l'accord de contribution de docs/CLA.md (version 1.1) » ou « I agree to the
+contributor license agreement in docs/CLA.md (version 1.1) ». Une contribution faite pour un employeur demande l'accord
+de celui-ci. **Pour l'expurgation, l'accord est requis sans exception**, même pour une correction d'une ligne.
 
 L'accord est aujourd'hui un projet de texte : **aucune contribution extérieure n'est fusionnée avant sa version
 définitive**. Le contrôle « Accord de contribution » (`.github/workflows/cla.yml`) vérifie la phrase sur chaque
@@ -37,7 +39,7 @@ demande de fusion d'une personne extérieure au dépôt ; une demande dont ce co
 - Un constat, un Substitut, un message, un journal ne portent jamais la valeur détectée, ni un extrait, ni un condensat
   non salé.
 - Chaque fichier source (`.go`, `.mjs`, `.mts`, `.ts`) commence par l'identifiant SPDX de son module :
-  `// SPDX-License-Identifier: Apache-2.0` hors de `expurgation/`, `// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0`
+  `// SPDX-License-Identifier: Apache-2.0` hors de `expurgation/`, `// SPDX-License-Identifier: BUSL-1.1`
   dessous (`go run ./tools/spdxcheck`). Le module racine n'importe jamais `expurgation/`.
 - Les valeurs à forme de secret des essais sont assemblées par morceaux à l'exécution ; seuls les fichiers de cas du
   corpus en contiennent ([.gitleaks.toml](.gitleaks.toml)).
@@ -79,10 +81,12 @@ reviewed by the team in `.github/CODEOWNERS`.
 - Never report a vulnerability in an issue or pull request: see [SECURITY.md](SECURITY.md).
 - Open an issue first, with a **synthetic** value of the same shape, never a real secret, customer name, host name or
   security tool of a company. A detection change adds its cases to the parity corpus (`vectors/`).
-- **Contributor license agreement**: the repository has two licenses (Apache-2.0 for the root module, PolyForm Small
-  Business 1.0.0 for `expurgation/`). Before your first pull request is merged, accept the
-  [contributor license agreement](docs/CLA.md) by writing in the pull request description: "I agree to the contributor
-  license agreement in docs/CLA.md (version 1.0)". A contribution made for an employer needs the employer's agreement.
+- **Contributor license agreement**: the repository has two licenses (Apache-2.0 for the root module; for
+  `expurgation/`, the Business Source License 1.1 from v0.11.0, PolyForm Small Business 1.0.0 from v0.6.0 to v0.10.4).
+  Before your first pull request is merged, accept the [contributor license agreement](docs/CLA.md) by writing in the
+  pull request description: "I agree to the contributor license agreement in docs/CLA.md (version 1.1)". A
+  contribution made for an employer needs the employer's agreement. For expurgation, the agreement is required without
+  exception, even for a one-line fix.
   The agreement is still a draft: **no external contribution is merged before its final version**. The "Accord de
   contribution" check (`.github/workflows/cla.yml`) verifies the sentence on every pull request from outside the
   repository; a pull request whose check fails is not merged.
