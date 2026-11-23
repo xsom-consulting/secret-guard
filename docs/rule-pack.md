@@ -14,7 +14,7 @@ Objets fermés ; chaînes et entiers seulement.
 | `minAgentVersion` | semver `MAJEUR.MINEUR.CORRECTIF`, sans pré-version ni métadonnées : version minimale du programme qui exécute le Pack (le moteur ne la juge pas) ; `0.0.0` pour le Pack initial |
 | `packVersion` | entier de 1 à 2^53 − 1 |
 | `issuedAt` | horodatage UTC `AAAA-MM-JJTHH:MM:SS[.mmm]Z` qui existe (forme et calendrier vérifiés par `pack.Decode`) |
-| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (426 dans le Pack initial de la v0.10.0) |
+| `rules` | tableau de 1 à 1 000 règles, dans l'ordre du catalogue (426 dans le Pack initial de la v0.11.0) |
 
 Règle :
 
