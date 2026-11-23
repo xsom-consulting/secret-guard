@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Commande wasmparity : exécute en Go natif, sur le corpus du module, les fonctions que rend le module WebAssembly
 // (analyse, expurgation, instructions cachées), et écrit leurs documents JSON, cas par cas, en JSON Lines sur la sortie

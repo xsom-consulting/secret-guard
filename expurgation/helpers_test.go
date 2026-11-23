@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Aides des essais de l’expurgation, reprises des essais du paquet detect (Pack initial, corpus de parité, vecteurs du
 // masquage, valeurs fictives) et écrites sur l’API publique de detect.

@@ -1,67 +1,146 @@
-# PolyForm Small Business License 1.0.0
+Business Source License 1.1
 
-<https://polyformproject.org/licenses/small-business/1.0.0>
+License text copyright © 2017 MariaDB Corporation Ab, All Rights Reserved.
+"Business Source License" is a trademark of MariaDB Corporation Ab.
 
-## Acceptance
+Parameters
 
-In order to get any license under these terms, you must agree to them as both strict obligations and conditions to all your licenses.
+Licensor:             XSOM CONSULTING ("xSOM Consulting")
 
-## Copyright License
+Licensed Work:        The expurgation module of Secret Guard
+                      (Go module github.com/xsom-consulting/secret-guard/expurgation,
+                      folder expurgation/ of the repository xsom-consulting/secret-guard,
+                      including the WebAssembly module that embeds it), version 0.11.0
+                      and later versions published by the Licensor under this License.
+                      The Licensed Work is (c) 2026 XSOM CONSULTING.
+                      Versions 0.6.0 to 0.10.4 remain under the PolyForm Small Business
+                      License 1.0.0, and versions 0.1.0 to 0.5.1 under the Apache
+                      License, Version 2.0; this License does not apply to them.
 
-The licensor grants you a copyright license for the software to do everything you might do with the software that would otherwise infringe the licensor's copyright in it for any permitted purpose.  However, you may only distribute the software according to [Distribution License](#distribution-license) and make changes or new works based on the software according to [Changes and New Works License](#changes-and-new-works-license).
+Additional Use Grant: You may make production use of the Licensed Work, provided
+                      that your use complies with all of the conditions below.
+                      Nothing in this Additional Use Grant limits the rights to copy,
+                      modify, create derivative works, redistribute and make
+                      non-production use of the Licensed Work granted by the Terms of
+                      this License.
 
-## Distribution License
+                      (a) Size threshold. The Organization on whose behalf you use
+                      the Licensed Work, together with all of its Affiliates, had in
+                      total fewer than 100 Personnel and less than USD 1,000,000 (one
+                      million United States dollars) of annual revenue during its
+                      most recently completed fiscal year. "Organization" means a
+                      legal entity, a sole proprietorship or any other organization;
+                      if you use the Licensed Work for yourself as an individual, you
+                      are the Organization. "Affiliate" means any entity that
+                      controls, is controlled by, or is under common control with the
+                      Organization, where "control" means direct or indirect
+                      ownership of more than 50% of the voting rights or of the equity
+                      interests of an entity. "Personnel" means the employees and the
+                      individual contractors working for the Organization or its
+                      Affiliates, each counted as one person regardless of working
+                      time.
 
-The licensor grants you an additional copyright license to distribute copies of the software.  Your license to distribute covers distributing the software with changes and new works permitted by [Changes and New Works License](#changes-and-new-works-license).
+                      (b) No Competing Offering. Whatever the size of the
+                      Organization, this Additional Use Grant never covers the use of
+                      the Licensed Work to provide a Competing Offering. A "Competing
+                      Offering" is a product or service, distributed to third parties
+                      or hosted for them, whose primary function is to detect or to
+                      mask secrets or data in content sent to artificial intelligence
+                      assistants. Integrating the Licensed Work into a tool used only
+                      internally by the Organization and its Affiliates is not a
+                      Competing Offering.
 
-## Notices
+                      (c) Service providers. An Organization that meets the threshold
+                      in (a) may make production use of the Licensed Work on the
+                      devices that it or its Personnel use, including to perform
+                      services for a client that does not meet that threshold.
+                      Installing, deploying or making available the Licensed Work on
+                      the devices or systems of a client, for use by the client's
+                      employees or contractors, is covered by this Additional Use
+                      Grant only if the client itself meets the threshold in (a) or
+                      holds a commercial license for the Licensed Work from the
+                      Licensor.
 
-You must ensure that anyone who gets a copy of any part of the software from you also gets a copy of these terms or the URL for them above, as well as copies of any plain-text lines beginning with `Required Notice:` that the licensor provided with the software.  For example:
+Change Date:          For each version of the Licensed Work, the fourth anniversary of
+                      the first publicly available distribution of that version under
+                      this License.
 
-> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
+Change License:       Apache License, Version 2.0
 
-## Changes and New Works License
+For information about alternative licensing arrangements for the Licensed Work,
+please contact contact@xsom.fr (subject "Secret Guard: expurgation license").
 
-The licensor grants you an additional copyright license to make changes and new works based on the software for any permitted purpose.
+Notice
 
-## Patent License
+The Business Source License (this document, or the "License") is not an Open
+Source license. However, the Licensed Work will eventually be made available
+under an Open Source License, as stated in this License.
 
-The licensor grants you a patent license for the software that covers patent claims the licensor can license, or becomes able to license, that you would infringe by using the software.
+-----------------------------------------------------------------------------
 
-## Fair Use
+Terms
 
-You may have "fair use" rights for the software under the law. These terms do not limit them.
+The Licensor hereby grants you the right to copy, modify, create derivative
+works, redistribute, and make non-production use of the Licensed Work. The
+Licensor may make an Additional Use Grant, above, permitting limited
+production use.
 
-## Small Business
+Effective on the Change Date, or the fourth anniversary of the first publicly
+available distribution of a specific version of the Licensed Work under this
+License, whichever comes first, the Licensor hereby grants you rights under
+the terms of the Change License, and the rights granted in the paragraph
+above terminate.
 
-Use of the software for the benefit of your company is use for a permitted purpose if your company has fewer than 100 total individuals working as employees and independent contractors, and less than 1,000,000 USD (2019) total revenue in the prior tax year.  Adjust this revenue threshold for inflation according to the United States Bureau of Labor Statistics' consumer price index for all urban consumers, U.S. city average, for all items, not seasonally adjusted, with 1982–1984=100 reference base.
+If your use of the Licensed Work does not comply with the requirements
+currently in effect as described in this License, you must purchase a
+commercial license from the Licensor, its affiliated entities, or authorized
+resellers, or you must refrain from using the Licensed Work.
 
-## No Other Rights
+All copies of the original and modified Licensed Work, and derivative works
+of the Licensed Work, are subject to this License. This License applies
+separately for each version of the Licensed Work and the Change Date may vary
+for each version of the Licensed Work released by Licensor.
 
-These terms do not allow you to sublicense or transfer any of your licenses to anyone else, or prevent the licensor from granting licenses to anyone else.  These terms do not imply any other licenses.
+You must conspicuously display this License on each original or modified copy
+of the Licensed Work. If you receive the Licensed Work in original or
+modified form from a third party, the terms and conditions set forth in this
+License apply to your use of that work.
 
-## Patent Defense
+Any use of the Licensed Work in violation of this License will automatically
+terminate your rights under this License for the current and all other
+versions of the Licensed Work.
 
-If you make any written claim that the software infringes or contributes to infringement of any patent, your patent license for the software granted under these terms ends immediately. If your company makes such a claim, your patent license ends immediately for work on behalf of your company.
+This License does not grant you any right in any trademark or logo of
+Licensor or its affiliates (provided that you may use a trademark or logo of
+Licensor as expressly required by this License).
 
-## Violations
+TO THE EXTENT PERMITTED BY APPLICABLE LAW, THE LICENSED WORK IS PROVIDED ON
+AN “AS IS” BASIS. LICENSOR HEREBY DISCLAIMS ALL WARRANTIES AND CONDITIONS,
+EXPRESS OR IMPLIED, INCLUDING (WITHOUT LIMITATION) WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND
+TITLE.
 
-The first time you are notified in writing that you have violated any of these terms, or done anything with the software not covered by your licenses, your licenses can nonetheless continue if you come into full compliance with these terms, and take practical steps to correct past violations, within 32 days of receiving notice.  Otherwise, all your licenses end immediately.
+MariaDB hereby grants you permission to use this License’s text to license
+your works, and to refer to it using the trademark “Business Source License”,
+as long as you comply with the Covenants of Licensor below.
 
-## No Liability
+Covenants of Licensor
 
-***As far as the law allows, the software comes as is, without any warranty or condition, and the licensor will not be liable to you for any damages arising out of these terms or the use or nature of the software, under any kind of legal claim.***
+In consideration of the right to use this License’s text and the “Business
+Source License” name and trademark, Licensor covenants to MariaDB, and to all
+other recipients of the licensed work to be provided by Licensor:
 
-## Definitions
+1. To specify as the Change License the GPL Version 2.0 or any later version,
+   or a license that is compatible with GPL Version 2.0 or a later version,
+   where “compatible” means that software provided under the Change License can
+   be included in a program with software provided under GPL Version 2.0 or a
+   later version. Licensor may specify additional Change Licenses without
+   limitation.
 
-The **licensor** is the individual or entity offering these terms, and the **software** is the software the licensor makes available under these terms.
+2. To either: (a) specify an additional grant of rights to use that does not
+   impose any additional restriction on the right granted in this License, as
+   the Additional Use Grant; or (b) insert the text “None”.
 
-**You** refers to the individual or entity agreeing to these terms.
+3. To specify a Change Date.
 
-**Your company** is any legal entity, sole proprietorship, or other kind of organization that you work for, plus all organizations that have control over, are under the control of, or are under common control with that organization.  **Control** means ownership of substantially all the assets of an entity, or the power to direct its management and policies by vote, contract, or otherwise.  Control can be direct or indirect.
-
-**Your licenses** are all the licenses granted to you for the software under these terms.
-
-**Use** means anything you do with the software requiring one of your licenses.
-
-Required Notice: Copyright (c) 2026 XSOM CONSULTING (https://xsom.fr)
+4. Not to modify this License in any other way.

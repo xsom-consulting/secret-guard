@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package request est l'expurgation à la demande du module WebAssembly : lecture stricte de la demande (Substituts
 // déjà connus de l'appelant), numérotation des Substituts par Empreinte locale, puis expurgation.ExpurgateAndRescan, et

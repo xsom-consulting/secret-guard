@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: PolyForm-Small-Business-1.0.0
+// SPDX-License-Identifier: BUSL-1.1
 
 // Package expurgation remplace chaque secret détecté par un Substitut typé, puis analyse de nouveau le texte expurgé.
 //
-// Module github.com/xsom-consulting/secret-guard/expurgation, sous PolyForm Small Business 1.0.0 (LICENSE de ce dossier,
-// source disponible) ; le moteur qu'il appelle, github.com/xsom-consulting/secret-guard/detect, reste sous Apache-2.0.
+// Module github.com/xsom-consulting/secret-guard/expurgation, sous Business Source License 1.1 depuis la v0.11.0
+// (LICENSE de ce dossier, code source disponible ; v0.6.0 à v0.10.4 : PolyForm Small Business 1.0.0) ; le moteur
+// qu'il appelle, github.com/xsom-consulting/secret-guard/detect, reste sous Apache-2.0.
 // Le paquet n'appelle que l'API publique de detect (Scan, SecretRange, Rules.FirstLineSecretEnd, SubstituteText,
 // Fingerprint) et la partie internal/ de ce dépôt.
 //

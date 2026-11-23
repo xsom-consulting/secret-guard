@@ -4,7 +4,7 @@
 // lignes, l'identifiant SPDX de la licence de son module :
 //
 //   - Apache-2.0 partout (moteur, Pack, ligne de commande, chargeurs du module WebAssembly, générateur) ;
-//   - PolyForm-Small-Business-1.0.0 sous expurgation/ (module github.com/xsom-consulting/secret-guard/expurgation :
+//   - BUSL-1.1 (Business Source License 1.1) sous expurgation/ (module github.com/xsom-consulting/secret-guard/expurgation :
 //     expurgation, module WebAssembly qui l'embarque, outil de parité).
 //
 // Usage (à la racine du dépôt) : go run ./tools/spdxcheck
@@ -29,8 +29,8 @@ import (
 const (
 	// Apache est l'identifiant du module racine.
 	Apache = "Apache-2.0"
-	// PolyForm est l'identifiant du module expurgation.
-	PolyForm = "PolyForm-Small-Business-1.0.0"
+	// BUSL est l'identifiant du module expurgation (Business Source License 1.1, depuis la v0.11.0).
+	BUSL = "BUSL-1.1"
 	// headerLines : nombre de lignes lues en tête de fichier (une ligne #! comprise).
 	headerLines = 3
 	marker      = "SPDX-License-Identifier:"
@@ -62,7 +62,7 @@ func (p Problem) String() string {
 // ExpectedLicense rend l'identifiant attendu d'un chemin relatif à la racine (barres obliques).
 func ExpectedLicense(rel string) string {
 	if rel == "expurgation" || strings.HasPrefix(rel, "expurgation/") {
-		return PolyForm
+		return BUSL
 	}
 	return Apache
 }

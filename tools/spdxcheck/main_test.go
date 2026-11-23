@@ -27,7 +27,7 @@ func header(id string) string { return "// SPDX-License-" + "Identifier: " + id 
 func TestExpectedLicense(t *testing.T) {
 	for rel, want := range map[string]string{
 		"detect/scan.go": Apache, "wasm/node.mjs": Apache, "generator/corpus/main.ts": Apache, "expurgation.go": Apache,
-		"expurgationx/a.go": Apache, "expurgation/expurgate.go": PolyForm, "expurgation/cmd/secret-guard-wasm/main_wasip1.go": PolyForm,
+		"expurgationx/a.go": Apache, "expurgation/expurgate.go": BUSL, "expurgation/cmd/secret-guard-wasm/main_wasip1.go": BUSL,
 	} {
 		if got := ExpectedLicense(rel); got != want {
 			t.Errorf("%s : %s, attendu %s", rel, got, want)
@@ -41,10 +41,10 @@ func TestCheck(t *testing.T) {
 	write(t, root, "wasm/ok.mjs", header(Apache)+"export {};\n")
 	write(t, root, "wasm/types.d.mts", header(Apache)+"export {};\n")
 	write(t, root, "generator/script.ts", "#!/usr/bin/env node\n"+header(Apache)+"export {};\n")
-	write(t, root, "expurgation/ok.go", header(PolyForm)+"\npackage expurgation\n")
+	write(t, root, "expurgation/ok.go", header(BUSL)+"\npackage expurgation\n")
 	// Écarts : sans en-tête, mauvaise licence d'un côté et de l'autre, en-tête trop bas.
 	write(t, root, "detect/missing.go", "package detect\n")
-	write(t, root, "detect/polyform.go", header(PolyForm)+"\npackage detect\n")
+	write(t, root, "detect/busl.go", header(BUSL)+"\npackage detect\n")
 	write(t, root, "expurgation/internal/request/apache.go", header(Apache)+"\npackage request\n")
 	write(t, root, "wasm/late.mjs", "// a\n// b\n// c\n"+header(Apache))
 	// Hors vérification : autre extension, dossiers ignorés.
@@ -64,9 +64,9 @@ func TestCheck(t *testing.T) {
 		got = append(got, p.String())
 	}
 	want := []string{
+		"detect/busl.go : identifiant SPDX BUSL-1.1, attendu Apache-2.0",
 		"detect/missing.go : aucun identifiant SPDX, attendu Apache-2.0",
-		"detect/polyform.go : identifiant SPDX PolyForm-Small-Business-1.0.0, attendu Apache-2.0",
-		"expurgation/internal/request/apache.go : identifiant SPDX Apache-2.0, attendu PolyForm-Small-Business-1.0.0",
+		"expurgation/internal/request/apache.go : identifiant SPDX Apache-2.0, attendu BUSL-1.1",
 		"wasm/late.mjs : aucun identifiant SPDX, attendu Apache-2.0",
 	}
 	if !slices.Equal(got, want) {

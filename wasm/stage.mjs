@@ -20,7 +20,7 @@ if (values.version !== undefined && values.version !== manifest.version) {
 const sources = {
   'secret-guard.wasm': join(root, 'dist', 'secret-guard.wasm'),
   LICENSE: join(root, 'LICENSE'),
-  'LICENSE-PolyForm-Small-Business-1.0.0': join(root, 'expurgation', 'LICENSE'),
+  'LICENSE-BUSL-1.1': join(root, 'expurgation', 'LICENSE'),
   NOTICE: join(root, 'NOTICE'),
 };
 const out = resolve(values.out);
