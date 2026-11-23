@@ -17,11 +17,19 @@ Licences de ce dépôt / licenses of this repository:
 - Module racine github.com/xsom-consulting/secret-guard : Apache-2.0 (LICENSE).
   Root module github.com/xsom-consulting/secret-guard: Apache-2.0 (LICENSE).
 - Module github.com/xsom-consulting/secret-guard/expurgation (dossier expurgation/,
-  module WebAssembly compris) : PolyForm Small Business 1.0.0 (expurgation/LICENSE),
-  sans code de l'œuvre d'origine. Les versions v0.1.0 à v0.5.1 restent sous Apache-2.0.
+  module WebAssembly compris), sans code de l'œuvre d'origine : code source disponible,
+  sous Business Source License 1.1 à partir de la version 0.11.0 (expurgation/LICENSE,
+  identifiant SPDX BUSL-1.1 ; Licensor : XSOM CONSULTING ; Change License : Apache-2.0,
+  quatre ans après la publication de chaque version). Les versions v0.6.0 à v0.10.4
+  restent sous PolyForm Small Business 1.0.0 ; les versions v0.1.0 à v0.5.1, sous
+  Apache-2.0. « Business Source License » est une marque de MariaDB Corporation Ab.
   Module github.com/xsom-consulting/secret-guard/expurgation (folder expurgation/,
-  including the WebAssembly module): PolyForm Small Business 1.0.0 (expurgation/LICENSE),
-  with no code from the original work. Versions v0.1.0 to v0.5.1 remain Apache-2.0.
+  including the WebAssembly module), with no code from the original work: source-available,
+  under the Business Source License 1.1 from version 0.11.0 (expurgation/LICENSE,
+  SPDX identifier BUSL-1.1; Licensor: XSOM CONSULTING; Change License: Apache-2.0,
+  four years after the publication of each version). Versions v0.6.0 to v0.10.4
+  remain under PolyForm Small Business 1.0.0; versions v0.1.0 to v0.5.1, Apache-2.0.
+  "Business Source License" is a trademark of MariaDB Corporation Ab.
 
 Composants tiers / third-party components:
 - Règles de fournisseurs du Pack initial (pack/initial/pack.json, generator/rule-pack/provider-rules.json),
