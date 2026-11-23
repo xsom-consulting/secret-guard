@@ -51,15 +51,36 @@ Additional Use Grant: You may make production use of the Licensed Work, provided
                       Competing Offering.
 
                       (c) Service providers. An Organization that meets the threshold
-                      in (a) may make production use of the Licensed Work on the
-                      devices that it or its Personnel use, including to perform
-                      services for a client that does not meet that threshold.
-                      Installing, deploying or making available the Licensed Work on
-                      the devices or systems of a client, for use by the client's
-                      employees or contractors, is covered by this Additional Use
-                      Grant only if the client itself meets the threshold in (a) or
-                      holds a commercial license for the Licensed Work from the
-                      Licensor.
+                      in (a) (a "Qualifying Provider") may make production use of the
+                      Licensed Work on the devices that it or its Personnel use,
+                      including to perform services for a client that does not meet
+                      that threshold.
+
+                      (d) Devices assigned by a client. An individual of the
+                      Personnel of a Qualifying Provider may also make production
+                      use of the Licensed Work on a device that a client assigns to
+                      that individual for an engagement, for that individual's sole
+                      use, on one device per individual. That use is made under the
+                      Qualifying Provider's rights under this Additional Use Grant,
+                      not the client's. Any user account for the Licensed Work, or
+                      for a product that embeds it, is opened in the name of the
+                      Qualifying Provider or of that individual, with an e-mail
+                      address of the Qualifying Provider or of that individual and
+                      not of the client, as a practical indication that the use
+                      belongs to the Qualifying Provider. Installing the Licensed
+                      Work on a device of a client requires the client's
+                      authorization under its own information technology rules;
+                      this License does not grant that authorization.
+
+                      (e) Deployments by or for a client. When a client installs the
+                      Licensed Work, or has it installed, for its own employees or
+                      for a group of contractors, that use is the client's use, and
+                      it is covered by this Additional Use Grant only if the client
+                      itself meets the threshold in (a) or holds a commercial license
+                      for the Licensed Work from the Licensor. The same applies to
+                      installing, deploying or making available the Licensed Work on
+                      the devices or systems of a client for use by the client's
+                      employees or contractors.
 
 Change Date:          For each version of the Licensed Work, the fourth anniversary of
                       the first publicly available distribution of that version under

@@ -29,8 +29,11 @@ que soit la taille de l'organisation.
   masquer des secrets ou des données dans ce qui est envoyé à des assistants d'IA. Intégrer l'expurgation dans un
   outil interne n'est pas concurrent.
 - **Prestataires.** Un prestataire sous le seuil peut l'utiliser sur ses propres postes pour ses missions, même chez
-  un client au-delà du seuil. L'installer ou la déployer chez un client, pour que les équipes du client l'utilisent,
-  exige que le client soit lui-même sous le seuil ou titulaire d'une licence de xSOM.
+  un client au-delà du seuil, et chacun de ses consultants sur le poste que le client lui attribue pour sa mission,
+  pour son seul usage, un poste par consultant : l'usage relève alors de la licence du prestataire (compte d'usage à
+  son nom, avec son adresse e-mail et non celle du client), et l'installation demande l'autorisation du client selon
+  ses règles informatiques. Dès que le client installe ou fait installer l'expurgation pour ses salariés ou pour un
+  ensemble de prestataires, l'usage relève du client, qui doit être sous le seuil ou titulaire d'une licence de xSOM.
 
 ### Qui a besoin d'une licence écrite de xSOM Consulting
 
@@ -71,9 +74,11 @@ open source license. The license text prevails over this summary.
 control), has fewer than 100 people (employees and individual contractors) and less than 1,000,000 USD annual revenue
 in its last completed fiscal year; never to provide a competing product or service (distributed or hosted for third
 parties, whose primary function is to detect or mask secrets or data in content sent to AI assistants; an internal
-tool is not competing); a service provider under the threshold may use it on its own devices for client work, but
-deploying it at a client for the client's teams requires the client to be under the threshold or to hold an xSOM
-license.
+tool is not competing); a service provider under the threshold may use it on its own devices for client work, and
+each of its consultants on the one device a client assigns to them for an engagement, for their sole use, under the
+provider's rights (user account in the provider's or consultant's name and e-mail, not the client's; installation
+with the client's authorization); once the client installs it, or has it installed, for its employees or a group of
+contractors, the use is the client's, which must be under the threshold or hold an xSOM license.
 
 **Written license from xSOM Consulting needed** for any other production use. xSOM Fleet customers receive it with
 their contract. Each version becomes Apache-2.0 four years after its first publication under this license.
