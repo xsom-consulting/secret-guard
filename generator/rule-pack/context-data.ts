@@ -29,7 +29,7 @@
  * contexte obligatoire, validateur nommé du moteur) et la règle composée AWS, décrits plus bas.
  */
 import type { RulePackRule, RuleSecretType, RuleValidator } from '../src/rule-pack.ts';
-import { REFERENCE_VALIDATORS } from './personal-data.ts';
+import { PERSONAL_DATA_OPT_IN_RULE_IDS, REFERENCE_VALIDATORS } from './personal-data.ts';
 
 /** Dépôt, commit et fichier d'Akto dont la technique du mot-clé de contexte est reprise (MIT). */
 export const CONTEXT_UPSTREAM_REPOSITORY = 'akto-api-security/akto';
@@ -358,8 +358,9 @@ function checkedRule(
   validator: RuleValidator,
   labelFr: string,
   labelEn: string,
+  optIn = false,
 ): ContextRule {
-  return contextRule(ruleId, secretType, score, pattern, labelFr, labelEn, false, validator);
+  return contextRule(ruleId, secretType, score, pattern, labelFr, labelEn, optIn, validator);
 }
 
 /**
@@ -399,7 +400,9 @@ export const CONTEXT_RULE_SOURCES: readonly ContextRule[] = [
   // Identifiants français absents de Presidio (v0.10.0) : TVA 35 (donnée publique), RIB 45 (comme l'IBAN), plaque et
   // adresse postale 30. L'adresse postale est « à activer » : une adresse d'entreprise est courante dans un pied de
   // page, une facture ou un jeu d'essai.
-  checkedRule('fr_vat', 'vat_number', 35, exact(FR_VAT_PATTERN), 'fr_vat_key', 'numéro de TVA intracommunautaire', 'French VAT number'),
+  // Numéro de TVA français « à activer » (v0.12.0) : identifiant d'entreprise publié (SIREN et clé), présent dans tout
+  // pied de facture ou mentions légales (corpus de bruit, cas « entreprise/ »).
+  checkedRule('fr_vat', 'vat_number', 35, exact(FR_VAT_PATTERN), 'fr_vat_key', 'numéro de TVA intracommunautaire', 'French VAT number', true),
   checkedRule('fr_rib', 'bank_account_number', 45, folded(FR_RIB_BODY), 'fr_rib_key', 'relevé d’identité bancaire', 'French bank account details'),
   contextRule('fr_license_plate', 'vehicle_registration_plate', 30, exact(FR_LICENSE_PLATE_PATTERN), 'plaque d’immatriculation', 'vehicle registration plate'),
   contextRule('fr_postal_address', 'postal_address', 30, FR_POSTAL_ADDRESS, 'adresse postale', 'postal address', true),
@@ -408,8 +411,14 @@ export const CONTEXT_RULE_SOURCES: readonly ContextRule[] = [
   contextRule('aws_access_key_pair', 'cloud_credential', 95, exact(AWS_PAIR_PATTERN), 'paire de clés d’accès AWS', 'AWS access key pair', false, '', awsPairSpans),
 ];
 
-/** Règles « à activer », dans l'ordre du Pack (`detect.OptInRuleIDs`). */
+/** Règles de données à contexte « à activer », dans l'ordre du Pack. */
 export const CONTEXT_OPT_IN_RULE_IDS: readonly string[] = CONTEXT_RULE_SOURCES.filter((source) => source.optIn).map((source) => source.rule.ruleId);
+
+/**
+ * Toutes les règles « à activer » du moteur, dans l'ordre du Pack (`detect.OptInRuleIDs`) : données personnelles
+ * (avant les fournisseurs) puis données à contexte.
+ */
+export const OPT_IN_RULE_IDS: readonly string[] = [...PERSONAL_DATA_OPT_IN_RULE_IDS, ...CONTEXT_OPT_IN_RULE_IDS];
 
 /** Règles du Pack, dans l'ordre. */
 export const CONTEXT_DATA_RULES: readonly RulePackRule[] = CONTEXT_RULE_SOURCES.map((source) => source.rule);
@@ -470,8 +479,9 @@ export function buildContextRulesGo(): string {
     ...lines,
     '}',
     '',
-    "// contextOptInRuleIDs : règles « à activer » (optin.go), dans l'ordre du Pack. Même source.",
-    `var contextOptInRuleIDs = []string{${CONTEXT_OPT_IN_RULE_IDS.map(goString).join(', ')}}`,
+    "// optInRuleIDs : règles « à activer » (optin.go), dans l'ordre du Pack : données personnelles",
+    '// (generator/rule-pack/personal-data.ts), puis données à contexte (même source que ci-dessus).',
+    `var optInRuleIDs = []string{${OPT_IN_RULE_IDS.map(goString).join(', ')}}`,
     '',
   ].join('\n');
 }

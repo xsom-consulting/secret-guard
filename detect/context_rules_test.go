@@ -147,7 +147,7 @@ func TestOptInRules(t *testing.T) {
 	}
 	t.Run("la liste fermée est celle du générateur, faite de règles « motif seul » du Pack initial, et rendue en copie", func(t *testing.T) {
 		ids := OptInRuleIDs()
-		if !slices.Equal(ids, []string{"email_address", "fr_postal_address"}) {
+		if !slices.Equal(ids, []string{"fr_siret", "fr_siren", "email_address", "fr_vat", "fr_postal_address"}) {
 			t.Fatalf("règles à activer %v", ids)
 		}
 		for _, id := range ids {
@@ -156,7 +156,7 @@ func TestOptInRules(t *testing.T) {
 			}
 		}
 		ids[0] = "x"
-		if OptInRuleIDs()[0] != "email_address" {
+		if OptInRuleIDs()[0] != "fr_siret" {
 			t.Fatal("la liste rendue n'est pas une copie")
 		}
 	})

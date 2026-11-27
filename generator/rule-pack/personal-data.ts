@@ -111,6 +111,17 @@ export const PERSONAL_DATA_RULES: readonly RulePackRule[] = [
   },
 ];
 
+/**
+ * Règles « à activer » parmi les données personnelles, dans l'ordre du Pack (v0.12.0) : SIRET et SIREN, identifiants
+ * d'entreprise publiés au registre. Mentions légales, pied de facture, devis, extrait K-bis en portent : le corpus de
+ * bruit (`vectors/noise.json`, cas « entreprise/ ») les montre dans des textes ordinaires, et le moteur ne les exécute
+ * que si l'appelant les nomme (`detect.LoadRulesWithOptIn`). TestNoiseCorpus tient la liste dans les deux sens : une
+ * règle par défaut ne se déclenche sur aucun cas de bruit, une règle « à activer » sur au moins un.
+ */
+export const PERSONAL_DATA_OPT_IN_RULE_IDS: readonly string[] = PERSONAL_DATA_RULES.map((rule) => rule.ruleId).filter((ruleId) =>
+  ['fr_siret', 'fr_siren'].includes(ruleId),
+);
+
 // ---------------------------------------------------------------------------------------------------------------
 // Seconde écriture des contrôles (oracle du corpus, indépendante de detect/personaldata.go).
 // ---------------------------------------------------------------------------------------------------------------

@@ -4,7 +4,7 @@
 //
 // Extension de ce module (v0.9.0), sans origine dans Secret Guard. Une règle qui se déclenche sur des textes
 // ordinaires du corpus de bruit (vectors/noise.json) ne peut pas s'exécuter d'office : elle est inscrite dans la liste
-// fermée contextOptInRuleIDs (context_rules.go, écrite avec le Pack initial par le générateur), et LoadRules la
+// fermée optInRuleIDs (context_rules.go, écrite avec le Pack initial par le générateur), et LoadRules la
 // laisse de côté. Le produit qui embarque le moteur l'active par LoadRulesWithOptIn, selon sa politique. Le schéma du Pack
 // ne change pas : la liste est du code du moteur, comme celle des validateurs.
 
@@ -22,8 +22,8 @@ var ErrUnknownOptInRule = errors.New("détection : règle à activer inconnue du
 
 // optInRules : la liste fermée, par identifiant.
 var optInRules = func() map[string]bool {
-	set := make(map[string]bool, len(contextOptInRuleIDs))
-	for _, id := range contextOptInRuleIDs {
+	set := make(map[string]bool, len(optInRuleIDs))
+	for _, id := range optInRuleIDs {
 		set[id] = true
 	}
 	return set
@@ -32,7 +32,7 @@ var optInRules = func() map[string]bool {
 // OptInRuleIDs rend la liste fermée des règles « à activer », dans l'ordre du Pack initial : LoadRules ne les exécute
 // pas, LoadRulesWithOptIn exécute celles que l'appelant nomme. Identifiants de règles, jamais une valeur.
 func OptInRuleIDs() []string {
-	return append([]string(nil), contextOptInRuleIDs...)
+	return append([]string(nil), optInRuleIDs...)
 }
 
 // LoadRulesWithOptIn charge le Pack comme LoadRules, et exécute en plus les règles « à activer » nommées par optIn,

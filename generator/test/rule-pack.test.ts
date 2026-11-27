@@ -250,7 +250,7 @@ describe('Pack initial', () => {
       }
     }
     // Une règle « à activer » est une règle de données à contexte : l'adresse électronique et l'adresse postale.
-    expect(CONTEXT_OPT_IN_RULE_IDS).toEqual(['email_address', 'fr_postal_address']);
+    expect(CONTEXT_OPT_IN_RULE_IDS).toEqual(['email_address', 'fr_vat', 'fr_postal_address']);
     // Le fichier Go (libellés, règles « à activer ») est exactement celui du générateur.
     expect(contextRulesText).toBe(buildContextRulesGo());
     // Technique du mot-clé de contexte : origine citée dans UPSTREAM.md et avis MIT dans NOTICE.

@@ -36,5 +36,6 @@ var contextSubstituteLabels = []SubstituteLabel{
 	{"aws_access_key_pair", "paire de cl\u00e9s d\u2019acc\u00e8s AWS", "AWS access key pair"},
 }
 
-// contextOptInRuleIDs : règles « à activer » (optin.go), dans l'ordre du Pack. Même source.
-var contextOptInRuleIDs = []string{"email_address", "fr_postal_address"}
+// optInRuleIDs : règles « à activer » (optin.go), dans l'ordre du Pack : données personnelles
+// (generator/rule-pack/personal-data.ts), puis données à contexte (même source que ci-dessus).
+var optInRuleIDs = []string{"fr_siret", "fr_siren", "email_address", "fr_vat", "fr_postal_address"}

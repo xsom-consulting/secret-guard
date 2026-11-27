@@ -83,7 +83,7 @@ Quinze règles « motif seul » ferment le Pack initial, après les règles de d
 - Le mot-clé précède la valeur sur la même ligne, avec la liaison bornée des règles de la v0.9.0 (« : », « = », « est », « is », guillemets) ; sans lui, pas de constat. Chaque règle a une porte littérale (ses mots-clés).
 - Comme les autres validateurs, ceux-ci ne s'exécutent pas dans un texte décodé de base64.
 - `aws_access_key_pair` est exécutée par une famille du moteur (`detect/awspair.go`), activée par son `ruleId` : les deux ordres, valeur de 40 caractères exactement, avec minuscule, majuscule et chiffre, jamais une empreinte hexadécimale. Le motif du Pack n'en décrit que la forme « identifiant, puis valeur » et donne la porte littérale. Le constat va de l'identifiant à la valeur ; l'identifiant seul reste `aws_access_key_id` (45).
-- Règles « à activer » du Pack initial : `email_address`, `fr_postal_address`.
+- Règles « à activer » du Pack initial : `fr_siret`, `fr_siren` (depuis la v0.12.0), `email_address`, `fr_vat` (depuis la v0.12.0), `fr_postal_address`. Une règle est « à activer » quand elle se déclenche sur des textes ordinaires du corpus de bruit (`vectors/noise.json`) : SIRET, SIREN et numéro de TVA sont des identifiants d'entreprise publiés au registre, présents dans les mentions légales, les factures et les devis (cas « entreprise/ »).
 - Version minimale : un Pack signé qui porte ces types de secret ou ces validateurs déclare en `minAgentVersion` la première version qui embarque le moteur v0.10.0.
 
 ### Règles de fournisseurs (v0.8.1)
