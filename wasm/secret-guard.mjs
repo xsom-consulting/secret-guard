@@ -35,7 +35,7 @@ const decoder = new TextDecoder('utf-8', { fatal: true });
 const encoder = new TextEncoder();
 
 /** Plus grand numéro d'un Substitut (detect.MaxSubstituteOrdinal). */
-export const MAX_SUBSTITUTE_ORDINAL = 999;
+export const MAX_SUBSTITUTE_ORDINAL = 999999999;
 
 /** Fonctions exportées par le module, et seulement elles. */
 export const MODULE_EXPORTS = Object.freeze([
@@ -192,7 +192,7 @@ export class SecretGuard {
 
   /**
    * Expurge des octets (Uint8Array) : la partie secrète de chaque constat est remplacée par un Substitut typé (préfixe
-   * public de la règle, puis « [secret masqué par xSOM n°<numéro> : <type>, pas la vraie valeur] », numéro de 1 à 999 ;
+   * public de la règle, puis « [secret masqué par xSOM n°<numéro> : <type>, pas la vraie valeur] », numéro de 1 à 999 999 999 ;
    * en anglais avec options.substituteLanguage 'en'), puis le texte expurgé est analysé de nouveau. Exige setFingerprintKey : le numéro d'un Substitut suit l'Empreinte locale de sa valeur. options.known,
    * les Substituts déjà posés ([{ localFingerprint, ordinal }]) : une même valeur reprend son numéro ; une nouvelle
    * prend le numéro suivant, au-dessus du plus grand connu et d'au moins options.minOrdinal. Rend { failure, initial,

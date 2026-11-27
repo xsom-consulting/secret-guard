@@ -46,11 +46,11 @@ func TestParseRequest(t *testing.T) {
 			t.Errorf("refusée : %q", accepted)
 		}
 	}
-	for _, refused := range []string{`null`, `[]`, `1`, `{`, `{"x":1}`, `{} 1`, `{"minOrdinal":-1}`, `{"minOrdinal":1000}`,
+	for _, refused := range []string{`null`, `[]`, `1`, `{`, `{"x":1}`, `{} 1`, `{"minOrdinal":-1}`, `{"minOrdinal":1000000000}`,
 		`{"substituteLanguage":"de"}`, `{"substituteLanguage":"FR"}`, `{"substituteLanguage":1}`,
 		`{"known":[{"localFingerprint":"` + strings.ToUpper(fp) + `","ordinal":1}]}`,
 		`{"known":[{"localFingerprint":"` + fp[:31] + `","ordinal":1}]}`,
-		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1000}]}`,
+		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1000000000}]}`,
 		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1},{"localFingerprint":"` + fp + `","ordinal":2}]}`,
 		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1},{"localFingerprint":"` + strings.Repeat("c", 32) + `","ordinal":1}]}`,
 		`{"known":[{"localFingerprint":"` + fp + `","ordinal":1,"value":"x"}]}`} {

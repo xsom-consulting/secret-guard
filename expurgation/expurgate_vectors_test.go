@@ -50,7 +50,16 @@ func expurgateVectorInputs() []expurgateVectorInput {
 		{"matrice/faux-substitut-fin", "TOKEN=ghp_" + strings.Repeat("X", 34) + "1a", "", 1, ""},
 		{"matrice/faux-substitut-corps", "TOKEN=ghp_" + strings.Repeat("X", 15) + "A" + strings.Repeat("X", 19) + "1", "", 1, ""},
 		{"matrice/numero-999", "export TOKEN=" + token, "", 999, ""},
-		{"matrice/numero-trop-grand", "A=" + token + "\nB_PASSWORD=" + password, "", 999, ""},
+		// Numéros de 1 à 999 999 999 (v0.13.0) : au-delà de 999, le Substitut est posé ; le second secret d'un texte
+		// numéroté à partir de 999 999 999 n'a plus de numéro (ordinal_refused).
+		{"matrice/numero-trop-grand", "A=" + token + "\nB_PASSWORD=" + password, "", detect.MaxSubstituteOrdinal, ""},
+		{"matrice/numero-1000", "A=" + token + "\nB_PASSWORD=" + password, "", 1000, ""},
+		{"matrice/numero-999999999", "export TOKEN=" + token, "", detect.MaxSubstituteOrdinal, detect.SubstituteEnglish},
+		// Substitut déjà posé à 4 et à 9 chiffres : valeur fictive, aucun constat, texte inchangé ; à 10 chiffres, ce
+		// n'est pas un Substitut : il est détecté et expurgé.
+		{"fictif/substitut-4-chiffres", `export TOKEN="` + subFR("ghp_", 1000, "jeton GitHub") + `"`, "", 1, ""},
+		{"fictif/substitut-9-chiffres", "DB_PASSWORD=" + subEN("", detect.MaxSubstituteOrdinal, "password") + "\n", "", 1, ""},
+		{"fictif/substitut-10-chiffres", `export TOKEN="` + subFR("", 1_000_000_000, "jeton GitHub") + `"`, "", 1, ""},
 		{"longueur/minimum", "postgres://u:p4ss@db/x", "", 1, ""},
 		{"longueur/points-de-code", "PASSWORD=é" + password + "😀", "", 1, ""},
 		{"utf16/non-ascii", "é😀 clé « " + token + " »\nDB_PASSWORD=" + syntheticPassword() + "\nfin 😀", "", 10, ""},

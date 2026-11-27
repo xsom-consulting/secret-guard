@@ -43,7 +43,7 @@ var (
 	ErrEncoding = errors.New("expurgation refusée : contenu hors UTF-8")
 	// ErrOrdinal refuse un numéro de Substitut hors de [detect.MinSubstituteOrdinal, detect.MaxSubstituteOrdinal], ou
 	// que l'appelant ne donne pas.
-	ErrOrdinal = errors.New("expurgation refusée : numéro de Substitut absent ou hors de 1 à 999")
+	ErrOrdinal = errors.New("expurgation refusée : numéro de Substitut absent ou hors de 1 à 999 999 999")
 	// ErrLanguage refuse une langue de Substitut autre que detect.SubstituteFrench, detect.SubstituteEnglish ou vide.
 	ErrLanguage = errors.New("expurgation refusée : langue de Substitut inconnue")
 )
@@ -85,7 +85,7 @@ type expurgatedSpan struct {
 // Expurgate rend une copie de content où la partie secrète de chaque constat de result est remplacée par un Substitut
 // (detect.SecretRange) : étendues triées par début, fin, puis score décroissant, fusionnées quand elles se chevauchent ou se
 // touchent (comme detect.Redact), représentées par le premier constat. Pour chaque étendue fusionnée, ordinal reçoit le
-// constat représentatif, son étendue ramenée à la partie remplacée, et rend le numéro du Substitut (1 à 999) ; il peut
+// constat représentatif, son étendue ramenée à la partie remplacée, et rend le numéro du Substitut (1 à 999 999 999) ; il peut
 // être appelé plusieurs fois pour un même constat et doit alors rendre le même numéro. Les octets hors des étendues
 // sont gardés tels quels. Rend aussi, pour chaque Substitut, sa Substitution (positions dans le texte d'origine).
 //
@@ -101,7 +101,7 @@ type expurgatedSpan struct {
 //
 // Expurgate ne prouve pas que le résultat est sûr ; ExpurgateAndRescan l'analyse de nouveau.
 //
-// Refus, sans texte : numéro absent (ordinal nil, ou qui rend faux) ou hors de 1 à 999 (ErrOrdinal) ;
+// Refus, sans texte : numéro absent (ordinal nil, ou qui rend faux) ou hors de 1 à 999 999 999 (ErrOrdinal) ;
 // analyse incomplète (ErrIncomplete) ; contenu hors UTF-8 (ErrEncoding) ; étendue hors du contenu ou
 // qui coupe un caractère, ou étendue remplacée autre que celle de son constat qui porte une Empreinte locale
 // (ErrSpan).
