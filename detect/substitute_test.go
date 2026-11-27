@@ -53,7 +53,7 @@ func TestSubstituteGrammar(t *testing.T) {
 		for _, value := range []string{
 			// Ancienne forme : texte ordinaire depuis la v0.5.0.
 			"", "[]", oldSubstitute("", 4, "1"), oldSubstitute("ghp_", 4, "1"), oldSubstitute("ghp_", 35, "1"),
-			subFR("", 0, "mot de passe"), subFR("", 1000, "mot de passe"), strings.Replace(base, "n°1", "n°01", 1),
+			subFR("", 0, "mot de passe"), subFR("", 1_000_000_000, "mot de passe"), strings.Replace(base, "n°1", "n°01", 1),
 			strings.Replace(base, "n°1", "n°١", 1), strings.Replace(base, "n°1", "n°１", 1), strings.Replace(base, "n°1", "n° 1", 1),
 			subFR("", 1, "password"), subEN("", 1, "mot de passe"), subFR("", 1, "Mot de passe"), subFR("", 1, "mot de passe "),
 			subFR("", 1, "jeton inconnu"), subFR("", 1, ""), subFR("ghq_", 1, "jeton GitHub"), subFR("GHP_", 1, "jeton GitHub"),
@@ -181,8 +181,8 @@ func TestSubstituteText(t *testing.T) {
 			}
 		}
 	})
-	t.Run("numéro hors de 1 à 999 : ErrSubstituteOrdinal ; langue inconnue : ErrSubstituteLanguage", func(t *testing.T) {
-		for _, n := range []int{0, -1, 1000, 1 << 40} {
+	t.Run("numéro hors de 1 à 999 999 999 : ErrSubstituteOrdinal ; langue inconnue : ErrSubstituteLanguage", func(t *testing.T) {
+		for _, n := range []int{0, -1, 1_000_000_000, 1 << 40} {
 			if got, err := SubstituteText([]byte("valeur"), "", n, ""); got != "" || !errors.Is(err, ErrSubstituteOrdinal) {
 				t.Errorf("%d : %q %v", n, got, err)
 			}
@@ -356,7 +356,7 @@ func TestFakeSubstituteDetected(t *testing.T) {
 			"mot de passe collé":                `DB_PASSWORD="` + base + password + `"`,
 			"mot de passe devant":               `DB_PASSWORD="` + password + base + `"`,
 			"numéro 0":                          `export TOKEN="` + subFR("", 0, "jeton GitHub") + `"`,
-			"numéro 1000":                       `export TOKEN="` + subFR("", 1000, "jeton GitHub") + `"`,
+			"numéro 1000000000":                 `export TOKEN="` + subFR("", 1_000_000_000, "jeton GitHub") + `"`,
 			"type d'une autre langue":           `export TOKEN="` + subFR("", 1, "GitHub token") + `"`,
 			"type hors de la table":             `export TOKEN="` + subFR("", 1, "jeton maison") + `"`,
 			"crochet fermant absent":            `export TOKEN="` + base[:len(base)-1] + `"`,
@@ -437,7 +437,7 @@ func TestFindSubstitutes(t *testing.T) {
 }
 
 // FuzzFindSubstitutes : quelle que soit l'entrée, les étendues rendues sont dans l'ordre, sans chevauchement, et chacune
-// est exactement un Substitut de la grammaire, de numéro 1 à 999.
+// est exactement un Substitut de la grammaire, de numéro 1 à 999 999 999.
 //
 //	go test ./detect -run '^$' -fuzz '^FuzzFindSubstitutes$' -fuzztime=60s
 func FuzzFindSubstitutes(f *testing.F) {
