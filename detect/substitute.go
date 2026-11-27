@@ -11,10 +11,10 @@
 //	[secret masked by xSOM #1: database password, not the real value]
 //
 // Grammaire exacte et fermée : préfixe de la table fermée substituteRulePrefixes (ou aucun), puis l'une des deux formes
-// ci-dessus, octet pour octet, avec un numéro de 1 à 999 sans zéro de tête et un type de la table fermée
-// substituteLabels de la même langue (ou SubstituteDefaultLabel). Rien d'autre : ni espace de plus, ni autre casse, ni
-// type d'une autre langue. Le Substitut ne porte rien de la valeur, sauf le préfixe public de sa règle : ni sa longueur,
-// ni un de ses caractères. Le moteur reconnaît un Substitut comme une valeur fictive (safeLiteral, scanPrivateKeys,
+// ci-dessus, octet pour octet, avec un numéro de 1 à 999 999 999 sans zéro de tête (au plus 9 chiffres depuis la
+// v0.13.0, 3 avant) et un type de la table fermée substituteLabels de la même langue (ou SubstituteDefaultLabel). Rien
+// d'autre : ni espace de plus, ni autre casse, ni type d'une autre langue. Le Substitut ne porte rien de la valeur, sauf
+// le préfixe public de sa règle : ni sa longueur, ni un de ses caractères. Le moteur reconnaît un Substitut comme une valeur fictive (safeLiteral, scanPrivateKeys,
 // safeContextualValue, argument de curl -u) : un texte expurgé, analysé de nouveau, ne bloque pas sur ses Substituts.
 // Un texte qui ne suit pas exactement la grammaire reste analysé comme tout autre texte.
 //
@@ -39,9 +39,10 @@ import (
 const (
 	// MaxSubstituteOrdinal est le plus grand numéro d'un Substitut ; MinSubstituteOrdinal, le plus petit.
 	MinSubstituteOrdinal = 1
-	MaxSubstituteOrdinal = 999
+	// Neuf chiffres depuis la v0.13.0 (trois avant) : une longue session d'agents dépasse 999 valeurs distinctes.
+	MaxSubstituteOrdinal = 999_999_999
 	// substituteMaxDigits : nombre de chiffres le plus grand du numéro.
-	substituteMaxDigits = 3
+	substituteMaxDigits = 9
 	// substituteMaxPrefix : longueur du plus long préfixe de la table (vérifiée par un test).
 	substituteMaxPrefix = len("https://hooks.slack.com/services/")
 )
@@ -264,7 +265,7 @@ var substitutePrefixSet = func() map[string]bool {
 func SubstitutePrefixes() []string { return append([]string(nil), substitutePrefixes...) }
 
 // ErrSubstituteOrdinal refuse un numéro de Substitut hors de [MinSubstituteOrdinal, MaxSubstituteOrdinal].
-var ErrSubstituteOrdinal = errors.New("substitut refusé : numéro hors de 1 à 999")
+var ErrSubstituteOrdinal = errors.New("substitut refusé : numéro hors de 1 à 999 999 999")
 
 // ErrSubstituteLanguage refuse une langue de Substitut autre que SubstituteFrench, SubstituteEnglish ou vide.
 var ErrSubstituteLanguage = errors.New("substitut refusé : langue inconnue")
@@ -418,7 +419,7 @@ func substitutePrefixOf(value []byte, ruleID string) string {
 // SubstituteText écrit le Substitut de value, trouvée par la règle ruleID, au numéro ordinal, dans la langue language
 // (vide : français) : préfixe le plus long de cette règle par lequel commence value (ou aucun, table fermée), puis le
 // corps avec le numéro et le type de la règle. Rien d'autre de la valeur : ni sa longueur, ni un de ses caractères.
-// Numéro hors de 1 à 999 : ErrSubstituteOrdinal ; langue inconnue : ErrSubstituteLanguage ; aucun texte dans les deux
+// Numéro hors de 1 à 999 999 999 : ErrSubstituteOrdinal ; langue inconnue : ErrSubstituteLanguage ; aucun texte dans les deux
 // cas. Le texte rendu suit exactement la grammaire : le moteur le reconnaît comme une valeur fictive.
 func SubstituteText(value []byte, ruleID string, ordinal int, language SubstituteLanguage) (string, error) {
 	if ordinal < MinSubstituteOrdinal || ordinal > MaxSubstituteOrdinal {

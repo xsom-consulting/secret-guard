@@ -94,7 +94,7 @@ func TestModuleExpurgate(t *testing.T) {
 		if !ok || other.Substitutions[0].Ordinal != 12 {
 			t.Fatalf("%+v", other)
 		}
-		full, text, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), `{"known":[{"localFingerprint":"`+strings.Repeat("b", 32)+`","ordinal":999}]}`)
+		full, text, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), `{"known":[{"localFingerprint":"`+strings.Repeat("b", 32)+`","ordinal":999999999}]}`)
 		if !ok || full.Failure != "ordinal_refused" || len(text) != 0 || len(full.Substitutions) != 0 {
 			t.Fatalf("%+v %q", full, text)
 		}
@@ -108,7 +108,7 @@ func TestModuleExpurgate(t *testing.T) {
 	})
 	t.Run("demande hors forme : refus", func(t *testing.T) {
 		for _, request := range []string{
-			`[]`, `{"known":[{"localFingerprint":"AB","ordinal":1}]}`, `{"other":1}`, `{"minOrdinal":1000}`,
+			`[]`, `{"known":[{"localFingerprint":"AB","ordinal":1}]}`, `{"other":1}`, `{"minOrdinal":1000000000}`,
 			`{} {}`, `{"substituteLanguage":"de"}`, `{"known":[{"localFingerprint":"` + strings.Repeat("a", 32) + `","ordinal":0}]}`,
 		} {
 			if _, _, ok := expurgateBuffer(t, m, []byte("TOKEN="+token), request); ok {

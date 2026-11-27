@@ -551,11 +551,212 @@
         "UHo5IVdy",
         "NFRuNQ=="
       ],
-      "firstOrdinal": 999,
+      "firstOrdinal": 999999999,
       "expected": {
         "failure": "ordinal_refused",
         "text": null,
         "substitutions": []
+      }
+    },
+    {
+      "id": "matrice/numero-1000",
+      "input": [
+        "QT1naHBf",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "YUIzZGFC",
+        "M2RhQjNk",
+        "CkJfUEFT",
+        "U1dPUkQ9",
+        "WHE3TG0y",
+        "UHo5IVdy",
+        "NFRuNQ=="
+      ],
+      "firstOrdinal": 1000,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "A=ghp_[secret ma",
+          "squé par xSOM n",
+          "°1000 : jeton G",
+          "itHub, pas la vr",
+          "aie valeur]\nB_PA",
+          "SSWORD=[secret m",
+          "asqué par xSOM ",
+          "n°1001 : mot de",
+          " passe, pas la v",
+          "raie valeur]"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 2,
+            "byteEnd": 42,
+            "utf16Start": 2,
+            "utf16End": 42,
+            "ordinal": 1000,
+            "replacement": "ghp_[secret masqué par xSOM n°1000 : jeton GitHub, pas la vraie valeur]"
+          },
+          {
+            "ruleId": "contextual_password",
+            "secretType": "password",
+            "byteStart": 54,
+            "byteEnd": 70,
+            "utf16Start": 54,
+            "utf16End": 70,
+            "ordinal": 1001,
+            "replacement": "[secret masqué par xSOM n°1001 : mot de passe, pas la vraie valeur]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "matrice/numero-999999999",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PWdocF9h",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Rh",
+        "QjNkYUIz",
+        "ZGFCM2Q="
+      ],
+      "firstOrdinal": 999999999,
+      "substituteLanguage": "en",
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=ghp",
+          "_[secret masked ",
+          "by xSOM #9999999",
+          "99: GitHub token",
+          ", not the real v",
+          "alue]"
+        ],
+        "substitutions": [
+          {
+            "ruleId": "github_token",
+            "secretType": "provider_token",
+            "byteStart": 13,
+            "byteEnd": 53,
+            "utf16Start": 13,
+            "utf16End": 53,
+            "ordinal": 999999999,
+            "replacement": "ghp_[secret masked by xSOM #999999999: GitHub token, not the real value]"
+          }
+        ]
+      }
+    },
+    {
+      "id": "fictif/substitut-4-chiffres",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PSJnaHBf",
+        "W3NlY3Jl",
+        "dCBtYXNx",
+        "dcOpIHBh",
+        "ciB4U09N",
+        "IG7CsDEw",
+        "MDAgOiBq",
+        "ZXRvbiBH",
+        "aXRIdWIs",
+        "IHBhcyBs",
+        "YSB2cmFp",
+        "ZSB2YWxl",
+        "dXJdIg=="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=\"gh",
+          "p_[secret masqu",
+          "é par xSOM n°1",
+          "000 : jeton GitH",
+          "ub, pas la vraie",
+          " valeur]\""
+        ],
+        "substitutions": []
+      }
+    },
+    {
+      "id": "fictif/substitut-9-chiffres",
+      "input": [
+        "REJfUEFT",
+        "U1dPUkQ9",
+        "W3NlY3Jl",
+        "dCBtYXNr",
+        "ZWQgYnkg",
+        "eFNPTSAj",
+        "OTk5OTk5",
+        "OTk5OiBw",
+        "YXNzd29y",
+        "ZCwgbm90",
+        "IHRoZSBy",
+        "ZWFsIHZh",
+        "bHVlXQo="
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "DB_PASSWORD=[sec",
+          "ret masked by xS",
+          "OM #999999999: p",
+          "assword, not the",
+          " real value]\n"
+        ],
+        "substitutions": []
+      }
+    },
+    {
+      "id": "fictif/substitut-10-chiffres",
+      "input": [
+        "ZXhwb3J0",
+        "IFRPS0VO",
+        "PSJbc2Vj",
+        "cmV0IG1h",
+        "c3F1w6kg",
+        "cGFyIHhT",
+        "T00gbsKw",
+        "MTAwMDAw",
+        "MDAwMCA6",
+        "IGpldG9u",
+        "IEdpdEh1",
+        "YiwgcGFz",
+        "IGxhIHZy",
+        "YWllIHZh",
+        "bGV1cl0i"
+      ],
+      "firstOrdinal": 1,
+      "expected": {
+        "failure": "none",
+        "text": [
+          "export TOKEN=\"[s",
+          "ecret masqué pa",
+          "r xSOM n°1 : je",
+          "ton d’accès, ",
+          "pas la vraie val",
+          "eur]\""
+        ],
+        "substitutions": [
+          {
+            "ruleId": "contextual_access_token",
+            "secretType": "access_token",
+            "byteStart": 14,
+            "byteEnd": 89,
+            "utf16Start": 14,
+            "utf16End": 87,
+            "ordinal": 1,
+            "replacement": "[secret masqué par xSOM n°1 : jeton d’accès, pas la vraie valeur]"
+          }
+        ]
       }
     },
     {

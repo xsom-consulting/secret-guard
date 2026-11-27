@@ -287,10 +287,10 @@ func TestExpurgateRefusals(t *testing.T) {
 			t.Errorf("%v", err)
 		}
 	})
-	t.Run("numéro absent, refusé ou hors de 1 à 999 : ErrOrdinal, aucun texte", func(t *testing.T) {
+	t.Run("numéro absent, refusé ou hors de 1 à 999 999 999 : ErrOrdinal, aucun texte", func(t *testing.T) {
 		initial := detect.Scan(content, rules, detect.Options{})
 		for name, ordinal := range map[string]func(detect.Finding) (int, bool){
-			"nil": nil, "faux": func(detect.Finding) (int, bool) { return 1, false }, "0": fixedOrdinal(0), "1000": fixedOrdinal(1000),
+			"nil": nil, "faux": func(detect.Finding) (int, bool) { return 1, false }, "0": fixedOrdinal(0), "1000000000": fixedOrdinal(1_000_000_000),
 		} {
 			if text, subs, err := Expurgate(content, initial, ordinal); text != nil || subs != nil || !errors.Is(err, ErrOrdinal) {
 				t.Errorf("%s : %v", name, err)
@@ -802,7 +802,7 @@ func substitutionDifference(content, text []byte, subs []Substitution) string {
 		if s.ByteStart < cursor || s.ByteEnd <= s.ByteStart || s.ByteEnd > len(content) {
 			return fmt.Sprintf("Substitution %d hors d'ordre ou du contenu", i)
 		}
-		if !isSubstitute([]byte(s.Replacement)) || s.Ordinal < 1 || s.Ordinal > 999 {
+		if !isSubstitute([]byte(s.Replacement)) || s.Ordinal < 1 || s.Ordinal > detect.MaxSubstituteOrdinal {
 			return fmt.Sprintf("Substitution %d hors de la grammaire", i)
 		}
 		rebuilt = append(append(rebuilt, content[cursor:s.ByteStart]...), s.Replacement...)

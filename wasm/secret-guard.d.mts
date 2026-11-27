@@ -55,7 +55,7 @@ export interface Substitution {
   readonly replacement: string;
 }
 
-/** Substitut déjà posé par l'appelant : Empreinte locale de la valeur et numéro de 1 à 999. */
+/** Substitut déjà posé par l'appelant : Empreinte locale de la valeur et numéro de 1 à 999 999 999. */
 export interface KnownSubstitute {
   readonly localFingerprint: string;
   readonly ordinal: number;
@@ -63,7 +63,7 @@ export interface KnownSubstitute {
 
 export interface ExpurgateOptions {
   readonly known?: readonly KnownSubstitute[];
-  /** Plus petit numéro d'un nouveau Substitut (0 à 999). */
+  /** Plus petit numéro d'un nouveau Substitut (0 à 999 999 999). */
   readonly minOrdinal?: number;
   readonly languageId?: string;
   /** Langue des Substituts : 'fr' (par défaut) ou 'en'. Une autre valeur fait refuser la demande. */

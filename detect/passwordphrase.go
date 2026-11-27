@@ -70,6 +70,10 @@ func (r *Rules) scanPasswordPhrases(v *view, assignment []finding, findings []fi
 	}
 	text := v.text
 	for _, m := range passwordHint.FindAllIndex(text, -1) {
+		// Marque de résultat d'un lanceur de tests (testrunner.go) : l'indice est un résultat, pas une annonce.
+		if isTestRunnerResult(text, m[0], m[1]) {
+			continue
+		}
 		start, end, ok := passwordPhraseValue(text, m[0], m[1])
 		if !ok {
 			continue

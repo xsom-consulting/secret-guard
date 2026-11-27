@@ -891,6 +891,11 @@ func (ctx *contextualText) assignmentNoise(v *view, m *assignmentMatch, p *parse
 	if !ctx.spend(max(p.end, lineEnd) - m.start + 64) {
 		return keepFinding
 	}
+	// Marque de résultat d'un lanceur de tests, partout (testrunner.go) : le nom lu est un résultat, la valeur le nom
+	// d'un test.
+	if p.kind == kindUnquoted && isTestRunnerResult(text, m.keyStart, m.keyEnd) {
+		return noiseVerdict{drop: true}
+	}
 	// Valeur chiffrée, partout (dotenv compris) : ce qui est écrit n'est pas le secret.
 	if isEncryptedEnvelope(text, p, lineEnd) {
 		return noiseVerdict{drop: true}

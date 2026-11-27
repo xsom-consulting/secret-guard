@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, test } from 'node:test';
 import { loaders, wasmModule } from './loaders.test-helpers.mjs';
-import { MAX_INPUT_BYTES, MODULE_ARITY, MODULE_EXPORTS, SecretGuard, SecretGuardError } from './secret-guard.mjs';
+import { MAX_INPUT_BYTES, MAX_SUBSTITUTE_ORDINAL, MODULE_ARITY, MODULE_EXPORTS, SecretGuard, SecretGuardError } from './secret-guard.mjs';
 import { WASI_FUNCTIONS, createMinimalWasi } from './wasi.mjs';
 
 const encoder = new TextEncoder();
@@ -143,12 +143,20 @@ for (const { name, load } of loaders) {
       assert.throws(() => guard.expurgate(input, { substituteLanguage: 'de' }), SecretGuardError);
       const other = guard.expurgate(input, { known: [{ localFingerprint: 'f'.repeat(32), ordinal: 7 }], minOrdinal: 20 });
       assert.deepEqual(other.substitutions.map((s) => s.ordinal), [20, 20]);
-      const full = guard.expurgate(input, { known: [{ localFingerprint: 'f'.repeat(32), ordinal: 999 }] });
+      // Numéros de 1 à 999 999 999 (v0.13.0) : le millième secret reçoit un Substitut ; au-delà, refus.
+      assert.equal(MAX_SUBSTITUTE_ORDINAL, 999999999);
+      const thousandth = guard.expurgate(input, { minOrdinal: 1000 });
+      assert.equal(thousandth.failure, 'none');
+      assert.deepEqual(thousandth.substitutions.map((s) => s.ordinal), [1000, 1000]);
+      assert.ok(decoder.decode(thousandth.text).includes('n°1000 : jeton GitHub, pas la vraie valeur]\n'));
+      const last = guard.expurgate(input, { minOrdinal: MAX_SUBSTITUTE_ORDINAL });
+      assert.deepEqual(last.substitutions.map((s) => s.ordinal), [999999999, 999999999]);
+      const full = guard.expurgate(input, { known: [{ localFingerprint: 'f'.repeat(32), ordinal: MAX_SUBSTITUTE_ORDINAL }] });
       assert.equal(full.failure, 'ordinal_refused');
       assert.equal(full.text, null);
       assert.deepEqual(full.substitutions, []);
       assert.throws(() => guard.expurgate(input, { known: [{ localFingerprint: 'XYZ', ordinal: 1 }] }), SecretGuardError);
-      assert.throws(() => guard.expurgate(input, { minOrdinal: 1000 }), SecretGuardError);
+      assert.throws(() => guard.expurgate(input, { minOrdinal: MAX_SUBSTITUTE_ORDINAL + 1 }), SecretGuardError);
       const big = guard.expurgate(new Uint8Array(MAX_INPUT_BYTES + 10).fill(0x61));
       assert.equal(big.failure, 'incomplete');
       assert.equal(big.text, null);

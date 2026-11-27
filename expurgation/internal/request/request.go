@@ -16,8 +16,9 @@ import (
 	"github.com/xsom-consulting/secret-guard/expurgation"
 )
 
-// MaxRequestBytes est la taille la plus grande d'une demande : 999 Substituts connus tiennent en moins de 64 Kio.
-const MaxRequestBytes = 64 << 10
+// MaxRequestBytes est la taille la plus grande d'une demande : 2 Mio (64 Kio avant la v0.13.0). 10 000 Substituts
+// connus à 9 chiffres en prennent 760 011 octets ; une longue session d'agents dépasse 999 valeurs distinctes.
+const MaxRequestBytes = 2 << 20
 
 // Known est un Substitut que l'appelant connaît déjà : l'Empreinte locale de la valeur et son numéro.
 type Known struct {
@@ -34,7 +35,7 @@ type Request struct {
 }
 
 // ParseRequest lit une demande en JSON strict : objet seul, aucun champ inconnu, Empreintes locales de 32 caractères
-// hexadécimaux minuscules, numéros de 1 à 999, ni Empreinte locale ni numéro répétés, minOrdinal de 0 à 999,
+// hexadécimaux minuscules, numéros de 1 à 999 999 999, ni Empreinte locale ni numéro répétés, minOrdinal de 0 à 999 999 999,
 // substituteLanguage « fr », « en » ou absente. Une demande vide vaut {} (aucun Substitut connu). Faux pour toute autre
 // forme.
 func ParseRequest(data []byte) (Request, bool) {
@@ -70,7 +71,7 @@ func ParseRequest(data []byte) (Request, bool) {
 
 // numbering attribue les numéros des Substituts, un par Empreinte locale : une Empreinte locale connue reprend son
 // numéro ; une nouvelle prend le numéro suivant, à partir du plus petit numéro au-dessus du plus grand numéro connu et
-// d'au moins MinOrdinal. Au-delà de 999 : refus (l'expurgation échoue, ordinal_refused).
+// d'au moins MinOrdinal. Au-delà de 999 999 999 : refus (l'expurgation échoue, ordinal_refused).
 type numbering struct {
 	byFingerprint map[string]int
 	next          int
@@ -97,7 +98,7 @@ func newNumbering(request Request) (*numbering, bool) {
 	return n, true
 }
 
-// ordinal rend le numéro du constat ; faux pour un constat sans Empreinte locale ou au-delà de 999.
+// ordinal rend le numéro du constat ; faux pour un constat sans Empreinte locale ou au-delà de 999 999 999.
 func (n *numbering) ordinal(f detect.Finding) (int, bool) {
 	if f.LocalFingerprint == "" {
 		return 0, false
