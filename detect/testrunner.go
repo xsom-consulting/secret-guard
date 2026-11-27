@@ -16,7 +16,7 @@ var testRunnerResults = map[string]bool{"PASS": true, "FAIL": true, "SKIP": true
 
 // isTestRunnerResult dit si le nom text[keyStart:keyEnd], lu par une affectation ou comme indice d'une phrase, est la
 // marque de résultat d'un lanceur de tests : de son début de ligne, des espaces ou tabulations, « --- », le résultat,
-// « : », une espace, un identifiant de test (sous-tests séparés par « / »), une espace, une durée entre parenthèses,
+// « : », une espace, un nom de test (sous-tests après « / », un seul mot), une espace, une durée entre parenthèses,
 // puis rien que des espaces ou tabulations jusqu'à la fin de la ligne. Ne lit que la ligne du nom, et seulement ce que
 // la forme admet.
 func isTestRunnerResult(text []byte, keyStart, keyEnd int) bool {
@@ -54,8 +54,10 @@ func isTestRunnerResult(text []byte, keyStart, keyEnd int) bool {
 
 func isLineEndByte(c byte) bool { return c == '\n' || c == '\r' }
 
-// testName rend la position qui suit l'identifiant de test lu à partir de i (une lettre ou « _ », puis lettres,
-// chiffres et « _ »), suivi de ses sous-tests (« / » et des signes autres que blancs et parenthèses), ou -1.
+// testName rend la position qui suit le nom de test lu à partir de i, ou -1 : un identifiant (une lettre ou « _ », puis
+// lettres, chiffres et « _ »), puis, pour un sous-test, « / » et tout signe autre qu'un blanc jusqu'au premier blanc.
+// go test remplace les espaces d'un nom de sous-test par « _ » : le nom est un seul mot, qui peut porter « / », « : »,
+// « , », « - » et des parenthèses.
 func testName(text []byte, i int) int {
 	end := len(text)
 	if i >= end || (!isASCIILetter(text[i]) && text[i] != '_') {
@@ -64,11 +66,9 @@ func testName(text []byte, i int) int {
 	for i < end && (isASCIIAlphanumeric(text[i]) || text[i] == '_') {
 		i++
 	}
-	for i < end && text[i] == '/' {
-		i++
-		start := i
-		for i < end && text[i] != ' ' && text[i] != '\t' && !isLineEndByte(text[i]) && text[i] != '(' && text[i] != ')' &&
-			text[i] != '/' {
+	if i < end && text[i] == '/' {
+		start := i + 1
+		for i < end && text[i] != ' ' && text[i] != '\t' && !isLineEndByte(text[i]) {
 			i++
 		}
 		if i == start {
