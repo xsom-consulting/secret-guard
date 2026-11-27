@@ -1254,3 +1254,18 @@ avec `-baseline` et à expliquer dans le message du commit.
    fichier écrit à la main.
 6. **La colonne v0.9.0** de `docs/encodages.md` (et de la page de comparaison, hors du dépôt) vient d'un relevé d'étude sur le binaire de
    la v0.9.0, qu'aucun essai du dépôt ne rejoue.
+
+## Marque de résultat d'un lanceur de tests (v0.13.0)
+
+**Écart d'analyse ajouté, sans effet sur le corpus de parité** (`detect/testrunner.go`). La sortie de `go test` écrit
+pour chaque test une ligne faite de « --- », du résultat en majuscules (PASS, FAIL ou SKIP), de « : », du nom du test
+et de sa durée entre parenthèses. L'affectation ordinaire (ASSIGNMENT) et l'indice « pass » des phrases
+(`passwordphrase.go`) lisaient la ligne du résultat PASS comme l'affectation d'un mot de passe, dont la valeur était le
+nom du test : relevé sur un Poste réel (xSOM Fleet, 27 novembre 2026), où chaque nom de test réussi était masqué.
+
+La forme est jugée en entier sur sa ligne : début de ligne, espaces ou tabulations, « --- », le résultat en
+majuscules, « : », une espace, un identifiant de test (sous-tests séparés par « / »), une espace, une durée
+(`0.20s`, `12s`) entre parenthèses, puis rien que des blancs jusqu'à la fin de la ligne. Un nom en minuscules, un
+autre séparateur, un texte avant le « --- » ou après la durée, une ligne sans durée restent des affectations
+(`TestTestRunnerResultIsNotPassword`). `vectors/noise.json` reçoit trois cas « vecu/go-test- » (PASS, FAIL, SKIP),
+chacun sans langage puis avec le langage shellscript.
