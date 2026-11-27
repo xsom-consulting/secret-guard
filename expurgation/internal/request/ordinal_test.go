@@ -38,3 +38,31 @@ func TestNineDigitOrdinals(t *testing.T) {
 		t.Errorf("numéro au-delà de 999 999 999 : %d", got)
 	}
 }
+
+// Une session de 10 000 Substituts connus à 9 chiffres tient dans une demande ; au-delà de 2 Mio, la demande est
+// refusée.
+func TestKnownListOfTenThousand(t *testing.T) {
+	var b strings.Builder
+	b.WriteString(`{"known":[`)
+	for i := range 10_000 {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		fp := strconv.FormatInt(int64(i), 16)
+		fp = strings.Repeat("0", 32-len(fp)) + fp
+		b.WriteString(`{"localFingerprint":"` + fp + `","ordinal":` + strconv.Itoa(detect.MaxSubstituteOrdinal-i) + `}`)
+	}
+	b.WriteString(`]}`)
+	t.Logf("demande de 10 000 numéros connus : %d octets", b.Len())
+	request, ok := ParseRequest([]byte(b.String()))
+	if !ok || len(request.Known) != 10_000 {
+		t.Fatalf("demande de 10 000 numéros connus refusée (%d octets)", b.Len())
+	}
+	if MaxRequestBytes != 2<<20 {
+		t.Errorf("MaxRequestBytes = %d, attendu 2 Mio", MaxRequestBytes)
+	}
+	over := []byte(`{"minOrdinal":1}` + strings.Repeat(" ", 2<<20))
+	if _, ok := ParseRequest(over); ok {
+		t.Error("demande de plus de 2 Mio admise")
+	}
+}

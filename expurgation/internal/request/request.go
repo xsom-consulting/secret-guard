@@ -16,9 +16,9 @@ import (
 	"github.com/xsom-consulting/secret-guard/expurgation"
 )
 
-// MaxRequestBytes est la taille la plus grande d'une demande : environ 920 Substituts connus de 4 chiffres, ou 860 de
-// 9 chiffres, tiennent en 64 Kio.
-const MaxRequestBytes = 64 << 10
+// MaxRequestBytes est la taille la plus grande d'une demande : 2 Mio (64 Kio avant la v0.13.0). 10 000 Substituts
+// connus à 9 chiffres en prennent 760 011 octets ; une longue session d'agents dépasse 999 valeurs distinctes.
+const MaxRequestBytes = 2 << 20
 
 // Known est un Substitut que l'appelant connaît déjà : l'Empreinte locale de la valeur et son numéro.
 type Known struct {
