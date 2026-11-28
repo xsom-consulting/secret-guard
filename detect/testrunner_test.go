@@ -22,6 +22,8 @@ func TestTestRunnerResultIsNotPassword(t *testing.T) {
 	}{
 		{"marque", "--- " + mark + ": " + name + " (0.20s)\n", true},
 		{"sous-test", "    --- " + mark + ": " + name + "/sous_cas#01 (0.00s)\n", true},
+		{"sous-test-parentheses", "    --- " + mark + ": " + name + "/FR-112:_cause,_v2,_mod-007_(essai1) (0.00s)\n", true},
+		{"sous-test-vide", "--- " + mark + ": " + name + "/ (0.00s)\n", false},
 		{"tabulation-et-retour", "\t--- " + mark + ": " + name + " (12s)\r\n", true},
 		{"minuscules", "--- " + lower + ": " + name + " (0.20s)\n", false},
 		{"sans-marqueur", mark + ": " + name + " (0.20s)\n", false},
